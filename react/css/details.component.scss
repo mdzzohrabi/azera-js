@@ -1,0 +1,11 @@
+.details {
+    .row {
+      margin: 0;
+      padding: 10px 0;
+    }
+    &.lined {
+      .row:not(:last-child) {
+        border-bottom: 1px #f0f0f0 solid;
+      }
+    }
+  }

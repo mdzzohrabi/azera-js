@@ -1,0 +1,29 @@
+{
+	"folders": [
+		{
+			"path": "reflect"
+		},
+		{
+			"path": "container"
+		},
+		{
+			"path": "util"
+		},
+		{
+			"path": "ts-template"
+		},
+		{
+			"path": "cms"
+		},
+		{
+			"path": "model"
+		},
+		{
+			"path": "web"
+		},
+		{
+			"path": "react"
+		}
+	],
+	"settings": {}
+}

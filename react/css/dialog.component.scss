@@ -1,0 +1,62 @@
+@import "util";
+
+.dialog-container.main {
+  position: fixed;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 900;
+}
+
+
+.dialog {
+  background: white;
+  box-shadow: 0 2px 1px rgba(0, 0, 0, 0.1), 0 2px 30px rgba(0, 0, 0, 0.15);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  border-radius: 3px;
+  overflow: hidden;
+  overflow-y: auto !important;
+  max-height: 90%;
+}
+
+.dialog-message {
+  padding: 10px 15px;
+
+  .buttons {
+    padding: 20px 0 10px 0;
+  }
+}
+
+.dialog-banner-icon {
+  font-size: 8em;
+  color: lightgray;
+  padding-right: 0;
+}
+
+.dialog-title {
+  padding: 10px 15px;
+  background-color: #4a5459;
+  color: white;
+  h1 {
+    font-size: 1.6em;
+    margin: 0;
+    font-weight: 100;
+  }
+}
+
+.dialog-container.main {
+  background: rgba(0,0,0,.2);
+
+  .dialog {
+    @include when(900px) {
+      min-width: 65% !important;
+    }
+    @include when(750px) {
+      min-width: 95% !important;
+    }
+  }
+}

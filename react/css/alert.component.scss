@@ -1,0 +1,15 @@
+.alert {
+    padding: 8px 15px;
+  }
+  
+  .alert {
+    &-danger {
+      background: #f8d7da;
+      color: #721c24;
+    }
+  
+    &-success {
+      background: #c9e8e9;
+      color: #063406;
+    }
+  }

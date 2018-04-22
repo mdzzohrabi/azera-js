@@ -1,0 +1,192 @@
+@import "util";
+
+table {
+  width: 100%;
+  border-spacing: 0;
+  th {
+    white-space: nowrap;
+    line-height: 2.5em;
+    border-bottom: 1px #d6d6d6 dotted;
+    padding: 5px 10px;
+    text-align: right;
+    &.sortable {
+      cursor: pointer;
+    }
+    &.sorted {
+      color: #0eb7cc;
+      &:after {
+        @extend %icon;
+        @extend .float-left;
+      }
+    }
+    &.desc:after {
+      content: 'arrow_upward';
+    }
+    &.asc:after {
+      content: 'arrow_downward';
+    }
+  }
+  td {
+    padding: 10px 10px;
+    border-bottom: 1px #f0f0f0 dotted;
+
+    &.empty {
+      text-align: center;
+      padding: 15px;
+    }
+
+    &.mines:before, &.plus:before {
+      @extend %icon;
+      @extend .float-right;
+      margin-left: 8px;
+    }
+
+    &.mines {
+      color: #c55757;
+      &:before {
+        content: 'arrow_downward';
+      }
+    }
+    &.plus {
+      color: #009688;
+      &:before {
+        content: 'arrow_upward';
+      }
+    }
+  }
+  
+  td.sorted, th.sorted {
+    background-color: #f1fafb;
+  }
+
+  .row-actions {
+    a {
+      margin-left: 10px;
+      padding-left: 10px;
+      border-left: 1px #ccc dotted;
+      &:last-child {
+        border-left: 0;
+        margin-left: 0;
+      }
+    }
+  }
+
+}
+
+div.table {
+  .row {
+    margin: 10px 0;
+    background: #fff;
+    //box-shadow: 0 1px 2.5px rgba(0,0,0,.15);
+    //border-radius: 5px;
+    //align-items: center;
+    padding: .7em;
+  }
+}
+
+div.table.table-mini {
+  background: white;
+  div.table-row {
+    //padding: 10px 30px;
+    border-bottom: 3px #b8b8b8 dashed;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    .table-column {
+      margin: 0;
+      padding: 8px 0;
+      border-bottom: 1px #ccc dotted;
+      .column-name {
+        font-weight: 400;
+      }
+      .column-value {
+        font-weight: 600;
+      }
+      &:last-child {
+        border-bottom: 0;
+      }
+    }
+  }
+}
+
+
+.table-container {
+  padding: 15px 30px;
+}
+
+.currencies-table {
+  .table-container {
+    background-color: #fff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07), 0 10px 17px rgba(0, 0, 0, 0.05);
+    //box-shadow: 0 40px 70px rgb(229, 236, 253), 0 120px 60px -11px rgb(213, 216, 225);
+  }
+}
+
+.table-currency {
+
+  td[class*="column-change"] {
+    font-size: 1.3em;
+  }
+
+  td.column-priceUsd {
+    font-weight: 400;
+  }
+
+  font-size: 1.1em;
+
+  @include when(1040px) {
+    font-size: 1em;
+  }
+
+  th.column {
+    //background: #6f798b;
+    color: #26414f;
+    border-bottom: 0;
+    font-size: 1em;
+    line-height: 4.3em;
+    text-align: right;
+    font-weight: 100;
+    white-space: nowrap;
+    &.sortable {
+      cursor: pointer;
+    }
+    &.asc, &.desc {
+      //background: #57616e;
+      font-weight: 500;
+    }
+  }
+
+  tbody {
+    td {
+      padding: 8px 10px;
+
+      img.currency {
+        @extend %trans2ms;
+        width: 24px;
+        opacity: .6;
+      }
+
+    }
+    tr {
+      &:nth-child(even) {
+        background: #f7f7f7;
+      }
+      &:nth-child(odd) {
+        //background-color: #ededed;
+      }
+
+      &:hover {
+        img.currency { opacity: 1 }
+      }
+    }
+  }
+
+  td.sorted {
+    background: rgba(108, 183, 124, 0.04);
+  }
+
+  th.sorted {
+    background: linear-gradient(rgba(0,0,0,0), rgba(108, 183, 124, 0.04));
+    border-radius: 10px 10px 0 0;
+  }
+
+}

@@ -1,0 +1,48 @@
+@import "util";
+
+.card {
+  background: white;
+  //box-shadow: 0 0 1px rgba(0, 0, 0, 0.2), 0 2px 5px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 10px 0 rgba(0,0,0,.05);
+  padding: 10px 20px;
+  border-radius: 5px;
+  margin: 0 0 15px 0;
+
+  h2 {
+    margin: 0;
+    padding: 5px 0 15px 0;
+    opacity: .6;
+    font-weight: 400;
+  }
+
+  .buttons {
+    display: flex !important;
+    button {
+      flex: 1;
+    }
+  }
+
+  .details {
+    padding: 0 !important;
+  }
+
+  &.blue {
+    background-color: #34aed4;
+    background: linear-gradient(-30deg, #52a3dc, #1879b1) !important;
+    box-shadow: none;
+  }
+
+  &.green {
+      background-color: #7fc034;
+      background: linear-gradient(130deg, #5c9f10, #7fc034 110%) !important;
+      box-shadow: none;
+  }
+}
+
+.theme-dark {
+  color: white;
+  button {
+    background: #fff;
+    color: black;
+  }
+}

@@ -1,0 +1,154 @@
+@import "./util";
+// @import "~bootstrap/scss/bootstrap-grid";
+
+input, textarea, select {
+  @extend %font;
+  padding: 5px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 2px;
+  &:focus {
+    outline: none;
+  }
+
+  &.code {
+    font-family: sans-serif;
+  }
+
+  &.linear {
+    background: none !important;
+    border: 0 !important;
+    border-bottom: 2px #f0f0f0 solid !important;
+  }
+
+  &[readonly] {
+    background: #f7f7f7;
+    border: 0;
+  }
+
+  &.large {
+    font-size: 1.2em;
+  }
+
+  &.fit {
+    width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+.theme-dark {
+  input, textarea, select {
+    background: rgba(255,255,255,.8);
+    border: 0;
+    color: white;
+    &::placeholder {
+      color: white;
+    }
+
+    &.linear {
+      border-bottom-color: #fff3 !important;
+    }
+  }
+}
+
+
+.input-container {
+  padding: 3px;
+  & > label {
+    //min-width: 25%;
+    padding: 5px 10px 5px 30px;
+    font-weight: 500;
+    display: inline-block;
+  }
+  &.has-icon {
+    input, select, textarea {
+      text-indent: 23px;
+    }
+  }
+  .input {
+    display: inline-block;
+    position: relative;
+    .icon {
+      position: absolute;
+      @extend %center-y;
+      right: 10px;
+      width: 15px;
+      color: #444444;
+    }
+    img.icon {
+      opacity: .5;
+    }
+  }
+
+  .input-hint {
+    color: #616161;
+    display: block;
+    //margin-right: 25%;
+    padding: 5px 0;
+    font-size: .9em;
+  }
+
+  &.input-ltr {
+    .icon {
+      right: auto;
+      left: 10px;
+    }
+  }
+
+  &.row {
+    margin-right: 0;
+    margin-left: 0;
+    .input {
+      .icon {
+        right: 25px;
+        left: auto;
+      }
+    }
+    &.input-ltr {
+      .icon {
+        right: auto;
+        left: 25px;
+      }
+    }
+  }
+}
+
+
+.inputs-row {
+
+  label {
+    padding: 5px 0 10px 0 !important;
+  }
+
+  .input {
+    display: block !important;
+  }
+
+  label, input, textarea, div.buttons, select {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .buttons {
+    padding: 8px 0;
+  }
+
+}
+
+.inputs-flex {
+  .input-container {
+    display: flex;
+    align-items: center;
+    & > label {
+      @extend .col-5;
+      min-width: auto;
+      width: auto;
+    }
+    & > .input {
+      flex: 1;
+      input:not([type="checkbox"]), textarea, select {
+        width: 100%;
+      }
+    }
+  }
+}

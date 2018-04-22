@@ -1,0 +1,17 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2017",
+        "inlineSourceMap": true,
+        "outDir": "./",
+        "declaration": true,
+        "experimentalDecorators": true,
+        "jsxFactory": "h",
+        "jsx": "react",
+        "importHelpers": true
+    },
+    "include": ["src"],
+    "exclude": [
+        "node_modules"
+    ]
+}
