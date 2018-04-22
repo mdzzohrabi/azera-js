@@ -1,0 +1,21 @@
+{
+    "name": "ts-go",
+    "description": "Typescript Module Template",
+    "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
+    "version": "1.0.4",
+    "main": "index.js",
+    "bin": {
+        "ts-go": "./bin/run.js"
+    },
+    "preferGlobal": true,
+    "files": [
+        "template",
+        "index.js",
+        "bin/run.js"
+    ],
+    "dependencies": {
+        "debug": "^3.1.0",
+        "ncp": "^2.0.0",
+        "yargs": "^11.0.0"
+    }
+}

@@ -1,0 +1,26 @@
+{
+    "name": "ts-project",
+    "description": "Typescript Module Template",
+    "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
+    "version": "1.0.0",
+    "main": "index.js",
+    "scripts": {
+        "ts:test": "bin/test",
+        "ts:run": "ts-node src/index.ts",
+        "test": "mocha tests/*.spec.js",
+        "build": "tsc -p tsconfig.json",
+        "start": "node index.js",
+        "git:commit": "git add * & git commit -m",
+        "git:push": "git push origin master"
+    },
+    "dependencies": {
+    },
+    "devDependencies": {
+        "@types/mocha": "^2.2.46",
+        "@types/node": "^9.3.0",
+        "mocha": "^4.1.0",
+        "tslint": "^5.9.1",
+        "typescript": "^2.6.2",
+        "ts-node": "^5.0.1"
+    }
+}
