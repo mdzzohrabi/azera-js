@@ -1,0 +1,28 @@
+{
+    "name": "@azera/reflect",
+    "description": "Reflection util",
+    "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
+    "license": "MIT",
+    "version": "1.0.4",
+    "main": "index.js",
+    "scripts": {
+        "build": "tsc",
+        "test": "mocha test/*.spec.js",
+        "ts:test": "mocha -r ts-node/registe src/test/*.ts",
+        "git:commit": "git add * & git commit -m",
+        "git:push": "git push origin master"
+    },
+    "files": [
+        "index.js",
+        "index.d.ts"
+    ],
+    "dependencies": {
+        "@azera/util": "^1.0.12"
+    },
+    "devDependencies": {
+        "@types/mocha": "^2.2.46",
+        "@types/node": "^9.3.0",
+        "mocha": "^4.1.0",
+        "typescript": "^2.6.2"
+    }
+}
