@@ -1,0 +1,16 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es2017",
+        "inlineSourceMap": true,
+        "outDir": "./",
+        "declaration": true,
+        "experimentalDecorators": true,
+        "importHelpers": true,
+        "emitDecoratorMetadata": true
+    },
+    "include": ["src"],
+    "exclude": [
+        "node_modules"
+    ]
+}
