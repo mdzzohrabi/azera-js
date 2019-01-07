@@ -117,7 +117,7 @@ export class Container implements IContainer {
         let name = service.name;
         let result: any;
 
-        if (name == undefined || is.Empty(name)) throw Error(`Service has no name`);
+        if (!service.invoke && (name == undefined || is.Empty(name))) throw Error(`Service has no name`);
 
         if ( is.Array(service.autoTags) ) {
             service.autoTags.forEach( item => {

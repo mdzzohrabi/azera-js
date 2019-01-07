@@ -88,8 +88,6 @@ export function extendDefinition(value: any, definition: Partial<IDefinition>): 
     if ( definition.methods ) {
         definition.methods = Object.assign(old.methods, definition.methods);
     }
-
-    //@ts-ignore
     return target[DEF] = Definition( Object.assign( old, definition ) );
 }
 
@@ -121,8 +119,8 @@ function getParameterServiceOrThrow(service: any, target: any, key: any, index: 
  * @param options Property injection options
  */
 export function Inject(services: ( Function | string )[]): ClassDecorator;
-export function Inject(service?: Function | string, options?: IPropertyInjectionOptions): ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator;
-export function Inject(service?: any, options?: any): ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator
+export function Inject(service?: Function | string, options?: IPropertyInjectionOptions): any;//ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator;
+export function Inject(service?: any, options?: any): any//ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator
 {
     return (target: any, key: any, index: any) => {
         let type = Decorator.getType(target, key, index);

@@ -22,8 +22,8 @@ export type ServiceDefinitionCollection = HashMap<Service>;
 
 export interface IContainer {
 
-    set(values: { [name: string]: ContainerValue }[] ): this;
-    set(name: string, value: ContainerValue): this;
+    set(values: { [name: string]: IDefinition | ContainerValue }[] ): this;
+    set(name: string, value: IDefinition | ContainerValue ): this;
 
     get <T>(name: string): T | undefined;
 

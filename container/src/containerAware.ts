@@ -2,7 +2,7 @@ import { Container } from ".";
 import { setDefinition } from "./decorators";
 import { IInternalDefinition, Constructor } from "./types";
 
-export function ContainerAware <TBase extends Constructor>(extend: TBase) {
+export function ContainerAware <TBase extends Constructor>(extend: TBase = undefined) {
 
     extend = extend || class {} as any;
 

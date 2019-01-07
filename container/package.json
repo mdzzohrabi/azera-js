@@ -4,6 +4,7 @@
     "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
     "version": "1.1.0",
     "main": "build/index.js",
+    "types": "build/index.d.ts",
     "directories": {
         "bin": "build",
         "doc": "README.md",
@@ -11,7 +12,7 @@
     },
     "license": "MIT",
     "scripts": {
-        "ts:test": ".bin/test",
+        "ts:test": "cd src/tests & mocha -r ts-node/register *.spec.ts",
         "build": "gulp clean & tsc -p tsconfig.json",
         "test": "mocha tests/*.spec.js",
         "git:commit": "git add * & git commit -m",
@@ -19,7 +20,7 @@
         "clean": "gulp clean"
     },
     "files": [
-        "build",
+        "build/**/*",
         "*.MD"
     ],
     "dependencies": {

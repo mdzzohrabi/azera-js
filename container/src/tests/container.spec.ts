@@ -172,7 +172,7 @@ describe('Container', () => {
                         hello() { return 'hello'; }
                     },
                     private: true
-                } as IDefinition
+                }
             });
 
             ok(container.has('logger'));
@@ -237,7 +237,7 @@ describe('Container', () => {
             @Inject([ '$version' ])
             class ConsoleApp {
 
-                @Inject('$$command') commands: ICommand[];
+                @Inject('$$command') commands: ICommand[] = [];
 
                 constructor( public version: string) {}
             }
@@ -261,16 +261,23 @@ describe('Container', () => {
 
                 consoleClass: ConsoleApp
 
-            } as IServices);
+            });
 
             equal( container.getByTag('command').length, 2);
 
             equal( container.findByTag('command').length, 2);
 
-            let console = container.get<{ commands: Function[] }>('console');
-            equal( console.commands.length , 2);
+            let vConsole = container.get<{ commands: Function[] }>('console');
+            equal( vConsole.commands.length , 2);
 
             let app = container.get<ConsoleApp>('consoleClass');
+
+            console.log(container.getDefinition(ConsoleApp));
+
+            deepEqual(container.getDefinition(ConsoleApp).properties, {
+                commands: []
+            });
+
             equal( app.version, '1.0.0' );
             equal( app.commands.length, 2 );
             equal( app.commands[0].command, '45');
