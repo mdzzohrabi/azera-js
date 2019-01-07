@@ -2,8 +2,12 @@ import { is } from "@azera/util";
 import { Container, Definition, getDependencies, isFactory } from "./container";
 import { IDefinition, IInternalDefinition } from "./types";
 import "reflect-metadata";
+import { Decorator } from './util';
+import { DecoratorError } from './errors';
+let { Type } = Decorator;
 
-export const DEF = Symbol('definition');
+
+export const DEF = Symbol('service');
 
 /**
  * Get a class constructor
@@ -18,23 +22,25 @@ export function getTarget(value: any): FunctionConstructor {
  * @param {Function} value Function or class to check
  */
 export function hasDefinition(value: Function): boolean {
+    //@ts-ignore
     return !!getTarget(value)[ DEF ];
 }
 
 export function emitTypes() {
-    return (target, method) => null;
+    return (target: any, method: string) => null;
 }
 
 /**
  * Get default class definition
  * @param {Function} target 
  */
-export function getInitialDefinition(target: Function, context?): IDefinition {
+export function getInitialDefinition(target: Function, context?: any): IDefinition {
 
     let deps = getDependencies(target).deps;
 
     if (context) {
         if ( Reflect.hasMetadata("design:paramtypes", context, target.name) ) {
+            //@ts-ignore
             let types = Reflect.getMetadata("design:paramtypes", context, target.name);
             
         }
@@ -50,42 +56,62 @@ export function getInitialDefinition(target: Function, context?): IDefinition {
         private: false,
         tags: [],
         isFactory: isFactory(target),
-        invoke: !is.Class(target)
+        invoke: !is.Class(target),
+        methods: {},
+        imports: [],
+        autoTags: []
     } as IInternalDefinition);
 }
 
 /**
  * Get decorated definition for a class or function
  */
-export function getDefinition(value, context?): IDefinition {
+export function getDefinition(value: any, context?: any): IDefinition {
     let target = getTarget(value);
+    //@ts-ignore
     return target[DEF] || ( target[DEF] = getInitialDefinition(target, context) );
 }
 
 /**
  * set decorated definition for a class or function
  */
-export function setDefinition(value, definition: IDefinition): IDefinition {
+export function setDefinition(value: any, definition: Partial<IDefinition>): IDefinition {
     return extendDefinition(value, definition);
     // let target = getTarget(value);
     // return target[DEF] || ( target[DEF] = Definition(Object.assign({ name: target.name }, definition)) );
 }
 
-export function extendDefinition(value, definition: IDefinition): IDefinition {
+export function extendDefinition(value: any, definition: Partial<IDefinition>): IDefinition {
     let target = getTarget(value);
-    return target[DEF] = Definition( Object.assign( getDefinition(target), definition ) );
+    let old = getDefinition(target);
+    // Fix methods combine
+    if ( definition.methods ) {
+        definition.methods = Object.assign(old.methods, definition.methods);
+    }
+
+    //@ts-ignore
+    return target[DEF] = Definition( Object.assign( old, definition ) );
 }
 
 export interface IPropertyInjectionOptions {
     lateBinding?: boolean;
 }
 
-function optimizeServiceType(type, name: string) {
+function optimizeServiceType(type: any, name: string) {
     if ( type == Array )
          return '$$' + name;
     else if ( type == String || type == Object || type == Number )
         return '$' + name;
     return type;
+}
+
+function getParameterServiceOrThrow(service: any, target: any, key: any, index: any) {
+    if ( service ) return service;
+    if ( Reflect.hasMetadata('design:paramtypes', target, key) ) {
+        return optimizeServiceType( Reflect.getMetadata('design:paramtypes', target, key)[index], key );
+    } else if ( !service ) {
+        throw new DecoratorError(`Please specify service for parameter injection`, target, key, index);
+    }
 }
 
 /**
@@ -95,46 +121,42 @@ function optimizeServiceType(type, name: string) {
  * @param options Property injection options
  */
 export function Inject(services: ( Function | string )[]): ClassDecorator;
-export function Inject(service?: Function | string, options?: IPropertyInjectionOptions);
-export function Inject(service?, options?)
+export function Inject(service?: Function | string, options?: IPropertyInjectionOptions): ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator;
+export function Inject(service?: any, options?: any): ClassDecorator | MethodDecorator | PropertyDecorator | ParameterDecorator
 {
-    return (target, key, index) => {
+    return (target: any, key: any, index: any) => {
+        let type = Decorator.getType(target, key, index);
 
-        // Property decorator
-        if ( !key && index >= 0 ) {
+        switch (type) {
+            case Type.MethodParameter:
+                service  = getParameterServiceOrThrow(service, target, key, index);
+                let def = getDefinition(target);
+                if ( !is.Array(def.methods[key]) ) def.methods[key] = [];
+                def.methods[key][index] = service;
+                break;
+            case Type.Method:
+                // throw new DecoratorError(`Decorate ${ type } not allowed`, target, key, index);
 
-            if ( !service ) {
-                if ( Reflect.hasMetadata('design:paramtypes', target, key) ) {
-                    service = optimizeServiceType( Reflect.getMetadata('design:paramtypes', target, key)[0], key );
-                } else {
-                    throw Error(`Please specify service for parameter injection`);
-                }
-            }
-
-            getDefinition(target).parameters[index] = service;
-
-        } else if ( key ) {
-
-            if ( index ) throw Error(`Method parameter injection not supported.`);
-            
-            options = Object.assign({
-                lateBinding: true
-            }, options);
-
-            if ( key && !service ) {
-                // Property
-                // console.log(target, key, index, service, Reflect.getMetadata("design:paramtypes", target,key));
-                if ( Reflect.hasMetadata("design:type", target, key) )
+                break;
+            case Type.ConstructorParameter:
+                service = getParameterServiceOrThrow(service, target, key, index);
+                getDefinition(target).parameters[index] = service;                
+                break;
+            case Type.Property:
+                options = Object.assign({
+                    lateBinding: true
+                }, options);
+    
+                if ( !service && Reflect.hasMetadata("design:type", target, key) )
                     service = optimizeServiceType( Reflect.getMetadata("design:type", target, key), key );
-            }
-
-            getDefinition(target).properties[key] = options ? Object.assign({ name: service }, options) : service;
-        } else {
-            // Class decorator
-            setDefinition(target, {
-                parameters: service
-            });
-            // target['$inject'] = service;
+    
+                getDefinition(target).properties[key] = options ? Object.assign({ name: service }, options) : service;
+                break;
+            case Type.Class:
+                setDefinition(target, {
+                    parameters: is.Array(service) ? service : [service]
+                });
+                break;
         }
     };
 }
@@ -145,7 +167,7 @@ export function Tag(...tags: string[]): ClassDecorator {
     };
 }
 
-export function Service(definition: IDefinition | string): ClassDecorator {
+export function Service(definition: Partial<IDefinition> | string): ClassDecorator {
     return target => {
 
         if ( typeof definition === 'string' ) {

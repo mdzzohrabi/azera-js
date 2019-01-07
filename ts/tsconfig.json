@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "outDir": "build",
+        "emitDecoratorMetadata": true,
+        "noUnusedLocals": true,
+        "experimentalDecorators": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "inlineSourceMap": false,
+        "sourceMap": true,
+        "preserveSymlinks": true,
+        "declaration": true,
+        "importHelpers": true,
+        "target": "esnext"
+    },
+    "include": ["src"],
+    "exclude": [
+        "node_modules"
+    ]
+}

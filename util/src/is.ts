@@ -1,7 +1,7 @@
 let isArray = Array.isArray;
 let RegExpFunction = RegExp;
-let toString = (value) => Object.prototype.toString.call(value);
-let keys = (value) => Object.keys(value);
+let toString = (value: any) => Object.prototype.toString.call(value);
+let keys = (value: object) => Object.keys(value);
 
 const CLASS_REGEX = /^class\s+/;
 
@@ -20,25 +20,25 @@ export namespace is {
 
     export let Promise = <T>(value: Promise<T> | any): value is Promise<T> => value && value instanceof global.Promise;
 
-    export let Empty = (value): boolean => !value || keys(value).length == 0;
+    export let Empty = (value: any): value is any => !value || keys(value).length == 0;
 
-    export let HashMap = <V>(value): value is HashMap<V> => toString(value) == LABEL.Object;
+    export let HashMap = <V>(value: any): value is HashMap<V> => toString(value) == LABEL.Object;
 
-    export let Object = (value): value is object => typeof value === 'object';
+    export let Object = (value: any): value is object => typeof value === 'object';
 
-    export let String = (value): value is string => typeof value == 'string';
+    export let String = (value: any): value is string => typeof value == 'string';
 
-    export let Function = (value): value is Function => typeof value === 'function';
+    export let Function = (value: any): value is Function => typeof value === 'function';
 
     export let Async = (value: Function) => toString(value) == LABEL.AsyncFunction;
 
-    export let Array = (value): value is Array<any> => isArray(value);
+    export let Array = (value: any): value is Array<any> => isArray(value);
 
-    export let InstanceOf = <T extends Function>(value, object: T): value is T => typeof value === 'object' && value instanceof object;
+    export let InstanceOf = <T extends Function>(value: any, object: T): value is T => typeof value === 'object' && value instanceof object;
 
-    export let RegExp = (value): value is RegExp => InstanceOf(value, RegExpFunction);
+    export let RegExp = (value: any): value is RegExp => InstanceOf(value, RegExpFunction);
 
-    export let Number = (value): value is number => typeof value == 'number';
+    export let Number = (value: any): value is number => typeof value == 'number';
 
     export let Newable = <T>(value: T): value is T & (new () => T) => is.Function(value) && !!value.prototype && value.constructor.name == 'Function';
 

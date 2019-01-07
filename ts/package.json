@@ -1,0 +1,10 @@
+{
+  "name": "@azera/ts",
+  "version": "1.0.0",
+  "description": "Azera TypeScript Project Config",
+  "main": "index.js",
+  "scripts": {},
+  "files": ["tsconfig.json"],
+  "author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
+  "license": "ISC"
+}

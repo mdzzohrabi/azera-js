@@ -1,34 +1,23 @@
-import { ContainerValue, Factory, IContainer, IDefinition, Service, Injectable, IAutoTagger, IInternalDefinition, Constructor, MockMethod, Invokable, InjectableFunction, IFactory, FunctionOf, IMethod } from "./types";
-import { ok } from "assert";
-import { forEach, is, parseFunction } from "@azera/util";
 import { getParameters } from "@azera/reflect";
+import { forEach, is } from "@azera/util";
 import { HashMap } from "@azera/util/is";
-import { hasDefinition, getDefinition, getTarget, setDefinition, DEF, extendDefinition } from "./decorators";
-import { WSASERVICE_NOT_FOUND } from "constants";
+import { ok } from "assert";
+import * as glob from "glob";
+import { DEF, getDefinition, hasDefinition, setDefinition } from "./decorators";
+import { ServiceNotFoundError } from "./errors";
+import { ContainerValue, Factory, IAutoTagger, IContainer, IDefinition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, Service, IPropertyInjection } from "./types";
 
 const FACTORY_REGEX = /.*Factory$/;
 
-// export class ServiceError extends Error {
-//     constructor() {
-//         super();
-//     }
-// }
-
-export class ServiceNotFoundError extends Error {
-    constructor(name: string, stack = []) {
-        super(`Service ${name} not found${ stack.length > 0 ? ', Stack: ' + stack.join(' -> ') : '' }.`);
-    }
-}
-
 interface IInvokeOptions {
     context?: any;
-    override?: IDefinition;
+    override?: Partial<IDefinition>;
 }
 
 export class Container implements IContainer {
 
     static isInheritedServiceDecorator(target: Function): boolean {
-        return target[DEF] && !target.hasOwnProperty(DEF);
+        return (<any>target)[DEF] && !target.hasOwnProperty(DEF);
         // return ( getDefinition(target) as IInternalDefinition ).$target !== target;
     }
 
@@ -50,13 +39,14 @@ export class Container implements IContainer {
     private services: HashMap<IDefinition> = {};
     private autoTags: IAutoTagger[] = [];
     private factories = new WeakMap <any, Factory>();
+    private imported: any[] = [];
 
     constructor(services?: HashMap<Service> , parameters?: HashMap<any> , autoTags?: IAutoTagger[]) {
         if ( autoTags ) this.autoTags = autoTags;
         if ( services ) this.set(services);
         if ( parameters ) this.params = parameters;
 
-        this.set('serviceContainer', function containerFactory() {
+        this.set('serviceContainer', function containerFactory(this: Container) {
             return this;
         });
 
@@ -72,11 +62,11 @@ export class Container implements IContainer {
      * @param _stack  Stack
      * @internal
      */
-    private buildFromFactory <T>(factory: Factory<T>, _stack = []): T {
-        let result, override = { isFactory: false, invoke: true };
+    private buildFromFactory <T>(factory: Factory<T>, _stack: string[] = []): T {
+        let result: any, override = { isFactory: false, invoke: true };
         
         if ( is.Class(factory) ) {
-            let context = this._invoke(factory, _stack);
+            let context = this._invoke(factory, _stack, { override: { isFactory: false } });
             result = this._invoke(Method(context, 'create') , _stack, { context, override });
         } else if ( is.Function(factory) ) {
             result = this._invoke(factory, _stack, { context: this, override });
@@ -89,6 +79,29 @@ export class Container implements IContainer {
         return result;
     }
 
+    private resolveImport(item: string | Function) {
+        if ( this.imported.includes(item) ) return;
+        this.imported.push( item );
+        if ( is.Function(item) ) this.add(item);
+        else if ( is.String(item) ) {
+            item = item + '!(*.d.ts).@(ts|js)'; // Ignore 
+            let files = glob.sync(item) || [];
+            files.forEach( file => {
+                let module = require(file);
+                forEach(module, moduleClass => {
+                    if ( is.Function(moduleClass) ) {
+                        this.add(moduleClass);
+                    }
+                });
+            });
+        }
+    }
+
+    private resolveImports(service: IDefinition) {
+        if ( !service.imports ) return;
+        service.imports.forEach( this.resolveImport.bind(this) );
+    }
+
     /**
      * Creation happens here
      * 
@@ -97,16 +110,29 @@ export class Container implements IContainer {
      * @param options       Options
      * @internal
      */
-    private resolveDefinition(definition: IDefinition, _stack, options?: IInvokeOptions) {
+    private resolveDefinition(definition: IDefinition, _stack: string[], options?: IInvokeOptions) {
 
         let { context, override }: IInvokeOptions = options || {};
         let service = override ? Object.assign(definition, override) : definition;
         let name = service.name;
-        let result;
+        let result: any;
+
+        if (name == undefined || is.Empty(name)) throw Error(`Service has no name`);
+
+        if ( is.Array(service.autoTags) ) {
+            service.autoTags.forEach( item => {
+                if ( is.Function(item) ) this.autoTag( item );
+                else this.autoTag( item.class, item.tags );
+            });
+        }
+
+        // Imports
+        this.resolveImports(service);
 
         // Factory
-        if ( this.factories.has(service.service) ) {
-            result = this.buildFromFactory( this.factories.get(service.service), _stack );
+        if ( service.service instanceof Function && this.factories.has(service.service) ) {
+            let factory = this.factories.get(service.service) as Factory;
+            result = this.buildFromFactory( factory, _stack );
         } else {
 
             ok( is.Array(service.parameters || []), `Service ${name} parameters must be array, ${ service.parameters } given` );
@@ -114,9 +140,11 @@ export class Container implements IContainer {
             let resolvedParameters = ( service.parameters || [] ).map( dep => this._invoke(dep, _stack, options) );
             let target = service.service;
 
+            if ( target == undefined ) throw Error(`No service defined for ${name}`);
+
             // Factory
             if ( service.isFactory ) {
-                result = this.buildFromFactory(target as any, _stack);
+                result = this.buildFromFactory(target as Factory, _stack);
             }
             // Service
             else
@@ -131,17 +159,21 @@ export class Container implements IContainer {
                 if ( service.properties ) {
                     forEach(service.properties, ( dep, key ) => {
 
+                        let prop: IPropertyInjection;
+
                         if ( is.String(dep) || is.Function(dep) ) {
-                            dep = { name: dep };
+                            prop = { name: dep };
+                        } else {
+                            prop = dep;
                         }
 
-                        if ( dep.lateBinding ) {
-                            let resolved;
+                        if ( prop.lateBinding ) {
+                            let resolved: any;
                             Object.defineProperty(result, key, {
-                                get: () => resolved || ( resolved = this._invoke(dep['name'], _stack, options) )
+                                get: () => resolved || ( resolved = this._invoke(prop.name, _stack, options) )
                             });
                         } else {
-                            result[key] = this._invoke(dep.name, _stack, options);
+                            result[key] = this._invoke(prop.name, _stack, options);
                         }
                     });
                 }
@@ -157,7 +189,14 @@ export class Container implements IContainer {
         return result;
     }
 
-    private getService <T>(name: string, stack = []): T {
+    /**
+     * Find and resolve a service definition by name
+     * @param name Service name
+     * @param stack internal use for debugging
+     * @returns {T}
+     * @throws ServiceNotFoundError
+     */
+    private getService <T>(name: string, stack: string[] = []): T {
         let service: IDefinition;
 
         if (service = this.services[name]) {
@@ -174,9 +213,11 @@ export class Container implements IContainer {
         throw new ServiceNotFoundError(name, stack);
     }
 
-    private _get <T>(name: string, stack = []): T {
+    private _get <T>(name?: string, stack: string[] = []): T | undefined {
 
-        stack = [].concat(stack);
+        if ( name == undefined ) return undefined;
+
+        stack = (<string[]>[]).concat(stack);
         stack.push(name);
 
         // Cached
@@ -197,31 +238,31 @@ export class Container implements IContainer {
      * @param {string} name
      * @returns {T}
      */
-    get<T>(name: string): T {
+    get<T>(name: string): T | undefined {
         return this._get <T>(name);
     }
 
     getByTag<T>(tag: string): T[] {
         return this.findByTag(tag).map( definition => {
             return this._get(definition.name);
-        });
+        }).filter((service): service is T => service != undefined);
     }
 
     findByTag(tag: string): IDefinition[] {
-        let services = [];
+        let services: IDefinition[] = [];
         forEach(this.services, service => {
-            if ( service.tags.includes(tag) )
+            if ( is.Array(service.tags) && service.tags.includes(tag) )
                 services.push( service );
         });
         return services;
     }
 
-    invokeLater <T extends object, M extends keyof T>(context: T, method?: M): MockMethod<T, M>;
-    invokeLater(context, method?): Function
+    invokeLater <T extends object, M extends keyof T>(context: T, method: M): MockMethod<T, M>;
+    invokeLater(context: any, method: string): Function
     {
         if ( Reflect.hasMetadata("design:paramtypes", context, method) ) {
             let types: any[] = Reflect.getMetadata("design:paramtypes", context, method);
-            let params = getParameters(context[method]);
+            // let params = getParameters(context[method]);
             let endOfDep = false;
             let deps = types.map((type, i) => {
                 if ( isInternalClass(type) ) {
@@ -234,7 +275,7 @@ export class Container implements IContainer {
 
             let resolved: any[];
 
-            return (...params) => {
+            return (...params: any[]) => {
                 return context[method].apply( context, ( resolved ? resolved : resolved = deps.map( dep => this._invoke(dep) ) ).concat(params) );
             };
 
@@ -246,20 +287,20 @@ export class Container implements IContainer {
     /**
      * Invoke a function and resolve its dependencies
      */
-    invoke<T>(value: Invokable<T>): T
+    invoke<T>(value: Invokable<T>): T | undefined
     {
         return this._invoke(value);
     }
 
-    private _invoke <T>(value: Invokable<T>, stack = [], options?: IInvokeOptions ): T {
+    private _invoke <T>(value: Invokable<T>, stack: string[] = [], options?: IInvokeOptions ): T | undefined {
 
         // String
         if ( is.String(value) ) return this._get(value, stack);
 
         // Function or Class
-        if ( is.Function(value) || isMethod(value) ) {
+        if ( is.Function(value) || isMethod(value) || is.Array(value) ) {
             let def = this.getDefinition(value);
-            if ( this.instances[def.name] ) return this.instances[def.name];
+            if ( !is.Empty(def.name) && this.instances[def.name] ) return this.instances[def.name];
             return this.resolveDefinition(def, [], options);
         }
 
@@ -268,7 +309,7 @@ export class Container implements IContainer {
     }
 
 
-    setParameter(name: string, value): this {
+    setParameter(name: string, value: any): this {
         this.params[name] = value;
         return this;
     }
@@ -284,7 +325,7 @@ export class Container implements IContainer {
      */
     set(values: { [name: string]: ContainerValue }): this;
     set(name: string, value: ContainerValue | IDefinition): this;
-    set(...params) {
+    set(...params: any[]) {
 
         // Collection of values
         if (is.HashMap<ContainerValue>(params[0]))
@@ -301,7 +342,12 @@ export class Container implements IContainer {
                 parameters: deps,
                 isFactory: isFactory(func),
                 private: false,
-                tags: []
+                tags: [],
+                autoTags: [],
+                imports: [],
+                invoke: false,
+                methods: {},
+                properties: {}
             });
         }
         else this.setParameter(name, value);
@@ -310,29 +356,38 @@ export class Container implements IContainer {
     }
 
 
-    getDefinition(target: string | Function | IMethod): IDefinition {
+    getDefinition(target: string | IMethod | Injectable): IDefinition {
+
+        let customDeps, def: IDefinition;
+
+        if ( is.Array( target ) ) {
+            let { deps, func } = getDependencies( target );
+            target = func;
+            customDeps = deps;
+        }
 
         if ( is.Function(target) ) {
-            let def = getDefinition(target) as IInternalDefinition;
+            def = getDefinition(target) as IInternalDefinition;
             Container.checkInheritance(target);
-            return def;
-
         } else if ( isMethod(target) ) {
-
             let method = target.context[ target.method ];
-            let def = getDefinition(method, target.context);
-            Container.checkInheritance( def.service );
-            return def;
-
-        } else if ( !is.String(target) ) {
+            def = getDefinition(method, target.context);
+            def.service && Container.checkInheritance( def.service );
+        } else if ( is.String(target) ) {
+            if ( !this.services[target] ) {
+                throw new ServiceNotFoundError(target);
+            }
+            def = this.services[target];                
+        } else {
             throw TypeError(`getDefinition only accepts function or string.`);
         }
 
-        if ( !this.services[target] ) {
-            throw new ServiceNotFoundError(target);
+        if ( customDeps ) {
+            def = Object.assign({}, def);
+            def.parameters = customDeps;
         }
 
-        return this.services[target];
+        return def;
     }
 
     addDefinition(definition: IDefinition): this {
@@ -340,14 +395,14 @@ export class Container implements IContainer {
         definition = Definition(definition);
 
         // Service decorated definition
-        if ( hasDefinition( definition.service ) ) {
+        if ( definition.service && hasDefinition( definition.service ) ) {
             definition = Object.assign( getDefinition(definition.service), definition );
         }
 
         // Auto tagging
         if ( (definition.tags || []).length == 0 )
             this.autoTags.forEach( tagger => {
-                definition.tags = [].concat( definition.tags || [] , tagger(definition) || [] );
+                definition.tags = (<string[]>[]).concat( definition.tags || [] , tagger(definition) || [] );
             });
 
 
@@ -371,10 +426,10 @@ export class Container implements IContainer {
 
     autoTag(tagger: IAutoTagger): this;
     autoTag(base: Function, tags: string[]): this;
-    autoTag(...params): this
+    autoTag(...params: any[]): this
     {
         if ( params[1] ) {
-            this.autoTags.push( def => def.service.prototype instanceof params[0] ? params[1] : [] );
+            this.autoTags.push( def => def.service && def.service.prototype instanceof params[0] ? params[1] : [] );
         } else {
             this.autoTags.push( params[0] );
         }
@@ -406,8 +461,18 @@ export class Container implements IContainer {
     }
     
     [Symbol.iterator]() {
-        return Object.values(this.services);
+        let keys = Object.keys(this.services);
+        return {
+            next() {
+                return {
+                    done: keys.length > 0,
+                    value: keys.pop()
+                }
+            }
+        };
     }
+
+
 
 }
 
@@ -429,7 +494,7 @@ export function getDependencies(value: Injectable | IMethod) {
 
     } else if (is.Function(value)) {
         func = value;
-        deps = value['$inject'] || ( hasDefinition(value) && getDefinition(value).parameters ) || ( getParameters(value) );
+        deps = (<any>value)['$inject'] || ( hasDefinition(value) && getDefinition(value).parameters ) || ( getParameters(value) );
 
     } else if (is.Array(value)) {
         
@@ -454,21 +519,21 @@ export function Definition(definition: IDefinition): IDefinition {
     return definition;
 }
 
-export function isFactory(value): value is Factory { return value instanceof Function && FACTORY_REGEX.test(value.name); }
-export function isService(value): value is Service { return value instanceof Function && !FACTORY_REGEX.test(value.name); }
-export function isDefinition(value): value is IDefinition {
+export function isFactory(value: any): value is Factory { return value instanceof Function && FACTORY_REGEX.test(value.name); }
+export function isService(value: any): value is Service { return value instanceof Function && !FACTORY_REGEX.test(value.name); }
+export function isDefinition(value: any): value is IDefinition {
     return is.HashMap(value) && ('service' in value || 'factory' in value);
 }
 
-export function Method (context, method: string) {
+export function Method (context: any, method: string) {
     return { context, method };
 }
 
-export function isMethod(value): value is IMethod {
+export function isMethod(value: any): value is IMethod {
     return typeof value == 'object' && 'context' in value && 'method' in value;
 }
 
 const internalClasses = [ Object, Function, Number, String ];
-export function isInternalClass(value) {
+export function isInternalClass(value: any) {
     return internalClasses.includes(value);
 }

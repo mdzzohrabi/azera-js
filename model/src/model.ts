@@ -2,6 +2,7 @@ import { Meta } from "./meta";
 import { Model as MongooseModel, Document, model, Schema } from "mongoose";
 import { Constructor } from "@azera/util/types";
 import * as mongoose from "mongoose";
+import { createSchema } from './schema';
 
 let models = {};
 
@@ -18,23 +19,8 @@ export function toModel<O, T extends Function>(modelClass: Constructor<O>, repos
     // Cache models
     if (models[modelClass.name]) return models[modelClass.name];
 
-    // Get model decorated definition
-    let definition = modelClass[ Meta.Definition ];
-
-    // Assert has definition
-    if ( !definition ) throw Error(`No definition found`);
-
-    // Get Schema decorator from repository
-    let schemaOptions = repository && repository[Meta.Schema] || modelClass[Meta.Schema] || {};
-
-    // Create mongoose schema from definition
-    let schema = new Schema(definition, schemaOptions);
-
-    // Load model class
-    schema.loadClass(modelClass);
-    // Load repository class
-    repository && schema.loadClass(repository);
-
+    let schema = createSchema(modelClass, repository);
+    
     // Create model and cache it by its name
     return models[ modelClass.name ] = model(modelClass.name, schema) as any;
 }

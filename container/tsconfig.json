@@ -2,15 +2,19 @@
     "compilerOptions": {
         "module": "commonjs",
         "target": "es2017",
-        "inlineSourceMap": true,
-        "outDir": "./",
+        "outDir": "./build",
         "declaration": true,
-        "experimentalDecorators": true,
         "importHelpers": true,
-        "emitDecoratorMetadata": true
+        "inlineSourceMap": true,
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "preserveSymlinks": true,
+        "strict": true,
+        "noUnusedLocals": true
     },
-    "include": ["src"],
+    "include": ["./src"],
     "exclude": [
-        "node_modules"
+        "node_modules",
+        "./src/tests"
     ]
 }

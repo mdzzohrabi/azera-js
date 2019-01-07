@@ -48,8 +48,10 @@ describe(`Is`, () => {
 
     it('ClassObject()', () => {
 
+        let anonFunc: any = function () {};
+
         ok(is.ClassObject(new class {}));
-        ok(is.ClassObject(new function() {}));
+        ok(is.ClassObject( new anonFunc() ));
         ok(!is.ClassObject(function() {}));
         ok(!is.ClassObject(class {}));
 

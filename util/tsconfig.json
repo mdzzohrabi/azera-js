@@ -6,6 +6,8 @@
         "outDir": "./",
         "declaration": true,
         "importHelpers": true,
+        "strict": true,
+        "noImplicitAny": true,
         "lib": [
             "es2015"
         ]

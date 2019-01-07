@@ -1,12 +1,13 @@
 {
     "compilerOptions": {
         "module": "commonjs",
-        "target": "es2017",
-        "inlineSourceMap": true,
+        "target": "esnext",
         "outDir": "./dist",
+        "inlineSourceMap": true,
         "declaration": true,
         "experimentalDecorators": true,
-        "strict": true,
+        "emitDecoratorMetadata": true,
+        "strict": false,
         "importHelpers": true
     },
     "include": ["src"],

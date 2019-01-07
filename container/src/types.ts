@@ -5,14 +5,14 @@ export { HashMap };
 export type Service = IDefinition | Function | any[];
 export type Factory<T = {}> = Constructor<IFactory<T>> | FunctionOf<T>;
 export type ContainerValue = any;
-export type Constructor<T= {}> = new (...args) => T;
+export type Constructor<T= {}> = new (...args: any[]) => T;
 // export type Constructor<T> = Function & { prototype: T }
 
 export interface IInjectable extends Function { $inject?: string[]; }
-export type MockMethod<O extends object, K extends keyof O> = (...params) => ReturnType< O[K] extends ((...params) => any) ? O[K] : any >;
-export type InjectableFunction<T = any> = { (...params): T ; $inject?: string[] };
-export type FunctionOf<T> = (...params) => T;
-export type Injectable<T = any> = InjectableFunction<T> | Function | Array<string | FunctionOf<T>>;
+export type MockMethod<O extends object, K extends keyof O> = (...params: any[]) => ReturnType< O[K] extends ((...params: any[]) => any) ? O[K] : any >;
+export type InjectableFunction<T = any> = { (...params: any[]): T ; $inject?: string[] };
+export type FunctionOf<T> = (...params: any[]) => T;
+export type Injectable<T = any> = InjectableFunction<T> | Function | Array<string | Function | FunctionOf<T>>;
 export type InvokableFunctions<T> = Injectable<T> | Constructor<T> | Factory<T>;
 export type Invokable<T> = InvokableFunctions<T> | string | T;
 export type IServices = HashMap< IDefinition | Function | any[] >;
@@ -25,22 +25,37 @@ export interface IContainer {
     set(values: { [name: string]: ContainerValue }[] ): this;
     set(name: string, value: ContainerValue): this;
 
-    get <T>(name: string): T;
+    get <T>(name: string): T | undefined;
 
-    invoke <T>(value: Invokable<T>): T;
+    invoke <T>(value: Invokable<T>): T | undefined;
 
 }
 
 export interface IDefinition {
-    name?: string;
+    // Service name
+    name: string;
+    // Service function or class
     service?: Function;
-    parameters?: string[];
-    properties?: HashMap<string | Function | IPropertyInjection>;
-    private?: boolean;
-    isFactory?: boolean;
+    // Constructor parameters
+    parameters: ( string | Function )[];
+    // Function/Class properties
+    properties: HashMap<string | Function | IPropertyInjection>;
+    // Methods injections
+    methods: { [name: string]: (string|Function)[] };
+    // Private service flag
+    private: boolean;
+    // Service is factory instead of orginal service
+    isFactory: boolean;
+    // Factory function
     factory?: Function | IFactory;
-    tags?: string[];
-    invoke?: boolean;
+    // Service tags
+    tags: string[];
+    // Invoke service instead of create instance
+    invoke: boolean;
+    // Imports files or services
+    imports: (string | Function)[];
+    // Auto tagging definition
+    autoTags: ({ class: Function, tags: string[] }|IAutoTagger)[];
 }
 
 export interface IInternalDefinition extends IDefinition {
@@ -55,10 +70,10 @@ export interface IPropertyInjection {
 }
 
 export interface IFactory<T = any> {
-    create(...params): T;
+    create(...params: any[]): T;
 }
 
 export interface IMethod {
-    context: object;
+    context: any;
     method: string;
 }

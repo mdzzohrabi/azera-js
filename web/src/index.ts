@@ -1,14 +1,14 @@
 /**
  * Typescript project main file
  */
-import {Http} from "./http";
-import {Controller} from "./http/controller";
-import {Kernel} from "./http/kernel";
+import { Http } from "./http";
+import { Controller } from "./http/controller";
+import { Kernel } from "./http/kernel";
 import { WebApplication } from "./types";
 
 class App extends Kernel {
     init(app: WebApplication) {
-        console.log('Init');
+        console.log('Init', this.container ? 'Has container' : 'No Container');
     }
 }
 

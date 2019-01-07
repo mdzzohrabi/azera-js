@@ -1,8 +1,47 @@
-import { ok, equal, deepEqual, notEqual, fail, ifError, throws } from "assert";
-import { isFactory, isService, isDefinition, getDependencies, Container, ServiceNotFoundError } from "../container";
-import { Inject, getDefinition, Service, Tag, emitTypes } from "../decorators";
-import { IDefinition, IServices, Factory, IFactory } from "../types";
+//@ts-nocheck
+//@ts-ignore
+
+import { deepEqual, equal, notEqual, ok, throws } from "assert";
+import { Container, getDependencies, isDefinition, isFactory, isService } from "../container";
 import { ContainerAware } from "../containerAware";
+import { Inject, Service } from "../decorators";
+import { IDefinition, IFactory, IServices } from "../types";
+import { FixtureApp } from './fixture/App';
+import { IBundle } from './fixture/IBundle';
+import { BundleA } from './fixture/BundleA';
+import { BundleB } from './fixture/BundleB';
+import { HomeController, Request } from './fixture/Controller';
+import { Decorator } from '../util';
+import forEach from "../../../util/src/forEach";
+
+describe('Util.Decorator', () => {
+
+    it('getType()', () => {
+
+        let Type = Decorator.Type;
+
+        function isType(type: Decorator.Type) {
+            return (...args: any[]) => {
+                equal( Decorator.getType( args[0], args[1], args[2] ), type );
+            };
+        }
+
+        @isType(Type.Class) class TestClass {
+            @isType(Type.Property) prop1: any;
+
+            constructor( @isType(Type.ConstructorParameter) param1: any ) {
+            }
+
+            @isType(Type.Method) method1() {}
+
+            method2( @isType(Type.MethodParameter) param2: any ) {}
+        }
+
+        let s = new TestClass("");
+
+    });
+
+});
 
 describe('Container', () => {
 
@@ -66,6 +105,15 @@ describe('Container', () => {
             );
         });
 
+        it('Array function deps', () => {
+            class A {}
+            class B {}
+            deepEqual(
+                getDependencies([ A, B, (a, b) => null ]).deps,
+                [ A, B ]
+            );
+        });
+
         it('Class', () => {
             class MyService {
                 constructor(logger, broker) {}
@@ -100,6 +148,16 @@ describe('Container', () => {
         
         before(() => {
             container = new Container;
+        });
+
+        it('size()', () => {
+            equal( container.size, 1 );
+        });
+
+        it('[iterate]', () => {
+            for (let name of container) {
+                equal(name, 'serviceContainer');
+            }
         });
 
         it('set(HashMap)', () => {
@@ -205,6 +263,7 @@ describe('Container', () => {
 
             } as IServices);
 
+            equal( container.getByTag('command').length, 2);
 
             equal( container.findByTag('command').length, 2);
 
@@ -373,7 +432,7 @@ describe('Container', () => {
 
         });
 
-        it('# Runtime injection - Class method invoke', () => {
+        it('# Runtime injection - Class method invoke (Container.invokeLater)', () => {
 
             let container = new Container;
 
@@ -416,8 +475,15 @@ describe('Container', () => {
 
         });
 
+        it('# Runtime injection - Fixture', () => {
+            let container = new Container;
+            let app = container.invoke(FixtureApp);
+            equal( app.bundles.length, 2 );
+            ok( app.container instanceof Container, `Container must be injected to FixtureApp`);
+        });
 
-        it('# Type Factory', () => {
+
+        it('# Type-based factory', () => {
 
             let container = new Container;
 
@@ -430,26 +496,48 @@ describe('Container', () => {
                 constructor( @Inject() public logger: Logger ) { }
             }
 
-            ok( container.invoke(App).logger instanceof Logger );
+            ok( container.invoke(App).logger instanceof Logger, 'App.logger must be instanceof Logger');
 
             container.setFactory(Logger, function () {
                 return 'Hello';
             });
 
-            equal( container.invoke(Logger), 'Hello' );
+            equal( container.invoke(Logger), 'Hello', `Container must use factory for Logger type`);
 
-            class LoggerF implements IFactory {
-                @emitTypes() create( mongoLog: Monolog ) {
-                    console.log('Hello World');
-                    return 'asd';
+            equal( container.invoke([Logger, function (logger) {
+                return logger;
+            }]), 'Hello');
+
+
+            class LoggerFactory implements IFactory {
+                create() {
+                    return new Monolog;
                 }
             }
 
-            container.setFactory(Logger, LoggerF);
-
-            console.log(container.invoke(Logger));
-
+            container.setFactory(Logger, LoggerFactory);
             ok( container.invoke(Logger) instanceof Monolog );
+
+        });
+
+        it('# Fixture - Controller', () => {
+
+            let container = new Container;
+
+            container.add(Request);
+
+            let controller = container.invoke( HomeController );
+            let indexAction = container.invokeLater(controller, 'indexAction');
+            let signupAction = container.invokeLater(controller, 'signUpAction');
+            let logoutAction = container.invokeLater(controller, 'logoutAction');
+            let loginAction = container.invokeLater(controller, 'loginAction');
+
+            equal( indexAction(), 12 );
+            equal( loginAction(), 12 );
+            equal( logoutAction(), 12 );
+            deepEqual( signupAction('Hello'), [ 'Hello', 12 ] );
+
+            //console.log( container.getDefinition(HomeController) );
 
         });
     });

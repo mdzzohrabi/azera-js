@@ -1,6 +1,8 @@
 import 'reflect-metadata';
 import { Meta } from "./meta";
-import { IFieldSchema, SchemaOptions, ObjectId } from "./types";
+import { IFieldSchema, SchemaOptions, ObjectId, isModel } from "./types";
+import { Model, Schema as MongooseSchema } from 'mongoose';
+import { createSchema } from './schema';
 
 function getOrCreate <T>(object, key, defaults: T): T {
     return ( object[key] || ( object[key] = defaults ) );
@@ -34,15 +36,41 @@ export function Field( options: IFieldSchema = {} ): PropertyDecorator {
     };
 }
 
-export function Required() {
+export function Required(): PropertyDecorator {
     return (target, key: string) => { setModelDefinition(target.constructor, key, { required: true }); };
 }
 
-export function Default(defaultValue) {
+export function Default(defaultValue): PropertyDecorator {
     return (target, key: string) => { setModelDefinition(target.constructor, key, { default: defaultValue }); };
 }
 
-export function CollectionOf(model: string | Function) {
-    let name = model['modelName'] || model['name'] || model;
-    return (target, key: string) => { setModelDefinition(target.constructor, key, { type: [{ type: ObjectId, ref: name }] }); };
+export function Relation(model: string | Function | object, { many = false, subDoc = false } = {}): PropertyDecorator {
+    return (target, key: string) => {
+        let name = model['modelName'] || model['name'] || model;
+        let type: any = { type: ObjectId, ref: name };
+        if ( subDoc ) {
+            if ( isModel(model) )
+                type = model.schema;
+            else if ( model instanceof MongooseSchema ) {
+                type = model;
+            }
+            else {
+                type = createSchema(model as any);
+            }
+        }
+        if ( many ) type = [ type ];
+        setModelDefinition(target.constructor, key, { type });
+    };
+}
+
+export function hasOne(model: string | Function, { subDoc = false } = {}) {
+    return Relation(model, { many: false, subDoc });
+}
+
+export function hasMany(model: string | Function, { subDoc = false } = {}) {
+    return Relation(model, { many: true, subDoc });
+}
+
+export function CollectionOf(model: string | Function): PropertyDecorator {
+    return hasMany(model);
 }

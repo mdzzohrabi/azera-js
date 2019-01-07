@@ -1,5 +1,3 @@
-import { is } from ".";
-import { HashMap } from "./is";
 
 export interface IIterator<K,V,R> {
     (value: V, key: K): R;

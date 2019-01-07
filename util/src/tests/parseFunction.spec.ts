@@ -3,7 +3,7 @@ import { equal, deepEqual } from "assert";
 
 describe('parseFunction()', () => {
     it('should works', () => {
-        let result = parseFunction(function Add(a,b) {});
+        let result = parseFunction(function Add(a: any,b: any) {});
         equal(result.name, 'Add');
         equal(result.isArrow, false);
         equal(result.isAnonymous, false);

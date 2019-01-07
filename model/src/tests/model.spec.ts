@@ -1,7 +1,8 @@
-import {CollectionOf, Default, Field, Model, Required, Schema, toModel} from "../index";
-import {deepEqual, equal} from "assert";
+import {CollectionOf, Default, Field, Model, Required, Schema, toModel, mongoose} from "../index";
+import {deepEqual, equal, ok} from "assert";
 import { suite, test } from 'mocha-typescript';
 import { Constructor } from '@azera/util/types';
+import { hasMany, hasOne } from '../decorator';
 
 @suite('Mongo Model')
 class MongoModalTest {
@@ -56,4 +57,26 @@ class MongoModalTest {
         equal(model.schema.obj['questions']['type'][0]['ref'], 'Question');
     }
     
+
+    @test "hasOne/hasMany"() {
+        class IBook {
+            @Field() name: string;
+        }
+
+        class IAuthor {
+            @hasMany(IBook) books: IBook[];
+            @hasOne(IBook) firstBook: IBook;
+            @hasMany(IBook, { subDoc: true }) subBooks: IBook[];
+            @hasOne(IBook, { subDoc: true }) subFirstBook: IBook;
+        }
+
+        let Author = toModel(IAuthor);
+
+        equal( Author.schema.obj['books'].type[0].ref, 'IBook' );
+        equal( Author.schema.obj['firstBook'].type.ref, 'IBook' );
+     
+        ok( Author.schema.obj['subBooks'].type[0] instanceof mongoose.Schema );
+        ok( Author.schema.obj['subFirstBook'].type instanceof mongoose.Schema );
+    }
+
 }

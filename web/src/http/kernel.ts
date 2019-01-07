@@ -1,12 +1,15 @@
 import { WebApplication } from "../types";
 import { Inject, Container } from "@azera/container";
 
+/**
+ * Application kernel
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 export class Kernel {
 
-    @Inject('serviceContainer') container: Container;
+    @Inject() public container: Container;
 
     init(app: WebApplication) {
 
     }
-
 }

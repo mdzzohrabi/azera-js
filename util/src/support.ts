@@ -1,4 +1,4 @@
-function checkExpression(expr) {
+function checkExpression(expr: string) {
     try {
         eval(expr);
         return true;

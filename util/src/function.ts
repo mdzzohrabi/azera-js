@@ -22,7 +22,7 @@ export function parseFunction(func: Function, options: IOptions = {}) {
     let isAsync = toString.startsWith('async ');
     let isAnonymous = !name && (toString.startsWith('function (') || toString.startsWith('('));
 
-    let params, defaults;
+    let params: string[] = [], defaults: { [key: string]: any } = {};
     if (options.resolveParams) {
         defaults = {};
         params = toString.split('(')[1].split(')')[0].split(',').map( param => {

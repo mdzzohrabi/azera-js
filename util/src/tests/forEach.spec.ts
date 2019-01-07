@@ -3,7 +3,7 @@ import { deepEqual, equal } from "assert";
 
 describe(`forEach`, () => {
     it(`should works with array`, () => {
-        let result = [];
+        let result: any[] = [];
         let array = [1,2,3,4,5];
         forEach(array, (value, index) => {
             result[index] = value;
@@ -14,7 +14,7 @@ describe(`forEach`, () => {
     it(`should works with objects`, () => {
 
         let base = { name: 'Masoud' };
-        let dest = {};
+        let dest: {[k: string]: any} = {};
 
         forEach(base, (value, name) => {
             dest[name] = value;
