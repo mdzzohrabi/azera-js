@@ -1,9 +1,9 @@
 import { is } from "@azera/util";
-import { Container, Definition, getDependencies, isFactory } from "./container";
-import { IDefinition, IInternalDefinition } from "./types";
 import "reflect-metadata";
-import { Decorator } from './util';
+import { Container, Definition, getDependencies, isFactory, SERVICE_REGEX } from "./container";
 import { DecoratorError } from './errors';
+import { IDefinition, IInternalDefinition } from "./types";
+import { Decorator } from './util';
 let { Type } = Decorator;
 
 
@@ -40,9 +40,7 @@ export function getInitialDefinition(target: Function, context?: any): IDefiniti
 
     if (context) {
         if ( Reflect.hasMetadata("design:paramtypes", context, target.name) ) {
-            //@ts-ignore
-            let types = Reflect.getMetadata("design:paramtypes", context, target.name);
-            
+            Reflect.getMetadata("design:paramtypes", context, target.name);
         }
     }
 
@@ -56,7 +54,7 @@ export function getInitialDefinition(target: Function, context?: any): IDefiniti
         private: false,
         tags: [],
         isFactory: isFactory(target),
-        invoke: !is.Class(target),
+        invoke: !is.Class(target) && !SERVICE_REGEX.test(target.name),
         methods: {},
         imports: [],
         autoTags: []
@@ -88,6 +86,7 @@ export function extendDefinition(value: any, definition: Partial<IDefinition>): 
     if ( definition.methods ) {
         definition.methods = Object.assign(old.methods, definition.methods);
     }
+    //@ts-ignore
     return target[DEF] = Definition( Object.assign( old, definition ) );
 }
 
@@ -147,6 +146,8 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
     
                 if ( !service && Reflect.hasMetadata("design:type", target, key) )
                     service = optimizeServiceType( Reflect.getMetadata("design:type", target, key), key );
+
+                if ( service instanceof Function && service.name == 'Function' ) service = key;
     
                 getDefinition(target).properties[key] = options ? Object.assign({ name: service }, options) : service;
                 break;

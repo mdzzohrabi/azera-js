@@ -1,7 +1,7 @@
 export class ServiceNotFoundError extends Error {
     constructor(name: string, stack: string[] = []) {
         stack.pop();
-        super(`Service ${name} not found${ stack.length > 0 ? ', Stack: ' + stack.join(' -> ') : '' }.`);
+        super(`Service "${name}" not found${ stack.length > 0 ? ', Stack: ' + stack.join(' -> ') : '' }`);
     }
 }
 

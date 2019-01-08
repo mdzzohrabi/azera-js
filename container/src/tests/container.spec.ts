@@ -164,7 +164,7 @@ describe('Container', () => {
             ok(!container.has('logger'));
 
             container.set({
-                logger: function () {
+                logger: function loggerService() {
                     this.age = 12;
                 },
                 broker: {
@@ -190,17 +190,66 @@ describe('Container', () => {
         });
 
         it('get( service )', () => {
+            ok( container.has('logger') , '"logger" service not found' );
             equal( container.get<{ age: number }>('logger').age, 12 );
             equal( container.get('logger'), container.get('logger'), 'Logger must be a shared service');
 
             notEqual( container.get('broker'), container.get('broker'), 'Broker must be a private service' );
         });
 
-        it('getDefinition()', () => {
-            equal( container.getDefinition('logger').name, 'logger' );
-            throws(() => {
-                container.getDefinition('not_defined');
-            }, /Service not_defined not found/);
+        describe('getDefinition()', () => {
+            let container: Container;
+
+            before(() => {
+                container = new Container({
+                    loggerService: function loggerService() { this.age = 12; },
+                    loggerFactory: function loggerFactory() {
+                        return { age: 12 };
+                    },
+                    loggerClass: class Logger {
+    
+                    }
+                });
+            });
+
+            it('should contains loggerClass', () => ok(container.has('loggerClass')));
+
+            it('should resolve anonymous function', () => {
+                let func = function () {};
+                let def = container.getDefinition(func);
+                equal(def.invoke, true, 'it should invoke anonymous function');
+                equal(def.service, func, 'Service must equals to function');
+            });
+
+            it('should throw error for not defined services', () => {
+                throws(() => {
+                    container.getDefinition('not_defined');
+                }, /Service "not_defined" not found/);
+            });
+
+            describe('anonymous service function', () => {
+                let def: IDefinition;
+                before(() => def = container.getDefinition('loggerService'));
+                it('should resolve name of defined service', () => equal( def.name, 'loggerService' ));
+                it('should resolve anonyous service function as not invokable', () => equal(def.invoke, false));
+                it('should resolve anonyous function as service not factory', () => equal(def.isFactory, false));
+            });
+
+            describe('anonymous factory function', () => {
+                let def: IDefinition;
+                before(() => def = container.getDefinition('loggerFactory'));
+                it('should resolve name of defined service', () => equal( def.name, 'loggerFactory' ));
+                it('should resolve anonyous factory function as invokable', () => equal(def.invoke, true));
+                it('should resolve function as factory', () => equal(def.isFactory, true));
+            });
+
+            describe('class', () => {
+                let def: IDefinition;
+                before(() => def = container.getDefinition('loggerClass'));
+                it('should resolve name of named class', () => equal(def.name, 'loggerClass'));
+                it('should resolve class as not invokable', () => equal(def.invoke, false));
+            });
+
         });
 
         it('invoke()', () => {
@@ -220,6 +269,35 @@ describe('Container', () => {
             });
 
             equal(factory.host, 'localhost');
+        });
+
+        describe('Resolve Definition', () => {
+
+            describe('Invoke methods', () => {
+
+                it('should invoke methods', () => {
+                    let name: string;
+                    let container = new Container().set({
+                        message: () => 'Masoud',
+                        logger: {
+                            service: class Logger {
+                                log(message: string) {
+                                    name = message;
+                                }
+                            },
+                            methods: {
+                                log: ['message']
+                            }
+                        }
+                    });
+    
+                    container.invoke('logger');
+    
+                    equal(name, 'Masoud');    
+                });
+
+            });
+
         });
 
         it('# advanced', () => {
@@ -247,15 +325,15 @@ describe('Container', () => {
                 version: '1.0.0',
 
                 testCommand: {
-                    service: function () {
+                    service: function testCommandService() {
                         this.command = '45';
                     },
                     tags: ['command']
                 },
-                myCommand: function () {
+                myCommand: function myCommandService() {
                     this.command = '12';
                 },
-                console: function ( $$command ) {
+                console: function consoleService( $$command ) {
                     this.commands = $$command;
                 },
 
@@ -263,8 +341,11 @@ describe('Container', () => {
 
             });
 
-            equal( container.getByTag('command').length, 2);
+            deepEqual( container.getParameters(), { version: '1.0.0' });
 
+            deepEqual( container.findByTag('command').map(d => d.name), [ 'testCommand', 'myCommand' ]);
+
+            equal( container.getByTag('command').length, 2);
             equal( container.findByTag('command').length, 2);
 
             let vConsole = container.get<{ commands: Function[] }>('console');
@@ -272,10 +353,11 @@ describe('Container', () => {
 
             let app = container.get<ConsoleApp>('consoleClass');
 
-            console.log(container.getDefinition(ConsoleApp));
-
             deepEqual(container.getDefinition(ConsoleApp).properties, {
-                commands: []
+                commands: {
+                    lateBinding: true,
+                    name: '$$command'
+                }
             });
 
             equal( app.version, '1.0.0' );
@@ -547,6 +629,46 @@ describe('Container', () => {
             //console.log( container.getDefinition(HomeController) );
 
         });
+
+        describe('Type-Based Properties Injection', () => {
+
+            let container1: Container;
+            let container2: Container;
+            before(() => {
+                container1 = new Container()
+                container2 = new Container();
+            });
+
+            class A {}
+            class B {
+                @Inject() public a: A;
+            }
+            class C {
+                @Inject() public a: A;
+            }
+
+            it('should separate different containers', () => {
+                let b = container1.invoke(B);
+                let c = container1.invoke(C);
+                equal(b.a, c.a, 'instance of A must be equals in different injections');
+
+                let b2 = container2.invoke(B);
+                let c2 = container2.invoke(C);
+
+                equal(b2.a, c2.a, 'instance of A must be equals in different injections');
+
+                notEqual(b.a, b2.a, 'instance of A must be difference in diffenrece containers');
+            });
+
+            it('should override class definitions by container specific definitions', () => {
+
+                equal( container.getDefinition(A).private, false );
+                container.set(A, { private: true });
+                equal( container.getDefinition(A).private, true );
+
+            });
+
+        })
     });
 
 });
