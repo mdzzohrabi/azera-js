@@ -166,7 +166,7 @@ export function Tag(...tags: string[]): ClassDecorator {
     };
 }
 
-export function Service(definition: Partial<IDefinition> | string): ClassDecorator {
+export function Service(definition: Partial<IDefinition> | string = {}): ClassDecorator {
     return target => {
 
         if ( typeof definition === 'string' ) {

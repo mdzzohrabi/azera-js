@@ -630,6 +630,29 @@ describe('Container', () => {
 
         });
 
+        describe('Resolve without Inject and Service decorators', () => {
+
+            it.skip('should resolve class constructor parameters', () => {
+
+                let container = new Container();
+                class Connection {
+                    name = "default"
+                }
+
+                @Service()
+                class App {
+                    constructor(public connection: Connection) {}
+                }
+
+                let app = container.invoke(App);
+
+                // Dependencies => ['connection']
+                equal(app.connection.name, 'default');
+
+            });
+
+        });
+
         describe('Type-Based Properties Injection', () => {
 
             let container1: Container;
