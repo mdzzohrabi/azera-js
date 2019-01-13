@@ -3,9 +3,9 @@ import { forEach, is } from "@azera/util";
 import { HashMap } from "@azera/util/is";
 import { ok } from "assert";
 import * as glob from "glob";
-import { DEF, getDefinition, hasDefinition, setDefinition } from "./decorators";
+import { META_INJECT, getDefinition, hasDefinition, setDefinition, getTarget } from "./decorators";
 import { ServiceNotFoundError } from "./errors";
-import { ContainerValue, Factory, IAutoTagger, IContainer, IDefinition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, Service, IPropertyInjection } from "./types";
+import { ContainerValue, Factory, IAutoTagger, IContainer, IDefinition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, Service, IPropertyInjection, Constructor } from "./types";
 
 export const FACTORY_REGEX = /.*Factory$/;
 export const SERVICE_REGEX = /.*Service$/;
@@ -18,7 +18,7 @@ interface IInvokeOptions {
 export class Container implements IContainer {
 
     static isInheritedServiceDecorator(target: Function): boolean {
-        return (<any>target)[DEF] && !target.hasOwnProperty(DEF);
+        return (<any>target)[META_INJECT] && !target.hasOwnProperty(META_INJECT);
         // return ( getDefinition(target) as IInternalDefinition ).$target !== target;
     }
 
@@ -186,8 +186,8 @@ export class Container implements IContainer {
                 }
 
                 // Methods
-                if (service.methods) {
-                    forEach(service.methods, (args, method) => {
+                if (service.calls) {
+                    forEach(service.calls, (args, method) => {
                         result[method].apply(result, args.map(arg => this._invoke(arg, _stack)));
                     });
                 }
@@ -272,30 +272,20 @@ export class Container implements IContainer {
         return services;
     }
 
+    invokeLater <T extends object, M extends keyof T>(context: Constructor<T>, method: M): MockMethod<T, M>;
     invokeLater <T extends object, M extends keyof T>(context: T, method: M): MockMethod<T, M>;
     invokeLater(context: any, method: string): Function
     {
-        if ( Reflect.hasMetadata("design:paramtypes", context, method) ) {
-            let types: any[] = Reflect.getMetadata("design:paramtypes", context, method);
-            // let params = getParameters(context[method]);
-            let endOfDep = false;
-            let deps = types.map((type, i) => {
-                if ( isInternalClass(type) ) {
-                    endOfDep = true;
-                    return null;
-                }
-                if ( endOfDep ) throw Error(`Dependencies must come first in method ${method}`);
-                return type;
-            }).filter( dep => !!dep );
+        let _context: object;
+        let _deps: any[];
+        let _def = this.getDefinition( getTarget(context) );
 
-            let resolved: any[];
-
-            return (...params: any[]) => {
-                return context[method].apply( context, ( resolved ? resolved : resolved = deps.map( dep => this._invoke(dep) ) ).concat(params) );
-            };
-
-        } else {
-            throw Error(`Cannot get parameters types from method ${method}`);
+        return (...params: any[]) => {
+            _context = _context || ( typeof context == 'function' ? this._invoke(context) : context );
+            //@ts-ignore
+            return _context[ method ].apply( _context,
+                ( _deps ? _deps : _deps = (_def.methods[method] || []).map(dep => this._invoke(dep)) ).concat(params)
+            );
         }
     }
 
@@ -567,7 +557,7 @@ export function isMethod(value: any): value is IMethod {
     return typeof value == 'object' && 'context' in value && 'method' in value;
 }
 
-const internalClasses = [ Object, Function, Number, String ];
+const internalClasses = [ Object, Function, Number, String, undefined ];
 export function isInternalClass(value: any) {
     return internalClasses.includes(value);
 }

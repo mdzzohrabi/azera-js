@@ -42,6 +42,8 @@ export interface IDefinition {
     properties: HashMap<string | Function | IPropertyInjection>;
     // Methods injections
     methods: { [name: string]: (string|Function)[] };
+    // Call methods
+    calls: { [name: string]: (string|Function)[] };
     // Private service flag
     private: boolean;
     // Service is factory instead of orginal service

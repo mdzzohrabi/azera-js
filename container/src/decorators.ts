@@ -1,13 +1,14 @@
 import { is } from "@azera/util";
 import "reflect-metadata";
-import { Container, Definition, getDependencies, isFactory, SERVICE_REGEX } from "./container";
+import { Container, Definition, getDependencies, isFactory, SERVICE_REGEX, isInternalClass } from "./container";
 import { DecoratorError } from './errors';
 import { IDefinition, IInternalDefinition } from "./types";
 import { Decorator } from './util';
 let { Type } = Decorator;
 
 
-export const DEF = Symbol('service');
+export const META_INJECT = Symbol('container.inject');
+export const META_PARAMETERS_INJECT = Symbol('container.constructor.inject');
 
 /**
  * Get a class constructor
@@ -23,7 +24,7 @@ export function getTarget(value: any): FunctionConstructor {
  */
 export function hasDefinition(value: Function): boolean {
     //@ts-ignore
-    return !!getTarget(value)[ DEF ];
+    return !!getTarget(value)[ META_INJECT ];
 }
 
 export function emitTypes() {
@@ -36,7 +37,7 @@ export function emitTypes() {
  */
 export function getInitialDefinition(target: Function, context?: any): IDefinition {
 
-    let deps = getDependencies(target).deps;
+    let deps = Reflect.hasMetadata(META_PARAMETERS_INJECT, target) ? [] : getDependencies(target).deps;
 
     if (context) {
         if ( Reflect.hasMetadata("design:paramtypes", context, target.name) ) {
@@ -55,6 +56,7 @@ export function getInitialDefinition(target: Function, context?: any): IDefiniti
         tags: [],
         isFactory: isFactory(target),
         invoke: !is.Class(target) && !SERVICE_REGEX.test(target.name),
+        calls: {},
         methods: {},
         imports: [],
         autoTags: []
@@ -66,8 +68,15 @@ export function getInitialDefinition(target: Function, context?: any): IDefiniti
  */
 export function getDefinition(value: any, context?: any): IDefinition {
     let target = getTarget(value);
+    if ( Reflect.hasMetadata(META_INJECT, target) ) {
+        return Reflect.getMetadata(META_INJECT, target);
+    }
+
+    let initial = getInitialDefinition(target, context);
+    Reflect.defineMetadata(META_INJECT, initial, target);
+    return initial;
     //@ts-ignore
-    return target[DEF] || ( target[DEF] = getInitialDefinition(target, context) );
+    //return target[DEF] || ( target[DEF] = getInitialDefinition(target, context));
 }
 
 /**
@@ -87,7 +96,7 @@ export function extendDefinition(value: any, definition: Partial<IDefinition>): 
         definition.methods = Object.assign(old.methods, definition.methods);
     }
     //@ts-ignore
-    return target[DEF] = Definition( Object.assign( old, definition ) );
+    return target[META_INJECT] = Definition( Object.assign( old, definition ) );
 }
 
 export interface IPropertyInjectionOptions {
@@ -134,10 +143,27 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
             case Type.Method:
                 // throw new DecoratorError(`Decorate ${ type } not allowed`, target, key, index);
 
+                if ( Reflect.hasMetadata("design:paramtypes", target, key) ) {
+                    let types: Function[] = Reflect.getMetadata("design:paramtypes", target, key);
+                    let endOfDep = false;
+                    let deps = types.map((type, i) => {
+                        if ( isInternalClass(type) ) {
+                            endOfDep = true;
+                            return null;
+                        }
+                        if ( endOfDep ) throw Error(`Dependencies must come first in method ${target.constructor.name}${key}`);
+                        return type;
+                    }).filter( dep => !!dep );
+
+                    //@ts-ignore
+                    getDefinition(target).methods[key] = deps;
+                }
+
                 break;
             case Type.ConstructorParameter:
+                Reflect.defineMetadata(META_PARAMETERS_INJECT, true, target);
                 service = getParameterServiceOrThrow(service, target, key, index);
-                getDefinition(target).parameters[index] = service;                
+                getDefinition(target).parameters[index] = service;
                 break;
             case Type.Property:
                 options = Object.assign({

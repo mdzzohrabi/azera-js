@@ -1,7 +1,7 @@
 //@ts-nocheck
 //@ts-ignore
 
-import { deepEqual, equal, notEqual, ok, throws } from "assert";
+import { deepEqual, equal, notEqual, ok, throws, deepStrictEqual } from "assert";
 import { Container, getDependencies, isDefinition, isFactory, isService } from "../container";
 import { ContainerAware } from "../containerAware";
 import { Inject, Service } from "../decorators";
@@ -137,6 +137,65 @@ describe('Container', () => {
             }
             let { deps } = getDependencies( MyService );
             deepEqual( deps, ['logger', 'broker'] );
+        });
+    });
+
+    describe('Decorators', () => {
+
+        describe('Class Decorator', () => {
+
+            it('should inject constructor parameters', () => {
+                @Inject([ 'logger', 'mailer' ])
+                class TestClass {
+                    constructor(logger, mailer) {}
+                }
+
+                let dep = new Container().getDefinition(TestClass);
+                deepStrictEqual(dep.parameters, [ 'logger', 'mailer' ]);
+            });
+
+            it('should inject contructor parameters with @Inject in parameter', () => {
+                class TestClass {
+                    constructor( @Inject('logger') _logger, @Inject('mailer') _mailer ) {}
+                }
+                deepStrictEqual(
+                    new Container().getDefinition(TestClass).parameters,
+                    [ 'logger', 'mailer' ]
+                );
+            });
+
+            it('should inject contructor parameters with @Inject in parameter', () => {
+                class TestClass2 {
+                    constructor( @Inject('logger') _logger, _mailer ) {}
+                }
+                deepStrictEqual(
+                    new Container().getDefinition(TestClass2).parameters,
+                    [ 'logger' ]
+                );
+            });
+
+            it('should inject contructor parameters with @Inject in methods', () => {
+                class TestClass2 {
+                    hello( @Inject('logger') _logger, _mailer ) {}
+                }
+                deepStrictEqual(
+                    new Container().getDefinition(TestClass2).methods['hello'],
+                    [ 'logger' ]
+                );
+            });            
+
+            it('should resolve parameters when @Inject to method', () => {
+                class Logger {}
+                class Mailer {}
+                class TestClass2 {
+                    @Inject() hello(logger: Logger,mailer: Mailer, name: String) {}
+                }
+                deepEqual(
+                    new Container().getDefinition(TestClass2).methods['hello'],
+                    [ Logger, Mailer ]
+                );
+            });            
+
         });
 
     });
@@ -285,7 +344,7 @@ describe('Container', () => {
                                     name = message;
                                 }
                             },
-                            methods: {
+                            calls: {
                                 log: ['message']
                             }
                         }
@@ -538,8 +597,8 @@ describe('Container', () => {
                 @Inject() middlewares: Middleware[];
                 @Inject() logger: Logger;
 
-                @Custom() run( logger: Logger, name: string ) {
-                    return { logger , name };
+                @Inject() run( logger: Logger, name: string ) {
+                    return { logger , name, self: this };
                 }
 
             }
@@ -553,10 +612,11 @@ describe('Container', () => {
             equal(app.middlewares.length, 1);
             ok( app.logger instanceof Logger );
 
-            let result = container.invokeLater(app, 'run');
+            let result = container.invokeLater(App, 'run');
             let run = result('Masoud');
             ok( run.logger instanceof Logger );
             equal(run.name, 'Masoud');
+            equal(run.self, app);
             // Second call
             run = result('Masoud');
             ok( run.logger instanceof Logger );
