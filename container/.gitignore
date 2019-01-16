@@ -1,7 +1,7 @@
 node_modules
 .idea
 .vscode
-*.js
+/build
 *.d.ts
 yarn-error.log
 package-lock.json
