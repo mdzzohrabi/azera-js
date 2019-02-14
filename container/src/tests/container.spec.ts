@@ -713,6 +713,46 @@ describe('Container', () => {
 
         });
 
+        describe('Type-Based Factory', () => {
+            
+            it('should invoke create one time for non-private services', () => {
+                let container = new Container();
+                let count = 0;
+                class A {};
+                class B {
+                    create() {
+                        count++;
+                        return new A;
+                    }
+                }
+                container.setFactory(A, B);
+                container.invoke(A);
+                container.invoke(A);
+
+                equal(count, 1);
+            });
+
+
+            it('should invoke create every time for private services', () => {
+                let container = new Container();
+                let count = 0;
+                @Service({ private: true })
+                class A {};
+                class B {
+                    create() {
+                        count++;
+                        return new A;
+                    }
+                }
+                container.setFactory(A, B);
+                container.invoke(A);
+                container.invoke(A);
+
+                equal(count, 2);
+            });
+
+        });
+
         describe('Type-Based Properties Injection', () => {
 
             let container1: Container;
