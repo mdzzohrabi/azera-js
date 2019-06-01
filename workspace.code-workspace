@@ -1,31 +1,34 @@
 {
 	"folders": [
 		{
-			"path": "reflect"
+			"path": "packages/reflect"
 		},
 		{
-			"path": "container"
+			"path": "packages/container"
 		},
 		{
-			"path": "util"
+			"path": "packages/util"
 		},
 		{
-			"path": "ts-template"
+			"path": "packages/ts-template"
 		},
 		{
-			"path": "cms"
+			"path": "packages/cms"
 		},
 		{
-			"path": "model"
+			"path": "packages/model"
 		},
 		{
-			"path": "web"
+			"path": "packages/web"
 		},
 		{
-			"path": "react"
+			"path": "packages/react"
 		},
 		{
-			"path": "ts"
+			"path": "packages/ts"
+		},
+		{
+			"path": "packages/appStack"
 		}
 	],
 	"settings": {}

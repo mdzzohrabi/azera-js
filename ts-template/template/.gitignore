@@ -1,7 +1,0 @@
-node_modules
-.idea
-.vscode
-*.js
-*.d.ts
-yarn-error.log
-package-lock.json

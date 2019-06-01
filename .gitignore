@@ -3,3 +3,6 @@ yarn-error.log
 .vscode
 node_modules
 .nyc_output
+_recycle
+coverage
+dist

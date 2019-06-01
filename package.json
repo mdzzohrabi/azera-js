@@ -1,0 +1,12 @@
+{
+  "name": "azera",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/mdzzohrabi/azera-js",
+  "author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "link-all": "find ./ -name * -type f"
+  },
+  "dependencies": {}
+}

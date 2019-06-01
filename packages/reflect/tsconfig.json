@@ -1,0 +1,11 @@
+{
+    "extends": "@azera/ts",
+    "compilerOptions": {
+        "outDir": "./",
+        "sourceRoot": "src",
+    },
+    "include": ["src"],
+    "exclude": [
+        "node_modules"
+    ]
+}
