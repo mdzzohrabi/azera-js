@@ -1,4 +1,4 @@
-import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command, Service, TwigBundle } from "@azera/stack";
+import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command, Service, TwigBundle, Middleware, ObjectResolver } from "@azera/stack";
 
 class TestBundle extends Bundle {
 
@@ -27,6 +27,12 @@ class LoginController {
 })
 class IndexController {
 
+    @Middleware('/middle') engineHeader( req: Request, res: Response, next: Function ) {
+        console.log('Engine header middleware');
+        res.header('Engine', 'Azera AppStack');
+        next();
+    }
+
     @Route('/') index( @Inject() res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
@@ -41,6 +47,23 @@ class IndexController {
 
 }
 
+class GetTaggedServicesCommand extends Command {
+    name: string = 'di:tag <tag>';
+    description: string = 'Find services by tag';
+    async run( @Inject() container: Container, tag: string ) {
+
+        let services = container.findByTag(tag);
+
+        if (services.length == 0) console.log(`No services found for tag "${ tag }"`);
+
+        let i = 0;
+        services.forEach(service => {
+            console.log(`${ ++i } : ${ service.name } (${ typeof service.service == 'function' ? service.service.name : '?' })`);
+        });
+
+    }
+}
+
 class DumpParametersCommand extends Command {
     
     description: string = 'Dump container parameters';
@@ -53,7 +76,7 @@ class DumpParametersCommand extends Command {
 }
 
 @Service({
-    imports: [ DumpParametersCommand, IndexController ]
+    imports: [ DumpParametersCommand, GetTaggedServicesCommand, IndexController ]
 })
 class RunKernel extends Command {
     name = 'web';
@@ -68,5 +91,13 @@ kernel
     .addService(RunKernel)
     .boot()
     .run('cli');
+
+let config = {
+    env: 'env://NODE_ENVIRONMENT'
+}
+
+let resolver = new ObjectResolver();
+
+console.log( resolver.resolve(config) );
 
 // console.log(kernel.dumpParameters(), kernel.container.findByTag('http.middleware'));

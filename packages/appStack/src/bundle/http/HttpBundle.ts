@@ -8,6 +8,7 @@ import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 import { DecoratedController } from './Controller';
 import { Kernel } from '../../Kernel';
 import * as path from 'path';
+import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 
 /**
  * Http Bundle
@@ -59,25 +60,38 @@ export class HttpBundle extends Bundle {
 
         container.set(HttpBundle.DI_SERVER, function expressFactory() {
             let server = bundle.server = express();
-            let middlewares = container.getByTag(HttpBundle.DI_TAG_MIDDLEWARE);
-            let controllers = container.getByTag(HttpBundle.DI_TAG_CONTROLLER);
+            let middlewares = container.getByTag(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
+            let controllers = container.getByTag(HttpBundle.DI_TAG_CONTROLLER) as any[];
     
             // Setup middlewares
-            middlewares.forEach(middle => server.use(middle as any));
+            middlewares.forEach((middle: any) => {
+                if ('middlewarePath' in middle) {
+                    server.use(middle.middlewarePath, middle);
+                } else {
+                    server.use(middle);
+                }
+            });
     
             // Controllers
             controllers.forEach(controller => {
     
-                let routePrefix = (<any>controller)['routePrefix'] || '';
+                let routePrefix = controller['routePrefix'] || '';
     
                 // Controller routes
                 let routes = (<RoutesCollection>controller)[ ROUTES_PROPERTY ] || [];
+
+                // Middlewares
+                let middlewares = (<MiddlewaresCollection>controller)[ MIDDLEWARES_PROPERTY ] || [];
     
                 // Controller di definition
                 let definition = container.getDefinition(controller.constructor);
     
                 // Injected controller methods
                 let injectedMethods = Object.keys(definition.methods);
+
+                middlewares.forEach(middle => {
+                    server.use( routePrefix + middle.path, container.invokeLater(controller, middle.methodName) );
+                });
                
                 routes.forEach(route => {
     

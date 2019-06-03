@@ -1,8 +1,9 @@
-import { Container, Inject, Service } from '@azera/container';
+import { Container, Inject } from '@azera/container';
+import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
 
-@Service({ tags: [ 'http.middleware' ] })
+@Middleware()
 export class HttpCoreMiddlewareFactory {
 
     create( @Inject() serviceContainer: Container ) {
