@@ -1,8 +1,8 @@
 0 silly argv { _: [ 'clean' ],
 0 silly argv   lernaVersion: '3.14.1',
-0 silly argv   '$0': 'C:\\Users\\Masoud\\AppData\\Local\\Yarn\\Data\\global\\node_modules\\lerna\\cli.js' }
+0 silly argv   '$0': 'D:\\Programs\\Node\\node_modules\\lerna\\cli.js' }
 1 notice cli v3.14.1
-2 verbose rootPath E:\Projects\AzeraJS
+2 verbose rootPath D:\Projects\azerajs
 3 info Removing the following directories:
 4 info clean packages\appStack\node_modules
 4 info clean packages\cms\node_modules
@@ -14,20 +14,27 @@
 4 info clean packages\ts\node_modules
 4 info clean packages\util\node_modules
 4 info clean packages\web\node_modules
-5 info clean removing E:\Projects\AzeraJS\packages\appStack\node_modules
-6 silly rimrafDir E:\Projects\AzeraJS\packages\appStack\node_modules
-7 info clean removing E:\Projects\AzeraJS\packages\cms\node_modules
-8 silly rimrafDir E:\Projects\AzeraJS\packages\cms\node_modules
-9 info clean removing E:\Projects\AzeraJS\packages\container\node_modules
-10 silly rimrafDir E:\Projects\AzeraJS\packages\container\node_modules
-11 info clean removing E:\Projects\AzeraJS\packages\model\node_modules
-12 silly rimrafDir E:\Projects\AzeraJS\packages\model\node_modules
-13 verbose rimrafDir removed E:\Projects\AzeraJS\packages\appStack\node_modules
-14 info clean removing E:\Projects\AzeraJS\packages\react\node_modules
-15 silly rimrafDir E:\Projects\AzeraJS\packages\react\node_modules
-16 verbose rimrafDir removed E:\Projects\AzeraJS\packages\model\node_modules
-17 info clean removing E:\Projects\AzeraJS\packages\reflect\node_modules
-18 silly rimrafDir E:\Projects\AzeraJS\packages\reflect\node_modules
-19 error Error: Command failed: C:\Program Files\nodejs10\node.exe C:\Users\Masoud\AppData\Local\Yarn\Data\global\node_modules\rimraf\bin.js --no-glob E:\Projects\AzeraJS\packages\cms\node_modules\
-19 error     at makeError (C:\Users\Masoud\AppData\Local\Yarn\Data\global\node_modules\execa\index.js:174:9)
-19 error     at Promise.all.then.arr (C:\Users\Masoud\AppData\Local\Yarn\Data\global\node_modules\execa\index.js:278:16)
+5 info clean removing D:\Projects\azerajs\packages\appStack\node_modules
+6 silly rimrafDir D:\Projects\azerajs\packages\appStack\node_modules
+7 info clean removing D:\Projects\azerajs\packages\cms\node_modules
+8 silly rimrafDir D:\Projects\azerajs\packages\cms\node_modules
+9 info clean removing D:\Projects\azerajs\packages\container\node_modules
+10 silly rimrafDir D:\Projects\azerajs\packages\container\node_modules
+11 info clean removing D:\Projects\azerajs\packages\model\node_modules
+12 silly rimrafDir D:\Projects\azerajs\packages\model\node_modules
+13 info clean removing D:\Projects\azerajs\packages\react\node_modules
+14 silly rimrafDir D:\Projects\azerajs\packages\react\node_modules
+15 info clean removing D:\Projects\azerajs\packages\reflect\node_modules
+16 silly rimrafDir D:\Projects\azerajs\packages\reflect\node_modules
+17 info clean removing D:\Projects\azerajs\packages\ts-template\node_modules
+18 silly rimrafDir D:\Projects\azerajs\packages\ts-template\node_modules
+19 info clean removing D:\Projects\azerajs\packages\ts\node_modules
+20 silly rimrafDir D:\Projects\azerajs\packages\ts\node_modules
+21 info clean removing D:\Projects\azerajs\packages\util\node_modules
+22 silly rimrafDir D:\Projects\azerajs\packages\util\node_modules
+23 info clean removing D:\Projects\azerajs\packages\web\node_modules
+24 silly rimrafDir D:\Projects\azerajs\packages\web\node_modules
+25 verbose rimrafDir removed D:\Projects\azerajs\packages\react\node_modules
+26 error Error: Command failed: D:\Programs\Node\node.exe D:\Programs\Node\node_modules\lerna\node_modules\rimraf\bin.js --no-glob D:\Projects\azerajs\packages\cms\node_modules\
+26 error     at makeError (D:\Programs\Node\node_modules\lerna\node_modules\execa\index.js:174:9)
+26 error     at Promise.all.then.arr (D:\Programs\Node\node_modules\lerna\node_modules\execa\index.js:278:16)

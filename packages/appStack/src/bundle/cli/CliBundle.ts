@@ -11,6 +11,8 @@ export const DI_TAG_COMMAND = 'cli.command';
  */
 export class CliBundle extends Bundle {
 
+    static DI_TAG_COMMAND = DI_TAG_COMMAND;
+
     init( @Inject() contianer: Container ) {
 
         contianer.autoTag(function (service) {

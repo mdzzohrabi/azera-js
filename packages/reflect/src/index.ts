@@ -13,7 +13,7 @@ const METHOD_FUNC_REGEX = /^[a-zA-Z_][0-9a-zA-Z_]*\(/;
 const OBJECT_DESTRUCTOR_REGEX = /\{.*?\}/;
 
 export interface IClass {
-    new (...params: any[]);
+    new (...params: any[]): any;
 }
 
 export function isArrowFunction(func: Function) {
@@ -47,7 +47,7 @@ export function toString( value: string | Function ): string {
     return typeof value === 'function' ? value.toString() : value;
 }
 
-export function assertFunction(value) {
+export function assertFunction(value: any) {
     if ( typeof value !== 'function' ) throw Error(`${ typeof value } is not a function`);
 }
 
@@ -62,7 +62,7 @@ export function getParameters(value: Function) {
     let isClass = string.startsWith('class ');
     let params = [];
     if ( isArrow ) {
-        params = string.split('=>')[0].split('(').pop().replace(/[()]/g, '').trim().replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR);
+        params = string.split('=>')[0].split('(').pop()!.replace(/[()]/g, '').trim().replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR);
     } else {
         let parts = string.split( isClass ? CLASS_PARAM_OFFSET_REGEX : PARAM_OFFSET_REGEX );
         params = parts[1] ? parts[1].split(')')[0].replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR) : [];

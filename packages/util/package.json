@@ -15,7 +15,10 @@
     },
     "dependencies": {
         "@azera/ts": "^1.0.0",
-        "tslib": "^1.9.3"
+        "@types/twig": "^1.12.2",
+        "tslib": "^1.9.3",
+        "twig": "^1.13.3",
+        "typescript": "^3.5.1"
     },
     "devDependencies": {
         "@types/mocha": "^2.2.46",

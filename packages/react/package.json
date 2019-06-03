@@ -25,7 +25,11 @@
         "@azera/ts": "^1.0.0",
         "@azera/util": "^1.0.12",
         "@types/string": "^0.0.29",
-        "string": "^3.3.3"
+        "@types/twig": "^1.12.2",
+        "string": "^3.3.3",
+        "tslib": "^1.9.3",
+        "twig": "^1.13.3",
+        "typescript": "^3.5.1"
     },
     "devDependencies": {
         "@types/mocha": "^5.0.0",

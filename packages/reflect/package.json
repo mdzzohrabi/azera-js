@@ -6,7 +6,7 @@
     "version": "1.0.4",
     "main": "index.js",
     "scripts": {
-        "clean": "rm *.d.ts *.js",
+        "clean": "rm -f *.d.ts *.js *.map && rm -rf test",
         "build": "tsc",
         "test": "mocha test/*.spec.js",
         "ts:test": "mocha -r ts-node/register src/test/*.ts",
@@ -19,13 +19,16 @@
     ],
     "dependencies": {
         "@azera/ts": "^1.0.0",
-        "@azera/util": "^1.0.12"
+        "@azera/util": "^1.0.12",
+        "@types/twig": "^1.12.2",
+        "tslib": "^1.9.3",
+        "twig": "^1.13.3"
     },
     "devDependencies": {
         "@types/mocha": "^2.2.46",
         "@types/node": "^9.3.0",
         "mocha": "^4.1.0",
         "ts-node": "^8.1.0",
-        "typescript": "^2.6.2"
+        "typescript": "^3.5.1"
     }
 }

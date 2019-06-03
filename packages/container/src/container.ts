@@ -15,13 +15,24 @@ interface IInvokeOptions {
     override?: Partial<IDefinition>;
 }
 
+/**
+ * Dependency Injection Container
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 export class Container implements IContainer {
 
+    /**
+     * Check if decorated class was inherited from another decorated class
+     * @param target Class
+     */
     static isInheritedServiceDecorator(target: Function): boolean {
         return (<any>target)[META_INJECT] && !target.hasOwnProperty(META_INJECT);
-        // return ( getDefinition(target) as IInternalDefinition ).$target !== target;
     }
 
+    /**
+     * Prepare class if inherited from service decorated class
+     * @param target Class
+     */
     static checkInheritance(target: Function) {
         if ( Container.isInheritedServiceDecorator(target) ) {
             let def = <IInternalDefinition>getDefinition(target);
@@ -34,13 +45,39 @@ export class Container implements IContainer {
         }
     }
 
-    // Cache for invoked services
+    /**
+     * Invoked services in-memory cache
+     */
     private instances: HashMap<any> = {};
+
+    /**
+     * Container parameters collection
+     */
     private params: HashMap<any> = {};
+    
+    /**
+     * Declared service definitions
+     */
     private services: HashMap<IDefinition> = {};
+
+    /**
+     * Tag extractor functions
+     */
     private autoTags: IAutoTagger[] = [];
+
+    /**
+     * Type factories
+     */
     private factories = new WeakMap <any, Factory>();
+
+    /**
+     * Container-specified class definitions
+     */
     private types = new WeakMap<Function, IDefinition>();
+
+    /**
+     * Imported things
+     */
     private imported: any[] = [];
 
     constructor(services?: HashMap<Service> , parameters?: HashMap<any> , autoTags?: IAutoTagger[]) {
@@ -57,13 +94,15 @@ export class Container implements IContainer {
 
     }
 
+    /**
+     * Get container parameters
+     */
     public getParameters() {
         return this.params;
     }
 
     /**
-     * Invoke a factory
-     * 
+     * Build service from factory
      * @param factory Factory
      * @param _stack  Stack
      * @internal
@@ -85,6 +124,11 @@ export class Container implements IContainer {
         return result;
     }
 
+    /**
+     * Resolve import
+     * @param item Path or Function to import
+     * @internal
+     */
     private resolveImport(item: string | Function) {
         if ( this.imported.includes(item) ) return;
         this.imported.push( item );
@@ -103,14 +147,18 @@ export class Container implements IContainer {
         }
     }
 
+    /**
+     * Resolve definition imports
+     * @param service Service definition
+     * @internal
+     */
     private resolveImports(service: IDefinition) {
         if ( !service.imports ) return;
         service.imports.forEach( this.resolveImport.bind(this) );
     }
 
     /**
-     * Creation happens here
-     * 
+     * Resolve (build) service definition
      * @param definition    Service definition
      * @param _stack        Resolving stack
      * @param options       Options
@@ -204,11 +252,11 @@ export class Container implements IContainer {
     }
 
     /**
-     * Find and resolve a service definition by name
+     * Build service by name
      * @param name Service name
-     * @param stack internal use for debugging
-     * @returns {T}
+     * @param stack Injection stack ( for debugging )
      * @throws ServiceNotFoundError
+     * @internal
      */
     private getService <T>(name: string, stack: string[] = []): T {
         let service: IDefinition;
@@ -228,12 +276,24 @@ export class Container implements IContainer {
         throw new ServiceNotFoundError(name, stack);
     }
 
-    private _get <T>(name?: string, stack: string[] = []): T | undefined {
+    /**
+     * Get service/parameters
+     * @param name Service or paremeter name
+     * @param stack Injection stack
+     * @internal
+     */
+    private _get <T extends Function>(name?: T, stack?: string[]): T
+    private _get <T>(name?: string, stack?: string[]): T
+    private _get (name?: string, stack: string[] = [])
+    {
 
         if ( name == undefined ) return undefined;
 
         stack = (<string[]>[]).concat(stack);
         stack.push(name);
+
+        // Function
+        if (typeof name == 'function') return this._invoke(name, stack);
 
         // Cached
         if ( this.instances[name] ) return this.instances[name];
@@ -245,24 +305,28 @@ export class Container implements IContainer {
         // Parameter
         else if (this.params[name]) return this.params[name];
 
-        return this.getService <T>(name, stack);
+        return this.getService(name, stack);
+    }
+
+    get<T extends Function>(service: T): T | undefined
+    get<T>(name: string): T | undefined
+    get(value: any)
+    {
+        return this._get(value);
     }
 
     /**
-     * Get a service or parameter
-     * @param {string} name
-     * @returns {T}
+     * Build tagged services
+     * @param tag Tag
      */
-    get<T>(name: string): T | undefined {
-        return this._get <T>(name);
-    }
-
     getByTag<T>(tag: string): T[] {
-        return this.findByTag(tag).map( definition => {
-            return this._get(definition.name);
-        }).filter((service): service is T => service != undefined);
+        return this.findByTag(tag).map( definition => this._get<T>(definition.name) ).filter((service): service is T => service != undefined);
     }
 
+    /**
+     * Get tagged services definitions
+     * @param tag Tag
+     */
     findByTag(tag: string): IDefinition[] {
         let services: IDefinition[] = [];
         forEach(this.services, service => {
@@ -272,6 +336,11 @@ export class Container implements IContainer {
         return services;
     }
 
+    /**
+     * Make an method injectable for later use
+     * @param context Method context (Class instance)
+     * @param method Method name
+     */
     invokeLater <T extends object, M extends keyof T>(context: Constructor<T>, method: M): MockMethod<T, M>;
     invokeLater <T extends object, M extends keyof T>(context: T, method: M): MockMethod<T, M>;
     invokeLater(context: any, method: string): Function
@@ -291,12 +360,19 @@ export class Container implements IContainer {
 
     /**
      * Invoke a function and resolve its dependencies
+     * @param value Invokable value
      */
     invoke<T>(value: Invokable<T>): T | undefined
     {
         return this._invoke(value);
     }
 
+    /**
+     * 
+     * @param value Invokable value
+     * @param stack Injection stack
+     * @param options 
+     */
     private _invoke <T>(value: Invokable<T>, stack: string[] = [], options?: IInvokeOptions ): T | undefined {
 
         // String
@@ -314,26 +390,74 @@ export class Container implements IContainer {
     }
 
 
+    /**
+     * Set parameter value
+     * @param name Parameter name
+     * @param value Value
+     */
     setParameter(name: string, value: any): this {
         this.params[name] = value;
         return this;
     }
 
+    /**
+     * Set parameters value
+     * @param params Parameters
+     */
+    setParameters(params: { [key: string]: any }) {
+        this.params = { ...this.params, params };
+        return this;
+    }
+
+    /**
+     * Set factory for a function
+     * @param type Type
+     * @param factory Factory
+     */
     setFactory(type: Function, factory: Factory) {
         this.factories.set(type, factory);
         delete this.instances[ getDefinition(type).name ];
         return this;
     }
 
+    /**
+     * Set alias for a type
+     * @param type Type
+     * @param alias Alias value
+     */
+    setAlias(type: Function, alias: any) {
+        this.setFactory(type, function typeAlias() {
+            return alias;
+        });
+        return this;
+    }
+
+    /**
+     * Get overrided service definition
+     * @param type Type
+     */
     getType(type: Function): IDefinition | undefined {
         return this.types.get(type);
     }
 
     /**
-     * Set services or parameters
+     * Set batch services and parameters
+     * @param values Services and Parameters
      */
     set(values: { [name: string]: IDefinition | ContainerValue }): this;
+
+    /**
+     * Set service/parameter
+     * @param name Service/Parameter name
+     * @param value 
+     */
     set(name: string, value: IDefinition | ContainerValue): this;
+
+    /**
+     * Container-scope class definition
+     * @param type Type/Class
+     * @param definition Definition
+     */
     set(type: Function, definition: Partial<IDefinition>): this;
     set(...params: any[]) {
 
@@ -351,25 +475,13 @@ export class Container implements IContainer {
 
         let [name, value] = params;
 
-        if (isDefinition(value)) this.addDefinition(Object.assign({ private: false, tags: [] }, value, { name }));
+        if (isDefinition(value)) {
+            this.addDefinition(Object.assign({ private: false, tags: [] }, value, { name }));
+        }
         else if ( is.Function(value) || is.Array(value) ) {
             let def = Object.assign({}, this.getDefinition(value));
             def.name = name;
             this.addDefinition(def);
-            // let { func, deps } = getDependencies( value );
-            // this.addDefinition({
-            //     name,
-            //     service: func,
-            //     parameters: deps,
-            //     isFactory: isFactory(func),
-            //     private: false,
-            //     tags: [],
-            //     autoTags: [],
-            //     imports: [],
-            //     invoke: false,
-            //     methods: {},
-            //     properties: {}
-            // });
         }
         else this.setParameter(name, value);
 
@@ -377,6 +489,10 @@ export class Container implements IContainer {
     }
 
 
+    /**
+     * Get service built-in definition
+     * @param target Class/Function
+     */
     getDefinition(target: string | IMethod | Injectable): IDefinition {
 
         let customDeps, def: IDefinition;
@@ -414,6 +530,10 @@ export class Container implements IContainer {
         return def;
     }
 
+    /**
+     * Add definition to container
+     * @param definition Definition
+     */
     addDefinition(definition: IDefinition): this {
         // Defaults
         definition = Definition(definition);
@@ -432,22 +552,41 @@ export class Container implements IContainer {
 
         delete this.instances[definition.name];
         this.services[definition.name] = definition;
+
+        this.resolveImports(definition);
+
         return this;
     }
 
+    /**
+     * Get parameter value
+     * @param name Parameter name
+     */
     getParameter(name: string) {
         if ( this.hasParameter(name) ) return this.params[name];
         throw Error(`Parameter ${name} not found`);
     }
 
+    /**
+     * Check parameter exists
+     * @param name Parameter name
+     */
     hasParameter(name: string): boolean {
         return Object.keys(this.params).includes(name);
     }
 
+    /**
+     * Check for service definition exist
+     * @param name Service name
+     */
     has(name: string): boolean {
         return !!this.services[name];
     }
 
+    /**
+     * Add Auto-tagger
+     * @param tagger Auto-tagger
+     */
     autoTag(tagger: IAutoTagger): this;
     autoTag(base: Function, tags: string[]): this;
     autoTag(...params: any[]): this
@@ -461,7 +600,7 @@ export class Container implements IContainer {
     }
 
     /**
-     * Declare a class or function to container
+     * Declare class or function to container
      */
     add(...services: Function[]) {
         services.forEach( service => {
@@ -471,15 +610,23 @@ export class Container implements IContainer {
         return this;
     }
 
-    
+    /**
+     * Get declared definitions
+     */
     get definitions() {
         return this.services;
     }
     
+    /**
+     * Return declared service names
+     */
     get names() {
         return Object.keys(this.services);
     }
 
+    /**
+     * Get services count
+     */
     get size() {
         return Object.keys(this.services).length;
     }
@@ -496,10 +643,12 @@ export class Container implements IContainer {
         };
     }
 
-
-
 }
 
+/**
+ * Get injectable dependencies
+ * @param value Injectable
+ */
 export function getDependencies(value: Injectable | IMethod) {
     let deps = [];
     let func: Function;

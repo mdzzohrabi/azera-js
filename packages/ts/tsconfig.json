@@ -3,16 +3,14 @@
         "module": "commonjs",
         "outDir": "build",
         "emitDecoratorMetadata": true,
-        "noUnusedLocals": true,
         "experimentalDecorators": true,
         "strict": true,
         "noImplicitAny": true,
-        "inlineSourceMap": false,
-        "sourceMap": true,
+        "inlineSourceMap": true,
         "preserveSymlinks": true,
         "declaration": true,
         "importHelpers": true,
-        "target": "esnext"
+        "target": "es2016"
     },
     "include": ["src"],
     "exclude": [

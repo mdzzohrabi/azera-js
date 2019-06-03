@@ -7,6 +7,7 @@ export * from './factory/LoggerFactory';
 export * from './Kernel';
 export * from './bundle/http';
 export * from './bundle/cli';
+export * from './bundle/twig';
 
 // External libraries
 

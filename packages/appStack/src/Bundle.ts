@@ -35,4 +35,16 @@ export class Bundle {
      */
     run(...params: any[]) {}
 
+    /**
+     * Add services to container
+     * @param params Services
+     */
+    getServices(...params: any[]): Function[] {
+        return [];
+    }
+
+    get bundleName() {
+        return (this.constructor as any).bundleName || this.constructor.name;
+    }
+
 }

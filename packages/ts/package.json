@@ -10,5 +10,9 @@
   "author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
   "license": "ISC",
   "dependencies": {
+    "@types/twig": "^1.12.2",
+    "tslib": "^1.9.3",
+    "twig": "^1.13.3",
+    "typescript": "^3.5.1"
   }
 }

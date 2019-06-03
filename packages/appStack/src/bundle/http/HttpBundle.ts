@@ -6,6 +6,8 @@ import { Logger } from '../../Logger';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 import { DecoratedController } from './Controller';
+import { Kernel } from '../../Kernel';
+import * as path from 'path';
 
 /**
  * Http Bundle
@@ -15,6 +17,18 @@ export class HttpBundle extends Bundle {
 
     static DI_TAG_MIDDLEWARE = 'http.middleware';
     static DI_TAG_CONTROLLER = 'http.controller';
+
+    /** Http listen port */
+    static DI_PARAM_PORT = 'http.port';
+
+    /** Views directory */
+    static DI_PARAM_VIEWS = 'http.views';
+
+    /** Express view engine */
+    static DI_PARAM_VIEW_ENGINE = 'http.viewEngine';
+
+    /** Http server (express) service name */
+    static DI_SERVER = 'http.server';
 
     public server: express.Express | undefined;
 
@@ -39,61 +53,74 @@ export class HttpBundle extends Bundle {
         container.add(HttpCoreMiddlewareFactory);
 
         // Default listen port
-        container.setParameter('http.port', 9095);
-        container.set('http.server', express);
+        container.setParameter(HttpBundle.DI_PARAM_PORT, 9095);
+        
+        let bundle = this;
 
+        container.set(HttpBundle.DI_SERVER, function expressFactory() {
+            let server = bundle.server = express();
+            let middlewares = container.getByTag(HttpBundle.DI_TAG_MIDDLEWARE);
+            let controllers = container.getByTag(HttpBundle.DI_TAG_CONTROLLER);
+    
+            // Setup middlewares
+            middlewares.forEach(middle => server.use(middle as any));
+    
+            // Controllers
+            controllers.forEach(controller => {
+    
+                let routePrefix = (<any>controller)['routePrefix'] || '';
+    
+                // Controller routes
+                let routes = (<RoutesCollection>controller)[ ROUTES_PROPERTY ] || [];
+    
+                // Controller di definition
+                let definition = container.getDefinition(controller.constructor);
+    
+                // Injected controller methods
+                let injectedMethods = Object.keys(definition.methods);
+               
+                routes.forEach(route => {
+    
+                    if ( injectedMethods.includes(route.action) ) {
+                        // @ts-ignore
+                        server[ route.method ]( routePrefix + route.path, function requestHandler() {
+                            // @ts-ignore
+                            return container.invokeLater(controller, route.action)();
+                        });
+                    } else {
+                        // @ts-ignore
+                        server[ route.method ]( routePrefix + route.path, controller[ route.action ].bind( controller ) );
+                    }
+    
+                });
+    
+            });
+
+            return server;
+    
+        });
     }
 
     boot( @Inject() container: Container ) {
 
-        let server = this.server = container.get<express.Express>('http.server')!;
-        let middlewares = container.getByTag(HttpBundle.DI_TAG_MIDDLEWARE);
-
-        // fix: Resolve controller imports
-        container.getByTag(HttpBundle.DI_TAG_CONTROLLER);
-
-        let controllers = container.getByTag(HttpBundle.DI_TAG_CONTROLLER);
-
-        // Setup middlewares
-        middlewares.forEach(middle => server.use(middle as any));
-
-        // Controllers
-        controllers.forEach(controller => {
-
-            let routePrefix = (<any>controller)['routePrefix'] || '';
-
-            // Controller routes
-            let routes = (<RoutesCollection>controller)[ ROUTES_PROPERTY ] || [];
-
-            // Controller di definition
-            let definition = container.getDefinition(controller.constructor);
-
-            // Injected controller methods
-            let injectedMethods = Object.keys(definition.methods);
-           
-            routes.forEach(route => {
-
-                if ( injectedMethods.includes(route.action) ) {
-                    // @ts-ignore
-                    server[ route.method ]( routePrefix + route.path, function requestHandler() {
-                        // @ts-ignore
-                        return container.invokeLater(controller, route.action)();
-                    });
-                } else {
-                    // @ts-ignore
-                    server[ route.method ]( routePrefix + route.path, controller[ route.action ].bind( controller ) );
-                }
-
-            });
-
-        });
+        // Views path
+        if ( !container.hasParameter(HttpBundle.DI_PARAM_VIEWS) && container.hasParameter(Kernel.DI_PARAM_ROOT) ) {
+            // Default views path
+            container.setParameter(HttpBundle.DI_PARAM_VIEWS, path.resolve( container.getParameter(Kernel.DI_PARAM_ROOT) , './views' ) );
+        } else if ( container.hasParameter(HttpBundle.DI_PARAM_VIEWS) ) {
+            // Resolve relative path
+            let dirPath = container.getParameter(HttpBundle.DI_PARAM_VIEWS) as string;
+            if (dirPath.startsWith('.') || dirPath.startsWith('/')) {
+                container.setParameter( HttpBundle.DI_PARAM_VIEWS, path.resolve( container.getParameter(Kernel.DI_PARAM_ROOT) , dirPath ) );
+            }
+        }
 
     }
 
-    run( @Inject('http.port') httpPort: number, @Inject() logger: Logger, action?: string ) {
+    run( @Inject() container: Container, @Inject('http.port') httpPort: number, @Inject() logger: Logger, action?: string ) {
 
         if (!action || action == 'web') {
-            this.server!.listen(httpPort, function serverStarted() {
+            container.get<express.Express>(HttpBundle.DI_SERVER)!.listen(httpPort, function serverStarted() {
                 logger.info(`Server started on port ${ httpPort }`);
             });
         }

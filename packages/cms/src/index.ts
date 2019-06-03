@@ -1,4 +1,4 @@
-import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command } from "@azera/stack";
+import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command, Service, TwigBundle } from "@azera/stack";
 
 class TestBundle extends Bundle {
 
@@ -7,7 +7,7 @@ class TestBundle extends Bundle {
     }
 }
 
-let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TestBundle ]);
+let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TwigBundle, new TestBundle ]);
 
 @Controller()
 class LoginController {
@@ -28,7 +28,15 @@ class LoginController {
 class IndexController {
 
     @Route('/') index( @Inject() res: Response ) {
-        res.end('Hello World');
+        res.render('index.html.twig', {
+            name: 'World'
+        })
+    }
+
+    @Route('/native') index2( req: Request, res: Response ) {
+        res.render('index.html.twig', {
+            name: 'World'
+        })
     }
 
 }
@@ -44,6 +52,9 @@ class DumpParametersCommand extends Command {
 
 }
 
+@Service({
+    imports: [ DumpParametersCommand, IndexController ]
+})
 class RunKernel extends Command {
     name = 'web';
     description = 'Start web server';
@@ -54,7 +65,7 @@ class RunKernel extends Command {
 
 kernel
     .loadParameters(__dirname + '/../app.config.json')
-    .addService(IndexController, DumpParametersCommand, RunKernel)
+    .addService(RunKernel)
     .boot()
     .run('cli');
 

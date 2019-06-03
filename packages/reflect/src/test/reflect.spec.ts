@@ -1,6 +1,5 @@
-import { reflect, isClass, isFunction, isArrowFunction, getParameters, isCallable, isMethod } from "../index";
-import { equal, ok, deepEqual, fail } from "assert";
-import { isMaster } from "cluster";
+import { deepEqual, equal, ok } from "assert";
+import { getParameters, isArrowFunction, isCallable, isClass, isFunction, isMethod, reflect } from "../index";
 
 describe('isArrowFunction()', () => {
 
@@ -10,8 +9,8 @@ describe('isArrowFunction()', () => {
 
     it('should works ok', () => {
         ok(isArrowFunction( () => null ));
-        ok(isArrowFunction( (name = 12) => {}));
-        ok(isArrowFunction( ({ name }) => null ));
+        ok(isArrowFunction( (name: number = 12) => {}));
+        ok(isArrowFunction( ({ name }: { name: string }) => null ));
         equal( isArrowFunction(function () {}), false );
         equal( isArrowFunction(Console.print), false, `Class methods are not arrow functions`);
     })
@@ -26,8 +25,8 @@ describe('isMethod()', () => {
 
     it('should works ok', () => {
         ok( !isMethod( () => null ));
-        ok( !isMethod( (name = 12) => {}));
-        ok( !isMethod( ({ name }) => null ));
+        ok( !isMethod( (name: number = 12) => {}));
+        ok( !isMethod( ({ name }: {name: string}) => null ));
         ok( !isMethod(function () {}) );
         ok( isMethod(Console.print) );
     })
@@ -37,12 +36,12 @@ describe('isMethod()', () => {
 describe('getParameters()', () => {
     it('should resolve function parameters', () => {
         deepEqual(
-            getParameters(function (param1, param2) { }),
+            getParameters(function (param1: any, param2: any) { }),
             ['param1', 'param2']
         );
 
-        deepEqual( getParameters( function (arg1) {}), [ 'arg1' ] );
-        deepEqual( getParameters( (arg1) => {}), [ 'arg1' ] );
+        deepEqual( getParameters( function (arg1: any) {}), [ 'arg1' ] );
+        deepEqual( getParameters( (arg1: any) => {}), [ 'arg1' ] );
 
         class A {
             m ( n = 12 ) {}
@@ -56,7 +55,7 @@ describe('getParameters()', () => {
 
     it('should resolve class with mixin parameters', () => {
 
-        function Mixin(target) {
+        function Mixin(target: any) {
             return class extends target {
 
             }
@@ -72,7 +71,7 @@ describe('getParameters()', () => {
     it('should resolve class constructor parameters', () => {
         deepEqual(
             getParameters(class {
-                constructor(param1, param2) { }
+                constructor(param1: any, param2: any) { }
             }),
             ['param1', 'param2']
         );
@@ -81,19 +80,19 @@ describe('getParameters()', () => {
 
     it('should resolve async function parameters', () => {
         deepEqual(
-            getParameters(async (logger) => {}),
+            getParameters(async (logger: any) => {}),
             [ 'logger' ]
         );
 
         deepEqual(
-            getParameters(async function (logger) {}),
+            getParameters(async function (logger: any) {}),
             [ 'logger' ]
         );
     });
 
     it('should resolve arrow function parameters', () => {
-        deepEqual(getParameters((param1, param2) => null), ['param1', 'param2']);
-        deepEqual(getParameters(param1 => null), ['param1']);
+        deepEqual(getParameters((param1: any, param2: any) => null), ['param1', 'param2']);
+        deepEqual(getParameters((param1: any) => null), ['param1']);
     });
 
     it('should resolve empty parameters', () => {
@@ -103,7 +102,7 @@ describe('getParameters()', () => {
     });
 
     it('should resolve object destruct parameters', () => {
-        deepEqual( getParameters(function ({ name, age = 12 }) {
+        deepEqual( getParameters(function ({ name, age = 12 }: { name: string, age: number }) {
 
         }) , [ 'p0' ])
     })
@@ -113,7 +112,7 @@ describe('Type checking', async () => {
 
     it('isArrowFunction()', () => {
         ok(isArrowFunction(() => null));
-        ok(isArrowFunction(_ => null));
+        ok(isArrowFunction((_: any) => null));
         ok(!isArrowFunction(async function () { }));
         ok(!isArrowFunction(function () { }));
         ok(!isArrowFunction(class { }));
@@ -138,7 +137,7 @@ describe('Type checking', async () => {
 
 describe('Reflect', () => {
     it('anonymous function with parameters', () => {
-        let r = reflect(function (a, b, c) { });
+        let r = reflect(function (a: any, b: any, c: any) { });
         equal('', r.name); // Name
         ok(r.isFunction);  // Function
         ok(!r.isClass);    // Class
@@ -160,7 +159,7 @@ describe('Reflect', () => {
 
     it('class', () => {
         let ref = reflect(class Console {
-            constructor(version) {}
+            constructor(version: any) {}
         });
         ok(ref.isClass);
     })

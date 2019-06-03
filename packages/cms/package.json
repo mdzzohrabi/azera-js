@@ -8,9 +8,11 @@
     "@azera/stack": "^1.0.0",
     "@azera/ts": "^1.0.0",
     "@types/commander": "^2.12.2",
+    "@types/twig": "^1.12.2",
     "commander": "^2.20.0",
     "ts-node": "^8.2.0",
     "tslib": "^1.9.3",
+    "twig": "^1.13.3",
     "typescript": "^3.4.5"
   }
 }
