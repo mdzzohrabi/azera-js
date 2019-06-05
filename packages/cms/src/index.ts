@@ -93,7 +93,10 @@ kernel
     .run('cli');
 
 let config = {
-    env: 'env://NODE_ENVIRONMENT'
+    env: 'env://NODE_ENVIRONMENT',
+    $imports : [
+
+    ]
 }
 
 let resolver = new ObjectResolver();
