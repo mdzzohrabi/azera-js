@@ -1,0 +1,9 @@
+# Home
+/: HomeController
+
+# Login
+/welcome: TestBundle::WelcomeController.index
+
+/welcome2:
+    - TestBundle::WelcomeController.index
+    - asd

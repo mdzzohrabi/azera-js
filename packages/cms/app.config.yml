@@ -1,0 +1,12 @@
+$imports: '@azera/stack/config.yml'
+
+parameters:
+
+    # Views directory
+    http.port: 8090
+
+    http.views: ./views
+
+# Routes collection
+# routes:
+#     $imports: ./config/routes.yml

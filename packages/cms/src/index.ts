@@ -1,4 +1,4 @@
-import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command, Service, TwigBundle, Middleware, ObjectResolver } from "@azera/stack";
+import { Bundle, Container, Controller, HttpBundle, Inject, Kernel, Request, Response, Route, CliBundle, Command, Service, TwigBundle, Middleware, ObjectResolver, serialize } from "@azera/stack";
 
 class TestBundle extends Bundle {
 
@@ -67,7 +67,7 @@ class GetTaggedServicesCommand extends Command {
 class DumpParametersCommand extends Command {
     
     description: string = 'Dump container parameters';
-    name: string = 'dump:parameters';
+    name: string = 'di:dump';
     
     async run( @Inject() kernel: Kernel ) {
         console.log(kernel.dumpParameters());       
@@ -86,21 +86,41 @@ class RunKernel extends Command {
     }
 }
 
-kernel
-    .loadParameters(__dirname + '/../app.config.json')
-    .addService(RunKernel)
-    .boot()
-    .run('cli');
+kernel.addService(RunKernel).bootAndRun(__dirname + '/../app.config.yml', 'cli').catch(err => {
+    console.error(err);
+});
 
-let config = {
-    env: 'env://NODE_ENVIRONMENT',
-    $imports : [
+// let config = {
+//     $imports : __dirname + '/../app.config.yml'
+// }
 
-    ]
-}
+// let resolver = new ObjectResolver();
 
-let resolver = new ObjectResolver();
+// resolver
+//     .resolver(ObjectResolver
+//         .schemaValidator()
+//         .node('parameters', { description: 'Container parameters', type: 'object' })
+//         .node('parameters.http.port', { type: 'number', description: 'Web server port', required: true })
+//         .node('parameters.http.views', { type: 'string', description: 'Views directory', required: true })
+//         .node('parameters.http.viewEngine', { description: 'Web server view engine', required: false })
+//         .node('parameters.*', { description: 'Extra parameter' })
+//         .node('routes', { type: 'object', description: 'Routes collection' })
+//         .node('routes.**', { description: 'Route item' })
+//         .resolver
+//     )
+//     .resolve(config)
+//     .then(result => {
 
-console.log( resolver.resolve(config) );
+//         console.log(result)
+        
+//         kernel
+//             .loadParameters(result.parameters)
+//             .addService(RunKernel)
+//             .boot()
+//             .run('cli');
+
+//     })
+//     .catch(err => console.log(err))
+// ;
 
 // console.log(kernel.dumpParameters(), kernel.container.findByTag('http.middleware'));

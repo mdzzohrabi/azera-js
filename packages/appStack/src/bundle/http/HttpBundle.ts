@@ -9,6 +9,7 @@ import { DecoratedController } from './Controller';
 import { Kernel } from '../../Kernel';
 import * as path from 'path';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
+import { SchemaValidator } from '../../ObjectResolver';
 
 /**
  * Http Bundle
@@ -43,7 +44,11 @@ export class HttpBundle extends Bundle {
         super();
     }
 
-    init( @Inject() container: Container ) {
+    init( @Inject() container: Container, @Inject() config: SchemaValidator, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
+
+        config
+            .node('parameters.http.views', { description: 'Web server views directory', type: 'string', required: true, validate: this._normalizeViewsDir.bind(this, rootDir) })
+            .node('parameters.http.port', { description: 'Web server port', type: 'number', required: true });
 
         // Register middlewares
         this.middlewares.forEach((middle, i) => {
@@ -115,6 +120,22 @@ export class HttpBundle extends Bundle {
         });
     }
 
+    _normalizeViewsDir(appRoot: string, viewsDir: string) {
+        if (viewsDir.match(/:[\/\\]/)) return viewsDir;
+        if ( !viewsDir && appRoot ) {
+            // Default views path
+            return path.resolve( appRoot , './views' );
+        }
+        else if ( viewsDir ) {
+            // Resolve relative path
+            let dirPath = viewsDir || './' as string;
+            if (dirPath.startsWith('.') || dirPath.startsWith('/')) {
+                return path.resolve( appRoot , dirPath );
+            }
+        }
+        return null;
+    }
+
     boot( @Inject() container: Container ) {
 
         // Views path
@@ -123,7 +144,7 @@ export class HttpBundle extends Bundle {
             container.setParameter(HttpBundle.DI_PARAM_VIEWS, path.resolve( container.getParameter(Kernel.DI_PARAM_ROOT) , './views' ) );
         } else if ( container.hasParameter(HttpBundle.DI_PARAM_VIEWS) ) {
             // Resolve relative path
-            let dirPath = container.getParameter(HttpBundle.DI_PARAM_VIEWS) as string;
+            let dirPath = container.getParameter(HttpBundle.DI_PARAM_VIEWS) || './' as string;
             if (dirPath.startsWith('.') || dirPath.startsWith('/')) {
                 container.setParameter( HttpBundle.DI_PARAM_VIEWS, path.resolve( container.getParameter(Kernel.DI_PARAM_ROOT) , dirPath ) );
             }

@@ -1,4 +1,0 @@
-{
-    "http.port": 8090,
-    "http.views": "./views"
-}

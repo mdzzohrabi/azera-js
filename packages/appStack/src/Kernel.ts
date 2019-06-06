@@ -4,6 +4,9 @@ import { Logger } from './Logger';
 import configureContainer from './Container.Config';
 import { readFileSync } from 'fs';
 import * as path from 'path';
+import { getPackageDir, asyncEach } from './Util';
+import { SchemaValidator, ObjectResolver } from './ObjectResolver';
+import { CoreBundle } from './bundle/core/CoreBundle';
 
 /**
  * Application kernel
@@ -41,10 +44,22 @@ export class Kernel {
         let kernel = this;
 
         // Container parameters
+        container.setParameter(Kernel.DI_PARAM_ROOT, getPackageDir());
         container.setParameter(Kernel.DI_PARAM_ENV, env);
 
         // Set kernel and Kernel refrence to current kernel
         container.setAlias(Kernel, kernel);
+
+        container.setFactory(SchemaValidator, function configSchemaValidatorFactory() {
+            return new SchemaValidator;
+        });
+
+        // Configuration resolver
+        container.setFactory(ObjectResolver, function objectResolverFactory() {
+            return new ObjectResolver().resolver( container.invoke(SchemaValidator)!.resolver );
+        });
+
+        this.bundles = [ new CoreBundle ].concat( this.bundles );
 
         container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
@@ -65,21 +80,23 @@ export class Kernel {
     /**
      * Bootstrap kernel
      */
-    boot() {
+    async boot() {
+
+        let { container, bundles } = this;
 
         // Boot time
-        this.container.setParameter(Kernel.DI_PARAM_BOOTSTART, Date.now());
+        container.setParameter(Kernel.DI_PARAM_BOOTSTART, Date.now());
 
         // Logger
-        let logger = this.container.invoke(Logger)!;
+        let logger = container.invoke(Logger)!;
         
         logger.info('Kernel bootstrap');
 
         // Initialize bundles
-        this.bundles.forEach(bundle => this.container.invokeLater(bundle, 'boot')() );
+        await asyncEach( bundles, async bundle => await container.invokeLater(bundle, 'boot')() );
 
         // Time of boot end
-        this.container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
+        container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
 
         return this;
         
@@ -89,11 +106,11 @@ export class Kernel {
      * Run kernel
      * @param params Optional kernel parameters
      */
-    run(...params: any[]) {
+    async run(...params: any[]) {
         this.container.setParameter(Kernel.DI_PARAM_PARAMETERS, params);
 
         // Run bundles
-        this.bundles.forEach(bundle => this.container.invokeLater(bundle, 'run')(...params));
+        await asyncEach( this.bundles, async bundle => await this.container.invokeLater(bundle, 'run')(...params));
     }
 
     /**
@@ -112,6 +129,17 @@ export class Kernel {
      */
     setParameter(key: string, value: any) {
         this.container.setParameter(key, value);
+        return this;
+    }
+
+    /**
+     * Load configuration file
+     * @param config Configuration
+     */
+    async loadConfig(config: string | object) {
+        let resolvedConfig = await this.container.invoke(ObjectResolver)!.resolve(config);
+        this.loadParameters(resolvedConfig.parameters);
+
         return this;
     }
 
@@ -148,6 +176,23 @@ export class Kernel {
      */
     dumpParameters() {
         return this.container.getParameters();
+    }
+
+    /**
+     * Load configuration file then Boot kernel and then run it
+     * @param configFile Configuration file
+     * @param params Run parameters
+     */
+    async bootAndRun( configFile?: string, ...params: any[]) {
+
+        if ( configFile ) {
+            await this.loadConfig({ $imports: configFile });
+        }
+
+        await this.boot();
+
+        await this.run(...params);
+
     }
 
 }
