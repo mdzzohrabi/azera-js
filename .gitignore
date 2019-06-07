@@ -6,3 +6,5 @@ node_modules
 _recycle
 coverage
 dist
+cache
+tmp
