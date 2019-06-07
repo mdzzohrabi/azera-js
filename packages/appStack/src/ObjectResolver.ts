@@ -2,8 +2,9 @@ import { promisify } from 'util';
 import { readFile } from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { getPackageDir, asyncEach } from './Util';
+import { getPackageDir, asyncEach, setProperty } from './Util';
 import * as deepExtend from 'deep-extend';
+import { runInNewContext } from 'vm';
 
 const readFilePromise = promisify(readFile);
 
@@ -17,6 +18,9 @@ export class ObjectResolver {
 
     // Node value resolvers
     public valueResolvers: { [type: string]: ValueResolver[] } = {};
+
+    /** Evaluation context */
+    public _context: any = {};
 
     constructor() {
         // Default resolvers
@@ -36,6 +40,11 @@ export class ObjectResolver {
         };
     }
 
+    context(context: any) {
+        this._context = context;
+        return this;
+    }
+
     /**
      * Throw an error prepared by resolver info
      * @param message Error message
@@ -52,8 +61,16 @@ export class ObjectResolver {
      */
     async resolveEval(value: string, info: ResolverInfo) {
         if (typeof value != 'string') return value;
-        let $ = info.result;     
-        if (value.startsWith('=')) return eval( value.substr(1) );
+
+        this._context.$ = info.result;
+        this._context.env = process.env;
+
+        if (value.startsWith('=')) return runInNewContext( value.substr(1), this._context );
+        else if (value.indexOf('%') >= 0) {
+            value = value.replace(/%(.*)?%/, (t, expr) => {
+                return runInNewContext(expr, this._context);
+            });
+        }
         return value;
     }
 
@@ -89,7 +106,10 @@ export class ObjectResolver {
             });
             return;
         }
-        else if ( (isJson = imports.endsWith('.json')) || (isYaml = imports.endsWith('.yml')) || (isModule = imports.startsWith('./'))  ) {
+        
+        imports = await this.resolveEval(imports, info) as string;        
+
+        if ( (isJson = imports.endsWith('.json')) || (isYaml = imports.endsWith('.yml')) || (isModule = imports.startsWith('./'))  ) {
 
             let { configFileStack } = info;
 
@@ -141,17 +161,14 @@ export class ObjectResolver {
      * @param info Resolve info
      */
     async resolveObject(value: any, info: ResolverInfo) {
-        if ( value == null ) return value;
+        if ( value == null || info.skipChildren ) return value;
         await asyncEach( Object.keys(value), async key => {
+            info.skipChildren = false;
             let nodeValue = value[key];
             if ( key == '$imports' ) {
                 await this.resolveImport( value, nodeValue, info );
                 delete value[key];
             } else {
-                // let currentNodePath = info.nodePath;
-                // let nodeName = '.' + key;
-                // if (!key.match(/^[a-zA-Z_]+$/))
-                //     nodeName = `['${ key }']`;
                 info.nodePath.push(key);
                 value[key] = await this.resolve( nodeValue, info );
                 info.nodePath.pop();
@@ -189,11 +206,8 @@ export class ObjectResolver {
         // Final result (default is input value)
         let result = value;
 
-        // Determine type of value
-        let dataType = typeof value;
-
         // Resolve info
-        info = info || { configFileStack: [], nodePath: [], result };
+        info = info || { configFileStack: [], nodePath: [], result, skipChildren: false };
         info.nodePath = info.nodePath || [];
         info.configFileStack = info.configFileStack || [ '<object>' ];
 
@@ -206,12 +220,16 @@ export class ObjectResolver {
                 result = await resolver(result, info!);
             });
 
+            // Determine type of value
+            let dataType = typeof value;
+
             // Type specified resolvers
             if ( this.valueResolvers[dataType] ) {
                 await asyncEach( this.valueResolvers[dataType], async resolver => {
                     result = await resolver(result, info!);
                 });
             }
+
 
             // After resolve resolvers (Total result as node value)
             if (rootResolver) {
@@ -284,6 +302,11 @@ export interface ResolverInfo {
      * Extra debug properties
      */
     [key: string]: any
+
+    /**
+     * Skip children
+     */
+    skipChildren: boolean
 }
 
 /**
@@ -301,9 +324,11 @@ export interface ValueResolver {
 export interface ResolverSchemaField {
     description?: string
     required?: boolean
-    validate?: (value: any) => any
+    validate?: (value: any, info: ResolverInfo) => any
     type?: string
     nodePathTest?: RegExp
+    default?: any
+    skipChildren?: boolean
 }
 
 export class ResolverSchema { [nodePath: string]: ResolverSchemaField }
@@ -311,11 +336,13 @@ export class ResolverSchema { [nodePath: string]: ResolverSchemaField }
 export class SchemaValidator {
     constructor(
         public schema: ResolverSchema = {},
-        public typeValidator: { [type: string]: (value: any) => boolean } = {
+        public typeValidator: { [type: string]: (value: any, ...params: any[]) => boolean } = {
             string: value => typeof value == 'string',
             object: value => typeof value == 'object',
             array: value => Array.isArray(value),
-            number: value => !!Number(value)
+            number: value => !!Number(value),
+            boolean: value => value == true || value == false,
+            in: (value, ...items) => items.includes(value)
         }
     ) {}
 
@@ -333,7 +360,7 @@ export class SchemaValidator {
 
         let node = this.schema[nodePath] || (this.schema[nodePath] = typeof schema == 'object' && schema || {});
 
-        node.nodePathTest = node.nodePathTest || new RegExp( '^' + nodePath.replace('.', '[.|]').replace('**', '[^\s]+').replace('*','[^.|\s]+') + '$' );
+        node.nodePathTest = node.nodePathTest || new RegExp( '^' + nodePath.replace('.', '[.|]').replace('**', '[^\\s]+').replace('*','[^.|\\s]+') + '$' );
 
         if (typeof schema == 'function') schema(node);
         return this;
@@ -352,17 +379,30 @@ export class SchemaValidator {
             let nodePath = info.nodePath.join('|');
             let node = Object.keys(this.schema).filter( path => this.schema[path].nodePathTest!.test(nodePath) ).pop();
 
-            // console.log('Visit', nodePath, node);
             if (node) 
             {
                 let nodeSchema = this.schema[node];
                 if ( info.nonVisitedNodes[node] ) delete info.nonVisitedNodes[node];
 
-                if (nodeSchema.type && !this.typeValidator[ nodeSchema.type ]( value ) ) {
-                    throw Error(`Node "${ nodePath }" must be a valid ${ nodeSchema.type }`);
+                if (nodeSchema.type ) {
+                    let ok = false;
+                    let types = nodeSchema.type.split('|');
+                    for (let type of types) {
+                        if (type.indexOf(':') > 0) {
+                            let [ typeName, params ] = type.split(':');
+                            ok = ok || this.typeValidator[ typeName ]( value, ...params.split(',') );
+                        } else {
+                            ok = ok || this.typeValidator[ type ]( value );
+                        }
+                        if (ok) break;
+                    }
+
+                    if (!ok)
+                        throw Error(`Node "${ info.nodePath.join('.') }" must be a valid ${ nodeSchema.type }, given type is ${ typeof value }`);
                 }
 
-                if (nodeSchema.validate) return nodeSchema.validate(value);
+                if (nodeSchema.skipChildren) info.skipChildren = nodeSchema.skipChildren;
+                if (nodeSchema.validate) return nodeSchema.validate(value, info);
             }
             else {
                 throw Error(`This node not defined in schema`);
@@ -377,7 +417,10 @@ export class SchemaValidator {
 
             Object.keys(nonVisitedNodes).forEach(nodePath => {
                 let node = nonVisitedNodes[nodePath];
-                if (node.required) {
+                if (node.default) {
+                    setProperty(value, nodePath, typeof node.default == 'function' ? node.default() : node.default);
+                }
+                else if (node.required) {
                     throw Error(`Node "${ nodePath }" (${ node.description }) must be entered but not found any value`)
                 }
             });

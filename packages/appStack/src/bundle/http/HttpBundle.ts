@@ -21,13 +21,13 @@ export class HttpBundle extends Bundle {
     static DI_TAG_CONTROLLER = 'http.controller';
 
     /** Http listen port */
-    static DI_PARAM_PORT = 'http.port';
+    static DI_PARAM_PORT = 'httpPort';
 
     /** Views directory */
-    static DI_PARAM_VIEWS = 'http.views';
+    static DI_PARAM_VIEWS = 'httpViews';
 
     /** Express view engine */
-    static DI_PARAM_VIEW_ENGINE = 'http.viewEngine';
+    static DI_PARAM_VIEW_ENGINE = 'httpViewEngine';
 
     /** Http server (express) service name */
     static DI_SERVER = 'http.server';
@@ -46,9 +46,22 @@ export class HttpBundle extends Bundle {
 
     init( @Inject() container: Container, @Inject() config: SchemaValidator, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
 
+        // Configuration
         config
-            .node('parameters.http.views', { description: 'Web server views directory', type: 'string', required: true, validate: this._normalizeViewsDir.bind(this, rootDir) })
-            .node('parameters.http.port', { description: 'Web server port', type: 'number', required: true });
+            .node('parameters.' + HttpBundle.DI_PARAM_VIEWS, { description: 'Web server views directory', type: 'string', required: true, validate: this._normalizeViewsDir.bind(this, rootDir), default: this._normalizeViewsDir.bind(this, rootDir, './views') })
+            .node('parameters.' + HttpBundle.DI_PARAM_PORT, { description: 'Web server port', type: 'number', required: true, default: 9090 })
+            .node('routes', { description: 'Route collection', type: 'object' })
+            .node('routes.**', {
+                description: 'Route item',
+                validate: function routeValidate(value, info) {
+                    info.skipChildren = !Array.isArray(value);
+                    if (typeof value == 'string') {
+                        return { controller: value };
+                    }
+                    return value;
+                }
+            })
+        ;
 
         // Register middlewares
         this.middlewares.forEach((middle, i) => {
@@ -136,7 +149,7 @@ export class HttpBundle extends Bundle {
         return null;
     }
 
-    boot( @Inject() container: Container ) {
+    boot( @Inject() container: Container, @Inject('config') config : any ) {
 
         // Views path
         if ( !container.hasParameter(HttpBundle.DI_PARAM_VIEWS) && container.hasParameter(Kernel.DI_PARAM_ROOT) ) {
@@ -152,7 +165,7 @@ export class HttpBundle extends Bundle {
 
     }
 
-    run( @Inject() container: Container, @Inject('http.port') httpPort: number, @Inject() logger: Logger, action?: string ) {
+    run( @Inject() container: Container, @Inject(HttpBundle.DI_PARAM_PORT) httpPort: number, @Inject() logger: Logger, action?: string ) {
 
         if (!action || action == 'web') {
             container.get<express.Express>(HttpBundle.DI_SERVER)!.listen(httpPort, function serverStarted() {

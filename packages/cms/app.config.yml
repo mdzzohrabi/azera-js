@@ -1,12 +1,21 @@
-$imports: '@azera/stack/config.yml'
+$imports:
+    - '@azera/stack/config.yml'
 
 parameters:
-
-    # Views directory
-    http.port: 8090
-
-    http.views: ./views
+    httpPort: 8090
+    # httpViews: ./views
 
 # Routes collection
-# routes:
-#     $imports: ./config/routes.yml
+routes:
+    $imports: ./config/routes.yml
+
+services:
+    /Command/RunCommand: ~
+    /Command/DumpParametersCommand: ~
+    /Command/GetTaggedServicesCommand: ~
+    /Controller/IndexController: ~
+
+kernel:
+
+    # Cache kernel resolved config
+    cacheConfig: false

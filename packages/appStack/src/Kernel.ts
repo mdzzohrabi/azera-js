@@ -2,11 +2,12 @@ import { Container } from '@azera/container';
 import { Bundle } from './Bundle';
 import { Logger } from './Logger';
 import configureContainer from './Container.Config';
-import { readFileSync } from 'fs';
+import { readFileSync, existsSync, writeFile, writeFileSync, mkdirSync } from 'fs';
 import * as path from 'path';
 import { getPackageDir, asyncEach } from './Util';
 import { SchemaValidator, ObjectResolver } from './ObjectResolver';
 import { CoreBundle } from './bundle/core/CoreBundle';
+import { Profiler } from './Profiler';
 
 /**
  * Application kernel
@@ -32,6 +33,15 @@ export class Kernel {
     /** Application root path */
     static DI_PARAM_ROOT = 'kernel.root';
 
+    /** Loaded configuration */
+    public config: any;
+
+    /** Source directory name */
+    public sourceDirectory: string = '/';
+
+    /** Cache directory */
+    public cacheDirectory: string = '/cache';
+
     constructor(
         // Kernel environment
         public env: string = 'dev',
@@ -41,10 +51,15 @@ export class Kernel {
         public container: Container = new Container()
     ) {
 
+        this.profiler.start('kernel.constructor');
+
         let kernel = this;
+        let rootDir = getPackageDir();
+
+        if ( existsSync(rootDir + '/dist') ) this.sourceDirectory = '/dist';
 
         // Container parameters
-        container.setParameter(Kernel.DI_PARAM_ROOT, getPackageDir());
+        container.setParameter(Kernel.DI_PARAM_ROOT, rootDir);
         container.setParameter(Kernel.DI_PARAM_ENV, env);
 
         // Set kernel and Kernel refrence to current kernel
@@ -59,7 +74,7 @@ export class Kernel {
             return new ObjectResolver().resolver( container.invoke(SchemaValidator)!.resolver );
         });
 
-        this.bundles = [ new CoreBundle ].concat( this.bundles );
+        this.bundles = ([ new CoreBundle ] as Bundle[]).concat( this.bundles );
 
         container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
@@ -67,20 +82,18 @@ export class Kernel {
         // Initialize bundles
         this.bundles.forEach(bundle => this.container.invokeLater(bundle, 'init')() );
 
-        // Bundles services
-        this.bundles.forEach(bundle => {
-            let services = this.container.invokeLater(bundle, 'getServices')();
-            container.add(...services);
-        });
-
         // Configure container defaults
         configureContainer(container);
+
+        this.profiler.end('kernel.constructor');
     }
 
     /**
      * Bootstrap kernel
      */
     async boot() {
+
+        this.profiler.start('kernel.boot');
 
         let { container, bundles } = this;
 
@@ -92,11 +105,19 @@ export class Kernel {
         
         logger.info('Kernel bootstrap');
 
+        // Bundles services
+        bundles.forEach(bundle => {
+            let services = container.invokeLater(bundle, 'getServices')();
+            container.add(...services);
+        });
+
         // Initialize bundles
         await asyncEach( bundles, async bundle => await container.invokeLater(bundle, 'boot')() );
 
         // Time of boot end
         container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
+
+        this.profiler.end('kernel.boot');
 
         return this;
         
@@ -137,9 +158,27 @@ export class Kernel {
      * @param config Configuration
      */
     async loadConfig(config: string | object) {
-        let resolvedConfig = await this.container.invoke(ObjectResolver)!.resolve(config);
-        this.loadParameters(resolvedConfig.parameters);
+        this.profiler.start('kernel.config');
+        let cachePath = this.rootDir + this.cacheDirectory + '/config.cache.json';
+        let resolvedConfig: any;
 
+        if (existsSync(cachePath)) {
+            resolvedConfig = JSON.parse( readFileSync(cachePath).toString() );
+        } else {
+            resolvedConfig = await this.container.invoke(ObjectResolver)!.context({ kernel: this }).resolve(config);
+            if (resolvedConfig.kernel.cacheDir)
+                this.cacheDirectory = resolvedConfig.kernel.cacheDir;
+            if ( resolvedConfig.kernel.cacheConfig ) {
+                if (!existsSync(cachePath))
+                    mkdirSync( path.dirname(cachePath), { recursive: true });
+                writeFileSync( cachePath, JSON.stringify(resolvedConfig));
+            }
+        }
+
+        this.loadParameters(resolvedConfig.parameters);
+        this.config = resolvedConfig;
+        this.container.set('config', resolvedConfig);
+        this.profiler.end('kernel.config');
         return this;
     }
 
@@ -148,7 +187,6 @@ export class Kernel {
      * @param file Json File
      */
     loadParameters(file: string | object) {
-
         let parameters: any;
 
         if ( typeof file == 'string' ) {
@@ -192,6 +230,51 @@ export class Kernel {
         await this.boot();
 
         await this.run(...params);
+
+    }
+
+    /** Get Profiler */
+    get profiler() { return this.container.invoke(Profiler)! }
+
+    /** Get application root directory */
+    get rootDir() { return this.container.getParameter(Kernel.DI_PARAM_ROOT); }
+
+    /**
+     * Dynamic import
+     * @param name Name
+     */
+    use<T>(name: string): T {
+
+        if ( name.startsWith('/') ) name = '.' + name;
+
+        let filePath = this.resolvePath(name);
+        let className = name.split('/').pop()!;
+
+        let module = require(filePath);
+
+        return module[className] || module.default;
+    }
+
+    /**
+     * Resolve path
+     * @param path Path
+     */
+    resolvePath(pathName: string) {
+
+        // Import from another package
+        if ( !pathName.startsWith('./') && !path.isAbsolute(pathName) ) {
+            let moduleName = pathName.split('/').slice(0, pathName.startsWith('@') ? 2 : 1).join('/');
+            let modulePath = getPackageDir(moduleName);
+            pathName = modulePath + pathName.substr( moduleName.length );
+        }
+
+        // Find base directory from parent config file
+        pathName = path.resolve(this.rootDir + this.sourceDirectory, pathName);
+
+        // Normalize
+        pathName = path.normalize(pathName);
+
+        return pathName;
 
     }
 

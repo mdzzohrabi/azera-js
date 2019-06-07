@@ -1,5 +1,7 @@
 import { Command as CommandInfo } from 'commander';
 
+export { CommandInfo };
+
 /**
  * Abstract command-line command
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
