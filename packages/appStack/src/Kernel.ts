@@ -1,13 +1,14 @@
 import { Container } from '@azera/container';
-import { Bundle } from './Bundle';
-import { Logger } from './Logger';
-import configureContainer from './Container.Config';
-import { readFileSync, existsSync, writeFile, writeFileSync, mkdirSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import * as path from 'path';
-import { getPackageDir, asyncEach } from './Util';
-import { SchemaValidator, ObjectResolver } from './ObjectResolver';
+import { Bundle } from './Bundle';
 import { CoreBundle } from './bundle/core/CoreBundle';
+import configureContainer from './Container.Config';
+import { Logger } from './Logger';
+import { ObjectResolver } from './objectResolver/ObjectResolver';
+import { SchemaValidator } from "./objectResolver/SchemaValidator";
 import { Profiler } from './Profiler';
+import { asyncEach, getPackageDir } from './Util';
 
 /**
  * Application kernel
@@ -166,8 +167,12 @@ export class Kernel {
             resolvedConfig = JSON.parse( readFileSync(cachePath).toString() );
         } else {
             resolvedConfig = await this.container.invoke(ObjectResolver)!.context({ kernel: this }).resolve(config);
+
+            // Set cache directory
             if (resolvedConfig.kernel.cacheDir)
                 this.cacheDirectory = resolvedConfig.kernel.cacheDir;
+
+            // Cache resolved configuration
             if ( resolvedConfig.kernel.cacheConfig ) {
                 if (!existsSync(cachePath))
                     mkdirSync( path.dirname(cachePath), { recursive: true });

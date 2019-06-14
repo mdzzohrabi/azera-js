@@ -26,7 +26,7 @@ export class CliBundle extends Bundle {
         let commands = container.getByTag(DI_TAG_COMMAND) as Command[];
 
         // Register commands
-        commands.forEach(command => {
+        commands.sort((a, b) => a.name > b.name ? -1 : 1).forEach(command => {
             command.configure(
                 commander
                     .command(command.name)

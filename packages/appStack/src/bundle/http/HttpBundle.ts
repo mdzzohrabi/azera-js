@@ -1,15 +1,14 @@
 import { Container, Inject } from '@azera/container';
 import * as parser from 'body-parser';
 import * as express from 'express';
-import { Bundle } from '../../Bundle';
-import { Logger } from '../../Logger';
-import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
-import { RoutesCollection, ROUTES_PROPERTY } from './Route';
-import { DecoratedController } from './Controller';
-import { Kernel } from '../../Kernel';
 import * as path from 'path';
+import { Bundle } from '../../Bundle';
+import { Kernel } from '../../Kernel';
+import { Logger } from '../../Logger';
+import { SchemaValidator } from "../../objectResolver/SchemaValidator";
+import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
-import { SchemaValidator } from '../../ObjectResolver';
+import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 
 /**
  * Http Bundle
@@ -50,17 +49,20 @@ export class HttpBundle extends Bundle {
         config
             .node('parameters.' + HttpBundle.DI_PARAM_VIEWS, { description: 'Web server views directory', type: 'string', required: true, validate: this._normalizeViewsDir.bind(this, rootDir), default: this._normalizeViewsDir.bind(this, rootDir, './views') })
             .node('parameters.' + HttpBundle.DI_PARAM_PORT, { description: 'Web server port', type: 'number', required: true, default: 9090 })
-            .node('routes', { description: 'Route collection', type: 'object' })
-            .node('routes.**', {
+            .node('web', { description: 'Web server configuration', type: 'object' })
+            .node('web.routes', { description: 'Route collection', type: 'object' })
+            .node('web.routes.**', {
                 description: 'Route item',
+                type: 'string|array|object',
                 validate: function routeValidate(value, info) {
-                    info.skipChildren = !Array.isArray(value);
+                    //info.skipChildren = !Array.isArray(value);
                     if (typeof value == 'string') {
                         return { controller: value };
                     }
                     return value;
                 }
             })
+            .node('web.routes.*.controller', { description: 'Route controller', type: 'string' })
         ;
 
         // Register middlewares

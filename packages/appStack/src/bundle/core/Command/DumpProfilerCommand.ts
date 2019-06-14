@@ -9,7 +9,7 @@ import { Command, CommandInfo } from '../../cli/Command';
 export class DumpProfilerCommand extends Command {
     
     description: string = 'Dump profiler';
-    name: string = 'profiler --visual';
+    name: string = 'profiler';
     
     async run( @Inject() container: Container, visual: boolean ) {
         let kernel = container.invoke(Kernel)!;
@@ -28,6 +28,7 @@ export class DumpProfilerCommand extends Command {
     }
 
     configure(command: CommandInfo) {
+        super.configure(command);
         command.option('-v, --visual', 'Visualize profiles');
     }
 

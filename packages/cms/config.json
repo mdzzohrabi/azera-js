@@ -1,0 +1,27 @@
+{
+    "$schema": "./config.schema.json",
+	"$imports": [
+		"@azera/stack/config.yml"
+	],
+	"config": { "allowExtra": false },
+	"parameters": {
+        "httpPort": 8090
+    },
+    "web": {
+        "routes": {
+            "$imports": "./config/routes.yml",
+            "/": {
+                "controller": "/Controller/IndexController"
+            }
+        }
+    },
+	"services": [
+		"/Command/RunCommand",
+		"/Command/DumpParametersCommand",
+		"/Command/GetTaggedServicesCommand",
+		"/Controller/IndexController"
+    ],
+	"kernel": {
+        "cacheConfig": false
+	}
+}

@@ -8,7 +8,7 @@ export * from './Kernel';
 export * from './bundle/http';
 export * from './bundle/cli';
 export * from './bundle/twig';
-export * from './ObjectResolver';
+export * from './objectResolver';
 export * from './Util';
 
 // External libraries

@@ -1,5 +1,10 @@
+# $schema: ./config.schema.json
 $imports:
     - '@azera/stack/config.yml'
+
+config: { allowExtra: true }
+
+customConfig: Yes
 
 parameters:
     httpPort: 8090

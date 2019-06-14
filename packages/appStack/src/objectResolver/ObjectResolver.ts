@@ -2,13 +2,62 @@ import { promisify } from 'util';
 import { readFile } from 'fs';
 import * as path from 'path';
 import * as yaml from 'js-yaml';
-import { getPackageDir, asyncEach, setProperty } from './Util';
+import { getPackageDir, asyncEach } from '../Util';
 import * as deepExtend from 'deep-extend';
 import { runInNewContext } from 'vm';
+import { SchemaValidator, ResolverSchema } from './SchemaValidator';
 
+/** Promisify readFile method */
 const readFilePromise = promisify(readFile);
 
+/**
+ * Object resolver data types (resolver types)
+ */
+export type ResolverType = '*' | 'object' | 'function' | 'string' | 'number' | 'undefined' | 'boolean' | 'bigint' | 'symbol' | 'afterResolve';
+
+/**
+ * Resolver info context used while resolve a value
+ */
+export interface ResolverInfo {
+    /**
+     * Traversed node path
+     */
+    nodePath: string[]
+
+    /**
+     * Loaded configuration files
+     */
+    configFileStack: string[]
+
+    /**
+     * Resolved data
+     */
+    result: any
+
+    /**
+     * Extra debug properties
+     */
+    [key: string]: any
+
+    /**
+     * Skip children
+     */
+    skipChildren: boolean
+}
+
+/**
+ * Resolver interface
+ */
+export interface ValueResolver {
+    (value: any, info: ResolverInfo): any
+}
+
+/**
+ * Object resolver error
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 class ObjectResolverError extends Error {}
+
 
 /**
  * Object resolve ( data validator )
@@ -33,7 +82,7 @@ export class ObjectResolver {
                 this.resolveFunction.bind(this)
             ],
             'string': [
-                this.resolveEval,
+                this.resolveEval.bind(this),
                 this.resolveEnv.bind(this)
             ],
             'afterResolve': []
@@ -278,154 +327,4 @@ export class ObjectResolver {
         return new SchemaValidator(schema);
     }
 
-}
-
-export type ResolverType = '*' | 'object' | 'function' | 'string' | 'number' | 'undefined' | 'boolean' | 'bigint' | 'symbol' | 'afterResolve';
-
-export interface ResolverInfo {
-    /**
-     * Traversed node path
-     */
-    nodePath: string[]
-
-    /**
-     * Loaded configuration files
-     */
-    configFileStack: string[]
-
-    /**
-     * Resolved data
-     */
-    result: any
-
-    /**
-     * Extra debug properties
-     */
-    [key: string]: any
-
-    /**
-     * Skip children
-     */
-    skipChildren: boolean
-}
-
-/**
- * Resolver interface
- */
-export interface ValueResolver {
-    (value: any, info: ResolverInfo): any
-}
-
-
-/**
- * Schema Validator
- */
-
-export interface ResolverSchemaField {
-    description?: string
-    required?: boolean
-    validate?: (value: any, info: ResolverInfo) => any
-    type?: string
-    nodePathTest?: RegExp
-    default?: any
-    skipChildren?: boolean
-}
-
-export class ResolverSchema { [nodePath: string]: ResolverSchemaField }
-
-export class SchemaValidator {
-    constructor(
-        public schema: ResolverSchema = {},
-        public typeValidator: { [type: string]: (value: any, ...params: any[]) => boolean } = {
-            string: value => typeof value == 'string',
-            object: value => typeof value == 'object',
-            array: value => Array.isArray(value),
-            number: value => !!Number(value),
-            boolean: value => value == true || value == false,
-            in: (value, ...items) => items.includes(value)
-        }
-    ) {}
-
-    node(nodePath: string, scope?: (node: ResolverSchemaField) => void): SchemaValidator
-    node(nodePath: string, schema?: ResolverSchemaField): SchemaValidator
-    node(nodePath: string, schema?: string): SchemaValidator
-    node(nodePath: string, schema?: any): SchemaValidator
-    {
-
-        if (typeof schema == 'string') {
-            schema = {
-                type: schema
-            }
-        }
-
-        let node = this.schema[nodePath] || (this.schema[nodePath] = typeof schema == 'object' && schema || {});
-
-        node.nodePathTest = node.nodePathTest || new RegExp( '^' + nodePath.replace('.', '[.|]').replace('**', '[^\\s]+').replace('*','[^.|\\s]+') + '$' );
-
-        if (typeof schema == 'function') schema(node);
-        return this;
-    }
-
-    /**
-     * Validator resolver
-     */
-    resolver = {
-        '*': (value: any, info: ResolverInfo) => {
-
-            info.nonVisitedNodes = info.nonVisitedNodes || { ...this.schema };
-        
-            // Root node
-            if (info.nodePath.length == 0) return value;
-            let nodePath = info.nodePath.join('|');
-            let node = Object.keys(this.schema).filter( path => this.schema[path].nodePathTest!.test(nodePath) ).pop();
-
-            if (node) 
-            {
-                let nodeSchema = this.schema[node];
-                if ( info.nonVisitedNodes[node] ) delete info.nonVisitedNodes[node];
-
-                if (nodeSchema.type ) {
-                    let ok = false;
-                    let types = nodeSchema.type.split('|');
-                    for (let type of types) {
-                        if (type.indexOf(':') > 0) {
-                            let [ typeName, params ] = type.split(':');
-                            ok = ok || this.typeValidator[ typeName ]( value, ...params.split(',') );
-                        } else {
-                            ok = ok || this.typeValidator[ type ]( value );
-                        }
-                        if (ok) break;
-                    }
-
-                    if (!ok)
-                        throw Error(`Node "${ info.nodePath.join('.') }" must be a valid ${ nodeSchema.type }, given type is ${ typeof value }`);
-                }
-
-                if (nodeSchema.skipChildren) info.skipChildren = nodeSchema.skipChildren;
-                if (nodeSchema.validate) return nodeSchema.validate(value, info);
-            }
-            else {
-                throw Error(`This node not defined in schema`);
-            }
-
-            return value;
-        },
-
-        afterResolve: (value: any, info: ResolverInfo) => {
-
-            let nonVisitedNodes: ResolverSchema = info.nonVisitedNodes || {};
-
-            Object.keys(nonVisitedNodes).forEach(nodePath => {
-                let node = nonVisitedNodes[nodePath];
-                if (node.default) {
-                    setProperty(value, nodePath, typeof node.default == 'function' ? node.default() : node.default);
-                }
-                else if (node.required) {
-                    throw Error(`Node "${ nodePath }" (${ node.description }) must be entered but not found any value`)
-                }
-            });
-
-            return value;
-        }
-    }
 }

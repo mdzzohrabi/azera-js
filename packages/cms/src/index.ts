@@ -9,6 +9,6 @@ class TestBundle extends Bundle {
 
 let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TwigBundle, new TestBundle ]);
 
-kernel.bootAndRun(__dirname + '/../app.config.yml', 'cli').catch(err => {
+kernel.bootAndRun(__dirname + '/../config.json', 'cli').catch(err => {
     console.error(err);
 });
