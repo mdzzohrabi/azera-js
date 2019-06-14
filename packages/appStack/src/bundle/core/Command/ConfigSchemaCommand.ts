@@ -4,6 +4,7 @@ import { Kernel } from '../../../Kernel';
 import { SchemaValidator } from '../../../objectResolver';
 import { Command } from '../../cli/Command';
 import { normalize } from 'path';
+import { Cli } from '../../cli/Cli';
 
 /**
  * Generate config json schema
@@ -14,14 +15,14 @@ export class ConfigSchemaCommand extends Command {
     description: string = 'Generate config json schema';
     name: string = 'config:schema';
     
-    async run( @Inject() container: Container, @Inject() validator: SchemaValidator ) {
+    async run( @Inject() container: Container, @Inject() validator: SchemaValidator, @Inject() cli: Cli ) {
         let kernel = container.invoke(Kernel)!;
         let schema = validator.getJsonSchema();
         let filePath = normalize( kernel.rootDir + '/config.schema.json' );
 
         writeFileSync(filePath, JSON.stringify(schema));
 
-        console.log(`Schema generated in "${ filePath }".`);
+        cli.success(`Schema generated in "${ filePath }".`);
     }
 
 }

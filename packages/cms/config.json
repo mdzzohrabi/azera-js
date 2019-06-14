@@ -1,8 +1,6 @@
 {
     "$schema": "./config.schema.json",
-	"$imports": [
-		"@azera/stack/config.yml"
-	],
+	"$imports": "@azera/stack/config.yml",
 	"config": { "allowExtra": false },
 	"parameters": {
         "httpPort": 8090

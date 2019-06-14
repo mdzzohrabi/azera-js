@@ -62,7 +62,7 @@ export class HttpBundle extends Bundle {
                     return value;
                 }
             })
-            .node('web.routes.*.controller', { description: 'Route controller', type: 'string' })
+            .node('web.routes.**.controller', { description: 'Route controller', type: 'string' })
         ;
 
         // Register middlewares

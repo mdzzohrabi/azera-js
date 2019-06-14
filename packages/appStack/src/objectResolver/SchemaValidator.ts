@@ -186,6 +186,11 @@ export class SchemaValidator {
                         if (isHashObject) {
                             parent = parent["patternProperties"] || (parent["patternProperties"] = {});
                             parent = parent[".*"] || (parent[".*"] = {});
+                            let hashNodePath = parts.slice(0, i + 1).join('.');
+
+                            if ( !this.schema[hashNodePath] ) throw Error(`Schema node not defined for "${ hashNodePath }"`);
+
+                            parent["description"] = this.schema[hashNodePath].description;
                             parent = parent["properties"] || (parent["properties"] = {});
                         } else {
                             parent = parent[propName] || (parent[propName] = {});
