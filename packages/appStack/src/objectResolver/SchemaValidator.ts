@@ -34,7 +34,9 @@ export class SchemaValidator {
             /** Boolean */
             boolean: value => value == true || value == false,
             /** IN (Array.includes) */
-            in: (value, ...items) => items.includes(value)
+            in: (value, ...items) => items.includes(value),
+            /** Enum (Array.includes) */
+            enum: (value, ...items) => items.includes(value)
         }) { }
 
     /**
@@ -155,7 +157,17 @@ export class SchemaValidator {
                 let nodeSchema = {} as any;
                 if ( node.description ) nodeSchema.description = node.description;
                 if ( node.type ) {
-                    let types = node.type.split('|');
+                    let enums: any[] = [];
+                    let types = node.type.split('|').map(item => {
+                        let [type, params] = item.split(':');
+                        if (type == 'in' || type == 'enum') {
+                            enums = params.split(',');
+                            return 'string';
+                        }
+                        return type;
+                    });
+                    if (enums.length > 0)
+                        nodeSchema.enum = enums;
                     if (types.length == 1) nodeSchema.type = types[0];
                     else nodeSchema.type = types;
                 }

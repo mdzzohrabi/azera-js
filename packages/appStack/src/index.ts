@@ -2,7 +2,6 @@
 export * from './Bundle';
 export * from './EventManager';
 export * from './Logger';
-export * from './Reflect';
 export * from './factory/LoggerFactory';
 export * from './Kernel';
 export * from './bundle/http';
@@ -10,6 +9,7 @@ export * from './bundle/cli';
 export * from './bundle/twig';
 export * from './objectResolver';
 export * from './Util';
+export * from './MicroKernel';
 
 // External libraries
 

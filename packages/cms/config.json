@@ -10,6 +10,10 @@
             "$imports": "./config/routes.yml",
             "/": {
                 "controller": "/Controller/IndexController"
+            },
+            "/public": {
+                "resource": "./public",
+                "type": "static"
             }
         }
     },

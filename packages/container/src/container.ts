@@ -343,26 +343,49 @@ export class Container implements IContainer {
      */
     invokeLater <T extends object, M extends keyof T>(context: Constructor<T>, method: M): MockMethod<T, M>;
     invokeLater <T extends object, M extends keyof T>(context: T, method: M): MockMethod<T, M>;
-    invokeLater(context: any, method: string): Function
+    invokeLater <R>(callable: Injectable<R>): (...params: any[]) => R;
+    invokeLater(context: any, method?: string): Function
     {
-        let _context: object;
+        let container = this;
+        let _context: any;
+        let _cached: any[];
         let _deps: any[];
-        let _def = this.getDefinition( getTarget(context) );
 
-        return (...params: any[]) => {
-            _context = _context || ( typeof context == 'function' ? this._invoke(context) : context );
-            //@ts-ignore
-            return _context[ method ].apply( _context,
-                ( _deps ? _deps : _deps = (_def.methods[method] || []).map(dep => this._invoke(dep)) ).concat(params)
-            );
+        if (!method) {
+            let _def = this.getDefinition(context);
+            _deps = _def.parameters;
+            context = { callable: _def.service };
+            method = 'callable';
+        } else {
+            _deps = this.getDefinition(getTarget(context)).methods[method!];
         }
+
+        let fnName = method + 'InvokeLater';
+
+        return {
+
+            // Later invokable function
+            [fnName]( ...params: any[] ) {
+                // Class as context
+                _context = _context || ( typeof context == 'function' ? container._invoke(context) : context );
+
+                // Execute
+                return _context[ method! ].apply(
+                    // This
+                    _context,
+                    // Parameters
+                    ( _cached ? _cached : _cached = (_deps || []).map(dep => container._invoke(dep)) ).concat(params)
+                );
+            }
+
+        }[fnName];
     }
 
     /**
      * Invoke a function and resolve its dependencies
      * @param value Invokable value
      */
-    invoke<T>(value: Invokable<T>): T | undefined
+    invoke<T>(value: Invokable<T>): T
     {
         return this._invoke(value);
     }
@@ -373,7 +396,7 @@ export class Container implements IContainer {
      * @param stack Injection stack
      * @param options 
      */
-    private _invoke <T>(value: Invokable<T>, stack: string[] = [], options?: IInvokeOptions ): T | undefined {
+    private _invoke <T>(value: Invokable<T>, stack: string[] = [], options?: IInvokeOptions ): T {
 
         // String
         if ( is.String(value) ) return this._get(value, stack);

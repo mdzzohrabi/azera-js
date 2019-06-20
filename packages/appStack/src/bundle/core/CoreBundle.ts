@@ -1,9 +1,9 @@
 import { Container, Inject } from '@azera/container';
 import { Bundle } from '../../Bundle';
+import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
-import { SchemaValidator } from "../../objectResolver/SchemaValidator";
-import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
+import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 
 /**
  * Core bundle
@@ -14,7 +14,7 @@ export class CoreBundle extends Bundle {
     static bundleName = 'Core';
     static version = '1.0.0';
 
-    init( @Inject() config: SchemaValidator, @Inject() container: Container ) {
+    init( @Inject() config: ConfigSchema, @Inject() container: Container ) {
 
         let kernel = container.invoke(Kernel)!;
 
@@ -40,7 +40,7 @@ export class CoreBundle extends Bundle {
         config
         .node('services', { description: 'Container services', type: 'array|object' })
         .node('services.*', { description: 'Service', type: 'object|string', validate: function(service) {
-                if (typeof service == 'string') return { service };
+                //if (typeof service == 'string') return { service };
                 return service;
             }
         })
@@ -68,17 +68,18 @@ export class CoreBundle extends Bundle {
             if ( kernelConfig.rootDir )
                 container.setParameter(Kernel.DI_PARAM_ROOT, kernelConfig.rootDir);
 
-            }
+        }
 
         // Configuration services
         if (services) {
             kernel.profiler.start('core.services');
             Object.keys(services).forEach(serviceName => {
                 let service = services[serviceName];
-
                 // Added services
-                if (!service || typeof service == 'string') {
+                if (!service) {
                     container.add( kernel.use(serviceName) );
+                } else if ( typeof service == 'string' ) {
+                    container.add(kernel.use(service));
                 } else {
                     service.service = kernel.use(service.service);
                     container.set(serviceName, service);

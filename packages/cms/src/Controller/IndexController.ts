@@ -18,7 +18,7 @@ export class IndexController {
         })
     }
 
-    @Route('/native') index2( req: Request, res: Response ) {
+    @Route('/native', 'post') index2( req: Request, res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
         })

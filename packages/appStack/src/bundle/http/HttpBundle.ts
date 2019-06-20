@@ -3,9 +3,10 @@ import * as parser from 'body-parser';
 import * as express from 'express';
 import * as path from 'path';
 import { Bundle } from '../../Bundle';
+import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
-import { SchemaValidator } from "../../objectResolver/SchemaValidator";
+import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
@@ -43,7 +44,7 @@ export class HttpBundle extends Bundle {
         super();
     }
 
-    init( @Inject() container: Container, @Inject() config: SchemaValidator, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
+    init( @Inject() container: Container, @Inject() config: ConfigSchema, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
 
         // Configuration
         config
@@ -63,6 +64,10 @@ export class HttpBundle extends Bundle {
                 }
             })
             .node('web.routes.**.controller', { description: 'Route controller', type: 'string' })
+            .node('web.routes.**.type', { description: 'Route type', type: 'enum:static,controller', default: 'controller' })
+            .node('web.routes.**.resource', { description: 'Route resource (e.g: /home/public)', type: 'string', validate(value, info) {
+                return info.resolvePath(value);
+            } })
         ;
 
         // Register middlewares
@@ -91,7 +96,9 @@ export class HttpBundle extends Bundle {
                     server.use(middle);
                 }
             });
-    
+
+            let router = server._router;
+              
             // Controllers
             controllers.forEach(controller => {
     
@@ -103,28 +110,37 @@ export class HttpBundle extends Bundle {
                 // Middlewares
                 let middlewares = (<MiddlewaresCollection>controller)[ MIDDLEWARES_PROPERTY ] || [];
     
-                // Controller di definition
+                // Controller service definition
                 let definition = container.getDefinition(controller.constructor);
     
                 // Injected controller methods
                 let injectedMethods = Object.keys(definition.methods);
 
+                // Register controller middlewares
                 middlewares.forEach(middle => {
                     server.use( routePrefix + middle.path, container.invokeLater(controller, middle.methodName) );
                 });
                
+                // Register controller routes
                 routes.forEach(route => {
+
+                    let routePath = routePrefix + route.path;
+                    let routeObj = router.route(routePath);
     
                     if ( injectedMethods.includes(route.action) ) {
                         // @ts-ignore
-                        server[ route.method ]( routePrefix + route.path, function requestHandler() {
+                        routeObj[ route.method ]( function requestHandler() {
                             // @ts-ignore
                             return container.invokeLater(controller, route.action)();
                         });
                     } else {
+                        let method = (<Function>controller[ route.action ]).bind( controller );
                         // @ts-ignore
-                        server[ route.method ]( routePrefix + route.path, controller[ route.action ].bind( controller ) );
+                        routeObj[ route.method ]( method );
                     }
+
+                    routeObj.controller = controller;
+                    routeObj.methodName = route.action;
     
                 });
     
@@ -175,6 +191,10 @@ export class HttpBundle extends Bundle {
             });
         }
 
+    }
+
+    getServices() {
+        return [ DumpRoutesCommand ];
     }
 
     static bundleName = "Http";

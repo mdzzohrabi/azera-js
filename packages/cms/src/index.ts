@@ -1,4 +1,4 @@
-import { Bundle, CliBundle, Container, HttpBundle, Inject, Kernel, TwigBundle } from "@azera/stack";
+import { Bundle, CliBundle, Container, HttpBundle, Inject, Kernel, TwigBundle, createMicroKernel } from "@azera/stack";
 
 class TestBundle extends Bundle {
 
@@ -12,3 +12,12 @@ let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TwigBundle, 
 kernel.bootAndRun(__dirname + '/../config.json', 'cli').catch(err => {
     console.error(err);
 });
+
+// createMicroKernel([
+//     '$env',
+//     Kernel,
+//     function microApp(env: string, kernel: Kernel, param :string)
+//     {
+//         console.log(env, kernel.rootDir, param);
+//     }
+// ]).run('hello');

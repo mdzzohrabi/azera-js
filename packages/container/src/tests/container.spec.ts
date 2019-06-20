@@ -624,6 +624,25 @@ describe('Container', () => {
 
         });
 
+        it('# Runtime injection - Function invoke later', () => {
+
+            let container = new Container();
+            container.setParameter('name', 'Masoud');
+            let invoked = false;
+
+            let invokable = container.invokeLater(function ($name: string) {
+                return $name;
+            });
+
+            equal(invoked, false, `Bounded function must not call soon`);
+
+            equal( invokable('ASD'), 'Masoud');
+
+            equal( container.invokeLater([ '$name' , (name: string) => name ])(), 'Masoud' );
+
+
+        });
+
         it('# Runtime injection - Fixture', () => {
             let container = new Container;
             let app = container.invoke(FixtureApp);

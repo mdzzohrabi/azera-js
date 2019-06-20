@@ -43,6 +43,12 @@ export interface ResolverInfo {
      * Skip children
      */
     skipChildren: boolean
+
+    /**
+     * Resolve path based on last loaded configuration file path
+     * @param path Path to resolve
+     */
+    resolvePath(path: string): string
 }
 
 /**
@@ -256,7 +262,11 @@ export class ObjectResolver {
         let result = value;
 
         // Resolve info
-        info = info || { configFileStack: [], nodePath: [], result, skipChildren: false };
+        info = info || { configFileStack: [], nodePath: [], result, skipChildren: false, resolvePath(_path: string) {
+            if ( this.configFileStack.length == 0 ) return _path;
+            let lastConfPath = this.configFileStack[ this.configFileStack.length -1 ];
+            return path.resolve( lastConfPath, _path );
+        } };
         info.nodePath = info.nodePath || [];
         info.configFileStack = info.configFileStack || [ '<object>' ];
 

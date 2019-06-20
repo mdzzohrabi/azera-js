@@ -20,6 +20,74 @@ export class Cli {
         this.print(`<bg:yellow><black>Warning</black></bg:yellow>`, ...params);
     }
 
+    /** Table options */
+    private tableOptions: CliTableOptions = {};
+    /** Table data */
+    private table: ( string | any[] )[] = [];
+
+    public startTable(options: CliTableOptions = {}) {
+        this.tableOptions = {
+            border: true,
+            borderHorizontal: '-',
+            borderSeparator: ' ⁞ ',
+            borderVertical: '|',
+            rowBreakLine: true,
+            ...options
+        };
+        this.tableBreakRow();
+    }
+
+    public tableBreakRow() {
+        let { border, borderHorizontal, cellSizes, borderSeparator } = this.tableOptions;
+        if ( !border ) return;
+        if ( !cellSizes ) {
+            this.table.push( '$break$' );
+            return;
+        }
+        this.print( cellSizes.map(s => borderHorizontal!.repeat(s + borderSeparator!.length) ).join('') );
+    }
+
+    public row(...cells: any[]) {
+        let { border, borderSeparator, rowBreakLine, cellSizes } = this.tableOptions;
+        
+        if ( !cellSizes ) {
+            this.table.push(cells);
+            return;
+        }
+
+        this.print( cells.map((cell: string, i) => {
+
+            if ( cellSizes![i] ) return cell.toString().padEnd( cellSizes![i] );
+            return cell;
+
+        }).join(border ? borderSeparator : ' '));
+        if ( rowBreakLine )
+            this.tableBreakRow();
+    }
+
+    public endTable() {
+        // Auto-size
+        if (this.table.length > 0) {
+
+            this.tableOptions.cellSizes = this.table.filter(i => Array.isArray(i))
+            .map(row => (<any[]>row).map(c => c.toString().length))
+            .reduce(function (r, row) {
+                let l = r.length > row.length ? r.length : row.length;
+                return [ ...new Array(l) ].map((_, i) => Math.max( r[i] || 0, row[i] || 0 ));
+            }) as number[];
+
+            this.table.forEach(row => {
+
+                if ( row == '$break$' ) this.tableBreakRow();
+                else this.row( ...row );
+
+            });
+        }
+
+        this.table = [];
+        this.tableOptions = {};
+    }
+
     private _optimizeParameter(param: any) {
 
         if (typeof param != 'string') return param;
@@ -52,5 +120,20 @@ export class Cli {
             .replace(/<h>(.*)?<\/h>/, (_, text) => `\x1b[8m${ text }\x1b[0m`)
 
     }
+
+}
+
+export interface CliTableOptions {
+
+    /**
+     * Draw bordered table
+     */
+    border?: boolean
+
+    borderVertical?: string
+    borderHorizontal?: string
+    borderSeparator?: string
+    rowBreakLine?: boolean
+    cellSizes?: number[]
 
 }

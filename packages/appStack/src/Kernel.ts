@@ -3,12 +3,13 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
 import * as path from 'path';
 import { Bundle } from './Bundle';
 import { CoreBundle } from './bundle/core/CoreBundle';
+import { ConfigResolver } from './ConfigResolver';
+import { ConfigSchema } from './ConfigSchema';
 import configureContainer from './Container.Config';
 import { Logger } from './Logger';
-import { ObjectResolver } from './objectResolver/ObjectResolver';
-import { SchemaValidator } from "./objectResolver/SchemaValidator";
 import { Profiler } from './Profiler';
 import { asyncEach, getPackageDir } from './Util';
+import "./JsExtensions";
 
 /**
  * Application kernel
@@ -66,13 +67,9 @@ export class Kernel {
         // Set kernel and Kernel refrence to current kernel
         container.setAlias(Kernel, kernel);
 
-        container.setFactory(SchemaValidator, function configSchemaValidatorFactory() {
-            return new SchemaValidator;
-        });
-
         // Configuration resolver
-        container.setFactory(ObjectResolver, function objectResolverFactory() {
-            return new ObjectResolver().resolver( container.invoke(SchemaValidator)!.resolver );
+        container.setFactory(ConfigResolver, function objectResolverFactory() {
+            return new ConfigResolver().resolver( container.invoke(ConfigSchema)!.resolver );
         });
 
         this.bundles = ([ new CoreBundle ] as Bundle[]).concat( this.bundles );
@@ -102,7 +99,7 @@ export class Kernel {
         container.setParameter(Kernel.DI_PARAM_BOOTSTART, Date.now());
 
         // Logger
-        let logger = container.invoke(Logger)!;
+        let logger = container.invoke(Logger);
         
         logger.info('Kernel bootstrap');
 
@@ -166,7 +163,7 @@ export class Kernel {
         if (existsSync(cachePath)) {
             resolvedConfig = JSON.parse( readFileSync(cachePath).toString() );
         } else {
-            resolvedConfig = await this.container.invoke(ObjectResolver)!.context({ kernel: this }).resolve(config);
+            resolvedConfig = await this.container.invoke(ConfigResolver).context({ kernel: this }).resolve(config);
 
             // Set cache directory
             if (resolvedConfig.kernel.cacheDir)

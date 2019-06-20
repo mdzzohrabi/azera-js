@@ -3,6 +3,7 @@ import { dirname } from 'path';
 
 /**
  * Get node package directory
+ * @param pkgName Package name
  */
 export function getPackageDir(pkgName?: string) {
     let dir: string;
@@ -16,12 +17,21 @@ export function getPackageDir(pkgName?: string) {
     return dir;
 }
 
+/**
+ * Iterate over a collection async (series)
+ * @param items Collection to iterate
+ * @param _func Iterator
+ */
 export async function asyncEach<T>(items: T[], _func: (value: T) => any) {
     let len = items.length;
     for (let i = 0; i < len ; i++)
         await _func(items[i]);
 }
 
+/**
+ * Execute jobs collection serialize
+ * @param items Job collection
+ */
 export async function serialize(items: Function[]) {
     return await asyncEach(items, async func => await func());
 }
