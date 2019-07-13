@@ -20,7 +20,6 @@
 	"services": [
 		"/Command/RunCommand",
 		"/Command/DumpParametersCommand",
-		"/Command/GetTaggedServicesCommand",
 		"/Controller/IndexController"
     ],
 	"kernel": {

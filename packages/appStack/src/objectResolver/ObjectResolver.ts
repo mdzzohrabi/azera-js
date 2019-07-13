@@ -106,7 +106,7 @@ export class ObjectResolver {
      * @param param1 Resolver info
      */
     $$throwError(message: string, { nodePath , configFileStack }: ResolverInfo) {
-        throw new ObjectResolverError(`${ message }, nodePath: ${ nodePath.join('.') || '<root>' }${ (configFileStack || []).reverse().length > 0 ? ".\nConfiguration file stack : \n-> " + configFileStack!.join("\n-> ") + "\n" : '' }`);
+        throw new ObjectResolverError(`${ message }, nodePath: ${ nodePath.join('.') || '<root>' }${ (configFileStack || []).reverse().length > 0 ? "\nConfiguration file stack : \n-> " + configFileStack!.join("\n-> ") + "\n" : '' }`);
     }
 
     /**

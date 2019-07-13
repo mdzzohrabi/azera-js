@@ -11,4 +11,8 @@ export class LoginController {
         res.end('Logout')
     }
 
+    ['GET /expo/:id']() {
+
+    }
+
 }

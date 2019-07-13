@@ -39,10 +39,7 @@ export class HttpBundle extends Bundle {
         public middlewares: express.RequestHandler[] = [
             parser.json()
         ]
-    )
-    {
-        super();
-    }
+    ) { super(); }
 
     init( @Inject() container: Container, @Inject() config: ConfigSchema, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
 

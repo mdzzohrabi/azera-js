@@ -72,4 +72,7 @@ describe(`Is`, () => {
         ok(!is.Empty([ 1, 2 ]));
     });
 
+    it('Arguments', function () {
+        ok(is.Arguments(arguments));
+    });
 });

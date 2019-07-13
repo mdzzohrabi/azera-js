@@ -1,6 +1,8 @@
+
 export const ROUTES_PROPERTY = 'routes';
 
-export type RouteMethods = 'get' | 'post' | 'put' | 'any' | 'delete' | 'options';
+export let HttpMethods = [ 'get', 'post', 'put', 'any', 'delete', 'options' ];
+export type RouteMethods = 'get' | 'post' | 'put' | 'any' | 'delete' | 'options'
 
 export interface RoutesCollection {
     routes: { 

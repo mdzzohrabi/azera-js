@@ -12,13 +12,13 @@ export class IndexController {
         next();
     }
 
-    @Route('/') index( @Inject() res: Response ) {
+    ['/']( @Inject() res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
         })
     }
 
-    @Route('/native', 'post') index2( req: Request, res: Response ) {
+    ['POST /native']( req: Request, res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
         })

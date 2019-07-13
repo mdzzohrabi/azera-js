@@ -1,3 +1,5 @@
+import is from './is';
+
 export namespace Decorator {
 
     export enum Type {
@@ -8,12 +10,21 @@ export namespace Decorator {
         Class = 'CLASS'
     }
 
-    export function getType(target: any, key: string | symbol, index: number): Type {
+    export function getType(args: IArguments): Type
+    export function getType(target: any, key?: string | symbol, index?: number): Type
+    {
+
+        if (is.Arguments(target)) {
+            key = target[1];
+            index = target[2];
+            target = target[0];
+        }
+
         if ( !!key ) {
-            if ( index >= 0 ) return Type.MethodParameter;
+            if ( index! >= 0 ) return Type.MethodParameter;
             else return ( typeof target[key] == 'function' ?  Type.Method : Type.Property );
         } else {
-            if ( index >= 0 ) return Type.ConstructorParameter;
+            if ( index! >= 0 ) return Type.ConstructorParameter;
             return Type.Class;
         }
     }

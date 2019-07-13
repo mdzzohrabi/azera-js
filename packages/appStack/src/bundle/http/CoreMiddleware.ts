@@ -2,9 +2,10 @@ import { Container, Inject } from '@azera/container';
 import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
+import { IFactory } from '@azera/container';
 
 @Middleware()
-export class HttpCoreMiddlewareFactory {
+export class HttpCoreMiddlewareFactory implements IFactory {
 
     create( @Inject() serviceContainer: Container ) {
         return function coreMiddleWare(req: any, res: any, next: any) {

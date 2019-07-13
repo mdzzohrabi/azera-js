@@ -1,7 +1,6 @@
 import { Bundle } from './Bundle';
-import { Inject, Container } from '@azera/container';
+import { Inject, Container, IInjectable } from '@azera/container';
 import { Kernel } from './Kernel';
-import { Injectable } from '@azera/container/build/types';
 
 export interface MicroKernelOptions {
     /** Environment (default: NODE_ENVIRONMENT) */
@@ -19,7 +18,7 @@ export interface MicroKernelOptions {
  * @param runHandler Kernel run
  * @param options Kernel options
  */
-export function createMicroKernel(runHandler: Injectable, options: MicroKernelOptions = {}) {
+export function createMicroKernel(runHandler: IInjectable, options: MicroKernelOptions = {}) {
 
     // Default options
     options = {

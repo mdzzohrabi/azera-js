@@ -11,12 +11,18 @@ export enum LABEL {
     Number = '[object Number]',
     String = '[object String]',
     Function = '[object Function]',
-    AsyncFunction = '[object AsyncFunction]'
+    AsyncFunction = '[object AsyncFunction]',
+    Arguments = '[object Arguments]',
+    Undefined = '[object Undefined]'
 }
 
 export interface HashMap<V> { [name: string]: V; }
 
 export namespace is {
+
+    export let Undefined = (value: any): value is undefined => toString(value) == LABEL.Undefined
+
+    export let Arguments = (value: any): value is IArguments => toString(value) == LABEL.Arguments
 
     export let Promise = <T>(value: Promise<T> | any): value is Promise<T> => value && value instanceof global.Promise;
 

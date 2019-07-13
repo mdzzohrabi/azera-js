@@ -21,7 +21,7 @@ describe('parseFunction()', () => {
         }
 
 
-        result = parseFunction((name = 'Masoud') => null, { parseDefaults: true });
+        result = parseFunction((name: string = 'Masoud') => null, { parseDefaults: true });
         deepEqual(result.params, ['name']);
         if ( !ES5 ) equal(result.defaults['name'], 'Masoud');
     });

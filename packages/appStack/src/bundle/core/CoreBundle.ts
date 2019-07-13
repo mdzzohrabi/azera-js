@@ -4,6 +4,7 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
 import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
+import { DiTagCommand } from './Command/DITagCommand';
 
 /**
  * Core bundle
@@ -53,7 +54,10 @@ export class CoreBundle extends Bundle {
     }
 
     getServices() {
-        return [ DumpProfilerCommand, ConfigSchemaCommand ];
+        return [
+            DumpProfilerCommand,
+            ConfigSchemaCommand,
+            DiTagCommand ];
     }
 
     boot( @Inject() container: Container ) {
