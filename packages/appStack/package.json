@@ -23,10 +23,12 @@
     "deep-extend": "^0.6.0",
     "express": "^4.17.1",
     "js-yaml": "^3.13.1",
+    "mssql": "^5.1.0",
     "pino": "^5.12.6",
     "ts-node": "^8.2.0",
     "tslib": "^1.9.3",
     "twig": "^1.13.3",
+    "typeorm": "^0.2.18",
     "typescript": "^3.4.5",
     "winston": "^3.2.1"
   }

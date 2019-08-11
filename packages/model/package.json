@@ -29,10 +29,12 @@
         "@types/twig": "^1.12.2",
         "axios": "^0.18.0",
         "mongoose": "^5.0.15",
+        "mssql": "^5.1.0",
         "reflect-metadata": "^0.1.12",
         "string": "^3.3.3",
         "tslib": "^1.9.0",
         "twig": "^1.13.3",
+        "typeorm": "^0.2.18",
         "typescript": "^3.5.1"
     },
     "devDependencies": {

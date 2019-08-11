@@ -21,8 +21,10 @@
         "@azera/ts": "^1.0.0",
         "@azera/util": "^1.0.12",
         "@types/twig": "^1.12.2",
+        "mssql": "^5.1.0",
         "tslib": "^1.9.3",
         "twig": "^1.13.3",
+        "typeorm": "^0.2.18",
         "typescript": "^3.5.3"
     },
     "devDependencies": {
