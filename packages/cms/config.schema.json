@@ -1,1 +1,140 @@
-{"$schema":"http://json-schema.org/draft-04/schema#","title":"Application Configuration Schema","type":"object","additionalProperties":true,"properties":{"web":{"description":"Web server configuration","type":"object","properties":{"routes":{"description":"Route collection","type":"object","patternProperties":{".*":{"description":"Route item","properties":{"type":{"description":"Route type","enum":["static","controller"],"type":"string","default":"controller"},"resource":{"description":"Route resource (e.g: /home/public)","type":"string"},"controller":{"description":"Route controller","type":"string"}}}}}}},"config":{"description":"Config validator configuration","type":"object","properties":{"allowExtra":{"description":"Allow custom configuration node","type":"boolean"}}},"kernel":{"description":"Kernel","properties":{"rootDir":{"description":"Application root directory path","type":"string","default":"D:\\Projects\\azerajs\\packages\\cms"},"cacheDir":{"description":"Cache directory","type":"string","default":"/cache"},"cacheConfig":{"description":"Cache resolved configuration","type":"boolean","default":true}}},"services":{"description":"Container services","type":["array","object"],"patternProperties":{".*":{"description":"Service","properties":{"tags":{"description":"Service tags","type":"array"},"service":{"description":"Service name","type":"string"},"imports":{"description":"Service imports","type":"array"},"private":{"description":"Service singleton or shared","type":"boolean"}}}}},"parameters":{"description":"Container parameters","type":"object","properties":{"httpPort":{"description":"Web server port","type":"number","default":9090},"httpViews":{"description":"Web server views directory","type":"string","default":"D:\\Projects\\azerajs\\packages\\cms\\views"}}}},"definitions":{}}
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "Application Configuration Schema",
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+        "db": {
+            "description": "Database",
+            "type": "array",
+            "items": [
+                {
+                    "type": "object",
+                    "description": "Database connection",
+                    "properties": {
+                        "alias": {
+                            "description": "Database connection alias"
+                        },
+                        "driver": {
+                            "description": "Database driver"
+                        },
+                        "username": {
+                            "description": "Database username"
+                        }
+                    }
+                }
+            ]
+        },
+        "web": {
+            "description": "Web server configuration",
+            "type": "object",
+            "properties": {
+                "routes": {
+                    "description": "Route collection",
+                    "type": "object",
+                    "patternProperties": {
+                        ".*": {
+                            "description": "Route item",
+                            "properties": {
+                                "type": {
+                                    "description": "Route type",
+                                    "enum": [
+                                        "static",
+                                        "controller"
+                                    ],
+                                    "type": "string",
+                                    "default": "controller"
+                                },
+                                "resource": {
+                                    "description": "Route resource (e.g: /home/public)",
+                                    "type": "string"
+                                },
+                                "controller": {
+                                    "description": "Route controller",
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "config": {
+            "description": "Config validator configuration",
+            "type": "object",
+            "properties": {
+                "allowExtra": {
+                    "description": "Allow custom configuration node",
+                    "type": "boolean"
+                }
+            }
+        },
+        "kernel": {
+            "description": "Kernel",
+            "properties": {
+                "rootDir": {
+                    "description": "Application root directory path",
+                    "type": "string",
+                    "default": "D:\\Projects\\node\\azerajs\\packages\\cms"
+                },
+                "cacheDir": {
+                    "description": "Cache directory",
+                    "type": "string",
+                    "default": "/cache"
+                },
+                "cacheConfig": {
+                    "description": "Cache resolved configuration",
+                    "type": "boolean",
+                    "default": true
+                }
+            }
+        },
+        "services": {
+            "description": "Container services",
+            "type": [
+                "array",
+                "object"
+            ],
+            "patternProperties": {
+                ".*": {
+                    "description": "Service",
+                    "properties": {
+                        "tags": {
+                            "description": "Service tags",
+                            "type": "array"
+                        },
+                        "private": {
+                            "description": "Service singleton or shared",
+                            "type": "boolean"
+                        },
+                        "imports": {
+                            "description": "Service imports",
+                            "type": "array"
+                        },
+                        "service": {
+                            "description": "Service name",
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
+        "parameters": {
+            "description": "Container parameters",
+            "type": "object",
+            "properties": {
+                "httpPort": {
+                    "description": "Web server port",
+                    "type": "number",
+                    "default": 9090
+                },
+                "httpViews": {
+                    "description": "Web server views directory",
+                    "type": "string",
+                    "default": "D:\\Projects\\node\\azerajs\\packages\\cms\\views"
+                }
+            }
+        }
+    },
+    "definitions": {}
+}

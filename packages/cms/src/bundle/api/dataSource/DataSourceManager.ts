@@ -95,6 +95,4 @@ function extract() {
 
 }
 
-['2']::extract();
-
 ds.buildEntities();

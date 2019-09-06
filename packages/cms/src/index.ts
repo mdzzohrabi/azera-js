@@ -1,4 +1,4 @@
-import { Bundle, CliBundle, Container, HttpBundle, Inject, Kernel, TwigBundle, createMicroKernel } from "@azera/stack";
+import { Bundle, CliBundle, Container, HttpBundle, Inject, Kernel, TwigBundle, createMicroKernel, TypeORMBundle } from "@azera/stack";
 
 class TestBundle extends Bundle {
 
@@ -7,7 +7,7 @@ class TestBundle extends Bundle {
     }
 }
 
-let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TwigBundle, new TestBundle ]);
+let kernel = new Kernel('dev', [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new TestBundle ]);
 
 kernel.bootAndRun(__dirname + '/../config.json', 'cli').catch(err => {
     console.error(err);

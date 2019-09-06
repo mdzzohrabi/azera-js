@@ -142,12 +142,12 @@ export class SchemaValidator {
 
         Object
             .keys(this.schema)
-            .sort((a, b) => a.length < b.length ? -1 : 1)
+            .sort((a, b) => a.length < b.length ? -1 : 1) // From A to B
             .forEach(nodePath => {
                 // Field schema
                 let node = this.schema[nodePath];
                 let parts = nodePath.split('.');
-                let len = parts.length;
+                let deepSize = parts.length;
                 let i = 0;
                 let parent = schema.properties;
                 let isArray = false;
@@ -155,7 +155,11 @@ export class SchemaValidator {
                 let isHashObject = false;
 
                 let nodeSchema = {} as any;
+
+                // Description
                 if ( node.description ) nodeSchema.description = node.description;
+
+                // Type
                 if ( node.type ) {
                     let enums: any[] = [];
                     let types = node.type.split('|').map(item => {
@@ -171,6 +175,8 @@ export class SchemaValidator {
                     if (types.length == 1) nodeSchema.type = types[0];
                     else nodeSchema.type = types;
                 }
+
+                // Default value
                 if (node.default) {
                     nodeSchema.default = typeof node.default == 'function' ? node.default() : node.default;
                 }
@@ -184,7 +190,7 @@ export class SchemaValidator {
                     }
 
                     // Leaf node
-                    if (len == i) {
+                    if (deepSize == i) {
                         parent[part] = nodeSchema;
                     }
                     else

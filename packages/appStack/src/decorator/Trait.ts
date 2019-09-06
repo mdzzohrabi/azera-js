@@ -45,6 +45,7 @@ let d: Trait<Person, A> = class {} as any;
 (new d()).hello();
 
 class Person {
+    constructor(public last: string) {}
     public name: string = '';
     getName() { return this.name }
     get hello() { return 12 }
@@ -55,5 +56,6 @@ let Masoud = trait(class Masoud {
 }, Person);
 
 let s = new Masoud('Reza');
+
 
 // console.log(s.getName());

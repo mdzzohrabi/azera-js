@@ -20,9 +20,13 @@
 	"services": [
 		"/Command/RunCommand",
 		"/Command/DumpParametersCommand",
-		"/Controller/IndexController"
+        "/Controller/IndexController"
     ],
 	"kernel": {
         "cacheConfig": false
-	}
+    },
+    "db": [
+        { "driver": "ASd" },
+        "12"
+    ]
 }

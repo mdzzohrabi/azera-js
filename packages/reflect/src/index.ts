@@ -11,6 +11,7 @@ const PARAM_SEPARATOR = /\s*\,\s*/;
 const ASYNC_FUNC_REGEX = /^(async\s+)?function/;
 const METHOD_FUNC_REGEX = /^[a-zA-Z_][0-9a-zA-Z_]*\(/;
 const OBJECT_DESTRUCTOR_REGEX = /\{.*?\}/;
+const COMMENT_REGEX = /\/\*([\W\w]*?)\*\//g;
 
 export interface IClass {
     new (...params: any[]): any;
@@ -55,22 +56,38 @@ export function assertFunction(value: any) {
  * Get parameters of function or a class
  * @param value Function or class
  */
-export function getParameters(value: Function) {
+export function getParameters(value: Function, namesOnly?: true): string[]
+export function getParameters(value: Function, namesOnly?: false): { name: string, hasDefault: boolean, value: string }[]
+export function getParameters(value: Function, namesOnly = true) {
     assertFunction(value);
     let string = toString(value);
     let isArrow = isArrowFunction(value);
     let isClass = string.startsWith('class ');
     let params = [];
     if ( isArrow ) {
-        params = string.split('=>')[0].split('(').pop()!.replace(/[()]/g, '').trim().replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR);
+        params = string.replace(COMMENT_REGEX, '').split('=>')[0].split('(').pop()!.replace(/[()]/g, '').trim().replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR);
     } else {
-        let parts = string.replace(/\/\*.*?\*\//g, '').split( isClass ? CLASS_PARAM_OFFSET_REGEX : PARAM_OFFSET_REGEX );
+        let parts = string.replace(COMMENT_REGEX, '').split( isClass ? CLASS_PARAM_OFFSET_REGEX : PARAM_OFFSET_REGEX );
         params = parts[1] ? parts[1].split(')')[0].replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR) : [];
     }
 
-    return params
-        .map( param => param.split('=')[0].trim() )
-        .filter(param => param.length > 0)
+    if (namesOnly) {
+        return params
+            .map( param => param.split('=')[0].trim() )
+            .filter(param => param.length > 0)
+    }
+
+    return params.map(param => {
+
+        let [name, value] = param.split('=');
+
+        return {
+            name: name.trim(),
+            hasDefault: value !== undefined,
+            value: value ? value.trim() : undefined
+        }
+
+    });
 }
 
 /**

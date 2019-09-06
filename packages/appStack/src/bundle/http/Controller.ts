@@ -20,17 +20,21 @@ export function Controller(routePrefix?: string, options?: ControllerOptions) {
 
         options = { children: [], ...options };
 
+        // Optimzie child controllers
         options.children!.forEach(child => {
 
             child.prototype.routePrefix = routePrefix;
-        child.prototype.parentController = controller;
+            child.prototype.parentController = controller;
 
         });
 
+        // Store controller options to its prototype
         (controller.prototype as DecoratedController).controllerOptions = options;
 
+        // Optimize controller route prefix
         if (routePrefix) controller.prototype.routePrefix = (controller.prototype.routePrefix || '') + routePrefix;
     
+        // Define controller in service container
         Service({ tags: [ HttpBundle.DI_TAG_CONTROLLER ], imports: options.children })( controller );
 
         // Extract routes defined in method name

@@ -690,7 +690,7 @@ export function getDependencies(value: Injectable | IMethod) {
 
     } else if (is.Function(value)) {
         func = value;
-        deps = (<any>value)['$inject'] || ( hasDefinition(value) && getDefinition(value).parameters ) || ( getParameters(value) );
+        deps = (<any>value)['$inject'] || ( hasDefinition(value) && getDefinition(value).parameters ) || ( getParameters(value, false).filter(p => !p.hasDefault && p.name.length > 0).map(p => p.name) );
 
     } else if (is.Array(value)) {
         

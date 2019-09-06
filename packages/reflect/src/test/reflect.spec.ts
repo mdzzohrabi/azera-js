@@ -117,6 +117,20 @@ describe('getParameters()', () => {
         );
 
     })
+
+    it('should resolve parameters with default values', () => {
+
+        deepEqual(
+            getParameters(class {
+                constructor(/** parameter 1 */ param1: any, param2: any = 12) { }
+            }, false),
+            [
+                { name: 'param1', hasDefault: false, value: undefined },
+                { name: 'param2', hasDefault: true, value: '12' }
+            ]
+        );
+
+    })
 });
 
 describe('Type checking', async () => {

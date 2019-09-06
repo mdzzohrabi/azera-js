@@ -8,5 +8,7 @@
   "scripts": {
     "link-all": "find ./ -name * -type f"
   },
-  "dependencies": {}
+  "devDependencies": {
+    "lerna": "^3.14.1"
+  }
 }
