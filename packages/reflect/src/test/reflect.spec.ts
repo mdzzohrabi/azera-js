@@ -106,6 +106,17 @@ describe('getParameters()', () => {
 
         }) , [ 'p0' ])
     })
+
+    it('should resolve commented parameters', () => {
+
+        deepEqual(
+            getParameters(class {
+                constructor(/** parameter 1 */ param1: any, param2: any) { }
+            }),
+            ['param1', 'param2']
+        );
+
+    })
 });
 
 describe('Type checking', async () => {

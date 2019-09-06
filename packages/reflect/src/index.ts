@@ -64,7 +64,7 @@ export function getParameters(value: Function) {
     if ( isArrow ) {
         params = string.split('=>')[0].split('(').pop()!.replace(/[()]/g, '').trim().replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR);
     } else {
-        let parts = string.split( isClass ? CLASS_PARAM_OFFSET_REGEX : PARAM_OFFSET_REGEX );
+        let parts = string.replace(/\/\*.*?\*\//g, '').split( isClass ? CLASS_PARAM_OFFSET_REGEX : PARAM_OFFSET_REGEX );
         params = parts[1] ? parts[1].split(')')[0].replace(OBJECT_DESTRUCTOR_REGEX, (s,i) => `p${i}`).split(PARAM_SEPARATOR) : [];
     }
 
