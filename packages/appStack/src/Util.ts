@@ -77,6 +77,24 @@ export function getProperty(obj: any, path: string) {
     return null;
 }
 
+/**
+ * Assert an condition and throw error with formatted message if condition is not true
+ * @param condition Condition to check
+ * @param format Message format
+ * @param params Message parameters
+ */
+export function invariant(condition: any, format: string, ...params: any[]) {
+
+    if (!condition) {
+        let argIndex = 0;
+        let message = format.replace(/%s/g, () => params[argIndex++]);
+        let error = new Error(message);
+        error.name = `Invariant violation`;
+        throw error;
+    }
+
+}
+
 export class Util {
 
     /**

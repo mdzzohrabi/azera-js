@@ -101,10 +101,11 @@ export function reflect(value: Function) {
     let isClass = CLASS_REGEX.test(toString);
     let isFunction = !isClass;
     let isAnonymous = isClass ? NO_NAME_CLASS_REGEX.test(toString) : NO_NAME_FUNC_REGEX.test(toString);
+    let isAsync = ASYNC_FUNC_REGEX.test(toString);
     let isArrow = isArrowFunction(value);
     let parameters = getParameters(value);
 
-    return { name, isClass, isFunction, isAnonymous, isArrow, parameters, toString };
+    return { name, isClass, isFunction, isAsync, isAnonymous, isArrow, parameters, toString };
 }
 
 export function has(object: object, property: string | number | symbol): boolean {

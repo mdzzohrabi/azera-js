@@ -99,7 +99,7 @@ export class Kernel {
         container.setParameter(Kernel.DI_PARAM_BOOTSTART, Date.now());
 
         // Logger
-        let logger = container.invoke(Logger);
+        let logger = await container.invokeAsync(Logger);
         
         logger.info('Kernel bootstrap');
 
@@ -110,7 +110,7 @@ export class Kernel {
         });
 
         // Initialize bundles
-        await asyncEach( bundles, async bundle => await container.invokeLater(bundle, 'boot')() );
+        await asyncEach( bundles, async bundle => await container.invokeLaterAsync(bundle, 'boot')() );
 
         // Time of boot end
         container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
@@ -129,7 +129,7 @@ export class Kernel {
         this.container.setParameter(Kernel.DI_PARAM_PARAMETERS, params);
 
         // Run bundles
-        await asyncEach( this.bundles, async bundle => await this.container.invokeLater(bundle, 'run')(...params));
+        await asyncEach( this.bundles, async bundle => await this.container.invokeLaterAsync(bundle, 'run')(...params));
     }
 
     /**

@@ -69,7 +69,7 @@ export class HttpBundle extends Bundle {
 
         // Register middlewares
         this.middlewares.forEach((middle, i) => {
-            container.set( 'http.middleware_' + i, { tags: [ HttpBundle.DI_TAG_MIDDLEWARE ], service: function middleFactory() { return middle; } });
+            container.set( 'http.middleware_' + i + '_' + middle.name, { tags: [ HttpBundle.DI_TAG_MIDDLEWARE ], service: function middleFactory() { return middle; } });
         })
 
         // Default middlewares
@@ -80,11 +80,14 @@ export class HttpBundle extends Bundle {
         
         let bundle = this;
 
-        container.set(HttpBundle.DI_SERVER, function expressFactory() {
+        container.setFactory(HttpBundle.DI_SERVER, async function expressFactory() {
             let server = bundle.server = express();
-            let middlewares = container.getByTag(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
-            let controllers = container.getByTag(HttpBundle.DI_TAG_CONTROLLER) as any[];
-    
+            let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
+            let controllers = await container.getByTagAsync(HttpBundle.DI_TAG_CONTROLLER) as any[];
+            console.log(
+                middlewares
+            );
+
             // Setup middlewares
             middlewares.forEach((middle: any) => {
                 if ('middlewarePath' in middle) {
@@ -183,8 +186,11 @@ export class HttpBundle extends Bundle {
     run( @Inject() container: Container, @Inject(HttpBundle.DI_PARAM_PORT) httpPort: number, @Inject() logger: Logger, action?: string ) {
 
         if (!action || action == 'web') {
-            container.get<express.Express>(HttpBundle.DI_SERVER)!.listen(httpPort, function serverStarted() {
-                logger.info(`Server started on port ${ httpPort }`);
+            container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
+                console.log(server);
+                server.listen(httpPort, function serverStarted() {
+                    logger.info(`Server started on port ${ httpPort }`);
+                })
             });
         }
 

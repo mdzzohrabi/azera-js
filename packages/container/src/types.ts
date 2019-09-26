@@ -10,6 +10,7 @@ export type Constructor<T= {}> = new (...args: any[]) => T;
 
 export interface IInjectable extends Function { $inject?: string[]; }
 export type MockMethod<O extends object, K extends keyof O> = (...params: any[]) => ReturnType< O[K] extends ((...params: any[]) => any) ? O[K] : any >;
+export type MockMethodAsync<O extends object, K extends keyof O> = (...params: any[]) => Promise< ReturnType< O[K] extends ((...params: any[]) => any) ? O[K] : any > >;
 export type InjectableFunction<T = any> = { (...params: any[]): T ; $inject?: string[] };
 export type FunctionOf<T> = (...params: any[]) => T;
 export type Injectable<T = any> = InjectableFunction<T> | Function | Array<string | Function | FunctionOf<T>>;
@@ -31,11 +32,11 @@ export interface IContainer {
 
 }
 
-export interface IDefinition {
+export interface IDefinition<T = Function> {
     // Service name
     name: string;
     // Service function or class
-    service?: Function;
+    service?: T;
     // Constructor parameters
     parameters: ( string | Function )[];
     // Function/Class properties

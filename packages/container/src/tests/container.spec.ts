@@ -813,4 +813,53 @@ describe('Container', () => {
         })
     });
 
+    describe(`Async`, () => {
+        it(`should invoke() async`, (done) => {
+
+            let container = new Container();
+            class Connection { constructor(public name = '') {} }
+            class Model { constructor(@Inject() public connection: Connection) {} }
+
+            container.set('connectionString', function connectionStringFactory() {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => resolve('yes'), 220);
+                });
+            });
+
+            container.setFactory(Connection, function connectionFactory(connectionString: string) {
+                return Promise.resolve(
+                    new Connection(connectionString)
+                );
+            });
+
+            throws(() => {
+                container.invoke(Model);
+            }, /not allowed/);
+
+            container.invokeAsync(Model).then(model => {
+                ok(model instanceof Model);
+                ok(model.connection instanceof Connection);
+                equal(model.connection.name, 'yes');
+                done();
+            }).catch(done);
+
+        });
+
+        it(`async function factory should works`, (done) => {
+            let container = new Container();
+            function delay(time: number) {
+                return new Promise((resolve, reject) => setTimeout(resolve, time));
+            }
+            container.setFactory('connectionString', async function connectionFactory() {
+                await delay(200);
+                return 'hello';
+            });
+
+            container.invokeAsync('connectionString').then(conn => {
+                equal(conn, 'hello');
+                done();
+            }).catch(done);
+        })
+    });
+
 });

@@ -1,6 +1,6 @@
 import { is } from "@azera/util";
 import "reflect-metadata";
-import { Container, Definition, getDependencies, isFactory, SERVICE_REGEX, isInternalClass } from "./container";
+import { Container, Definition, getDependencies, isFactory, isInternalClass, SERVICE_REGEX } from "./container";
 import { DecoratorError } from './errors';
 import { IDefinition, IInternalDefinition } from "./types";
 import { Decorator } from './util';
@@ -15,7 +15,7 @@ export const META_PARAMETERS_INJECT = Symbol('container.constructor.inject');
  * @param {any} value
  */
 export function getTarget(value: any): FunctionConstructor {
-    return value.prototype && value.prototype.constructor == value ? value : ( value.constructor == Function ? value : value.constructor );
+    return value.constructor && (value.constructor == Function || is.Async(value)) ? value : value.constructor;
 }
 
 /**
@@ -44,7 +44,6 @@ export function getInitialDefinition(target: Function, context?: any): IDefiniti
             Reflect.getMetadata("design:paramtypes", context, target.name);
         }
     }
-
 
     return Definition({
         $target: target,

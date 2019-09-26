@@ -189,4 +189,15 @@ describe('Reflect', () => {
         ok(ref.isClass);
     })
 
+    it('should reflect async function correctly', () => {
+
+        let result = reflect(async function HelloWorld(param1: string) {});
+
+        equal(result.name, 'HelloWorld');
+        equal(result.parameters.length, 1);
+        deepEqual(result.parameters, ['param1']);
+        ok(result.isAsync);
+
+    });
+
 });

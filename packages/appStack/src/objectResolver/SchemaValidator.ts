@@ -1,5 +1,5 @@
 import { ResolverInfo } from './ObjectResolver';
-import { setProperty } from '../Util';
+import { setProperty, invariant } from '../Util';
 
 /**
  * Schema validator
@@ -59,6 +59,8 @@ export class SchemaValidator {
      * @param type Field type
      */
     node(nodePath: string, type?: string): SchemaValidator;
+    node(nodePath: string, type?: Partial<ResolverSchemaField>): SchemaValidator;
+    node(nodePath: string, type?: (node: ResolverSchemaField) => void): SchemaValidator;
     node(nodePath: string, schema?: any): SchemaValidator
     {
         if (typeof schema == 'string') {
@@ -68,9 +70,16 @@ export class SchemaValidator {
         }
         let node = this.schema[nodePath] || (this.schema[nodePath] = typeof schema == 'object' && schema || {});
         node.nodePathTest = node.nodePathTest || new RegExp('^' + nodePath.replace('.', '[.|]').replace('**', '[^\\s]+').replace('*', '[^.|\\s]+') + '$');
+        node.path = nodePath;
         if (typeof schema == 'function')
             schema(node);
         return this;
+    }
+
+    findNode(path: string | string[]) {
+        if (Array.isArray(path)) path = path.join('|');
+        else path = path.replace('.', '|');
+        return Object.values(this.schema).find(node => node.nodePathTest!.test(path as string));
     }
 
     /**
@@ -82,12 +91,25 @@ export class SchemaValidator {
             // Root node
             if (info.nodePath.length == 0 || info.nodePath[0] == '$schema')
                 return value;
-            let nodePath = info.nodePath.join('|');
-            let node = Object.keys(this.schema).filter(path => this.schema[path].nodePathTest!.test(nodePath)).pop();
-            if (node) {
-                let nodeSchema = this.schema[node];
-                if (info.nonVisitedNodes[node])
-                    delete info.nonVisitedNodes[node];
+
+            let isArrayItem = Number(info.nodePath[info.nodePath.length - 1]).toString() == info.nodePath[info.nodePath.length - 1] || Number(info.nodePath[info.nodePath.length - 2]).toString() == info.nodePath[info.nodePath.length - 2];
+
+            let parentNode = this.findNode(info.nodePath.slice(0, info.nodePath.length - 1));
+
+            if (!parentNode && isArrayItem) {
+                parentNode = this.findNode(info.nodePath.slice(0, info.nodePath.length - 2));
+            }
+
+            // Array node
+            if (isArrayItem && parentNode && parentNode.type == 'array') {
+                return value;
+            }
+
+            let nodeSchema = this.findNode(info.nodePath);
+
+            if (nodeSchema) {
+                if (info.nonVisitedNodes[nodeSchema.path])
+                    delete info.nonVisitedNodes[nodeSchema.path];
                 if (nodeSchema.type) {
                     let ok = false;
                     let types = nodeSchema.type.split('|');
@@ -183,25 +205,41 @@ export class SchemaValidator {
 
                 // Deep into node path from root
                 parts.forEach(part => {
+
                     i++;
                     
-                    if (part.startsWith('*')) {
+                    // Wild card node
+                    if (part.startsWith('*') && !isArray) {
                         return;
                     }
 
                     // Leaf node
                     if (deepSize == i) {
-                        parent[part] = nodeSchema;
+                        if ( Array.isArray(parent) ) {
+                            parent.push(nodeSchema);
+                        } else {
+                            parent[part] = nodeSchema;
+                        }
                     }
                     else
                     // Parent nodes
                     {
-                        parent = parent[part];
-                        isArray = parent.type == 'array';
-                        isHashObject = !!parts[i] && parts[i].startsWith('*');
+
+                        if (part.startsWith('*') && Array.isArray(parent)) {
+                            let _parent = parent.find(item => item.type == 'object');
+                            if (!_parent) parent.push(_parent = { type: 'object' });
+                            if (!_parent['properties']) _parent['properties'] = {};
+                            parent = _parent['properties'];
+                            return;
+                        }
+
+                        invariant(parent = parent[part], `parent node "${ parts.slice(0, i).join('.') }" not defined in schema for "${ parts.join('.') }", please define it."`);
+
+                        isArray = parent.type == 'array'; // Array
+                        isHashObject = !!parts[i] && parts[i].startsWith('*');  // Assumes that it is an object if next node is *
                         let propName = isArray ? 'items' : 'properties';
 
-                        if (isHashObject) {
+                        if (isHashObject && !isArray) {
                             parent = parent["patternProperties"] || (parent["patternProperties"] = {});
                             parent = parent[".*"] || (parent[".*"] = {});
                             let hashNodePath = parts.slice(0, i + 1).join('.');
@@ -211,7 +249,12 @@ export class SchemaValidator {
                             parent["description"] = this.schema[hashNodePath].description;
                             parent = parent["properties"] || (parent["properties"] = {});
                         } else {
-                            parent = parent[propName] || (parent[propName] = {});
+                            // Go to next node
+                            if (isArray) {
+                                parent = (parent['items'] || (parent['items'] = []));
+                            } else {
+                                parent = parent['properties'] || (parent['properties'] = {}); 
+                            }
                         }
                     }
 
@@ -225,6 +268,7 @@ export class SchemaValidator {
 }
 
 export interface ResolverSchemaField {
+    path: string
     description?: string
     required?: boolean
     validate?: (value: any, info: ResolverInfo) => any
