@@ -52,7 +52,10 @@ export class DumpRoutesCommand extends Command {
                 })
 
             } else {
-                cli.row( ++i, '[Middleware]', layer.handle.name, 'All');
+
+                let pattern = layer.regexp.source.replace('^', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g,'/') || '/';
+
+                cli.row( ++i, `${pattern} [M]`, layer.handle.name, 'All');
             }
 
         });

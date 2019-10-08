@@ -89,10 +89,8 @@ export class Container implements IContainer {
         if ( services ) this.set(services);
         if ( parameters ) this.params = parameters;
 
-        this.set('serviceContainer', {
-            factory: function containerFactory(this: Container) {
-                return this;
-            }
+        this.setFactory('serviceContainer', function containerFactory(this: Container) {
+            return this;
         });
 
         // Get container
@@ -203,7 +201,7 @@ export class Container implements IContainer {
             ok( is.Array(service.parameters || []), `Service ${service.name} parameters must be array, ${ service.parameters } given` );
             ok( service.service || service.factory, `No service defined for ${service.name}` );
 
-            let resolvedParameters = ( service.parameters || [] ).map( dep => this._invoke(dep, _stack, options as any) as any );
+            let resolvedParameters: any[] = ( service.parameters || [] ).map( dep => this._invoke(dep, _stack, options as any) as any );
             let target = service.service;
 
             if (this.strictAsync && !async && resolvedParameters.find(d => d instanceof Promise) !== undefined) {
@@ -252,7 +250,8 @@ export class Container implements IContainer {
 
             }
 
-            if (async) {
+            if (async && resolvedParameters.filter(param => param instanceof Promise).length > 0) {
+
                 let resolver = new Promise(async (resolve, reject) => {
                     resolvedParameters = await Promise.all(resolvedParameters);
                     let { result: object } = createService(resolvedParameters);
@@ -323,7 +322,7 @@ export class Container implements IContainer {
 
         if ( name == undefined ) return undefined;
 
-        stack = stack || [];
+        stack = ([] as string[]).concat( stack || [] );
         stack.push(name);
 
         // Function
@@ -398,7 +397,8 @@ export class Container implements IContainer {
             _deps = this.getDefinition(getTarget(context)).methods[method!];
         }
 
-        let fnName = method + 'InvokeLater';
+        let contextName = context && context.name || undefined;
+        let fnName = ( contextName ? contextName + '.' :'' ) + method + 'InvokeLater';
 
         return {
 
@@ -443,7 +443,8 @@ export class Container implements IContainer {
             _deps = this.getDefinition(getTarget(context)).methods[method!];
         }
 
-        let fnName = method + 'InvokeLaterAsync';
+        let contextName = context && context.name || undefined;
+        let fnName = ( contextName ? contextName + '.' :'' ) + method + 'InvokeLaterAsync';
 
         return {
 
@@ -507,7 +508,7 @@ export class Container implements IContainer {
         if ( (_isClass = is.Class(value)) || (_isFunction = is.Function(value)) || (_isMethod = isMethod(value)) || is.Array(value) ) {
             let def = this.getDefinition(value);
             stack.push(`${def.name} (${ _isClass ? 'Class' : _isFunction ? 'Function' : _isMethod ? 'Method' : 'Array' })`);
-            if ( !isMethod && !is.Empty(def.name) && this.instances[def.name] ) return this.instances[def.name];
+            if ( !_isMethod && !is.Empty(def.name) && this.instances[def.name] ) return this.instances[def.name];
             return this.resolveDefinition(def, stack, options as any) as any;
         }
 

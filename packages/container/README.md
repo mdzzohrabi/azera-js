@@ -8,6 +8,8 @@
 - [Auto tagging](##Auto%20tagging)
   - [Create custom auto tagging function](###Create%20custom%20auto%20tagging%20function)
 - [Predefined Services and Parameters](##Predefined%20Services%20and%20Parameters)
+- [Type-based injection](##Type-based%20injection)
+- [Async](#Async)
 
 ## Intro
 Azera container is a `dependency injection` service container for `JavaScript` written in `Typescript`.
@@ -152,12 +154,19 @@ container.autoTag( definition => {
 import {Inject} from "@azera/container";
 
 export default {
+
+
   app: class App {
-    @Inject('logger') logger: Logger;
+
+    @Inject('logger')
+    logger: Logger;
+    
     run() {
       // Run logic
     }
+
   },
+
   // You can also declare service with Definition schema
   logger: {
     service: class Logger {
@@ -182,4 +191,61 @@ import Parameters from "./parameters";
 let container = new Container(Services, Parameters);
 let app = container.get('app');
 app.run();
+```
+
+
+## Type-based injection
+We can also emit service configuration and naming and use type-based injection.
+
+```typescript
+// Logger.ts
+export default class Logger {
+  log(message: string) {
+    console.log(message);
+  }
+}
+```
+```typescript
+// App.ts
+import Logger form './Logger.ts'
+
+export default class App {
+  constructor(@Inject() public logger: Logger) {}
+}
+```
+```typescript
+// index.ts
+import App from './App.ts';
+
+new Container()
+  .invoke(App)
+  .logger
+  .log('Hello World');
+```
+
+
+## Async
+```typescript
+@Service({
+  factory: async function connectionFactory() {
+    let connection = new Connection();
+    await connection.connect();
+    return connection;
+  }
+})
+class Connection {
+  name = "default";
+  async connect() { /** Connection logic **/ }
+  async execute(query: string) { /** Command Exection **/ }
+}
+
+class Model {
+  constructor(@Inject() connection: Connection) {
+  }
+}
+
+let container = new Container();
+container.invokeAsync(Model).then(model => {
+  console.log(model.connection.execute("SELECT * FROM User"));
+});
 ```

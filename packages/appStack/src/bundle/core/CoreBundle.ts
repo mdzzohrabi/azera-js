@@ -5,6 +5,7 @@ import { Kernel } from '../../Kernel';
 import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
 import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 import { DiTagCommand } from './Command/DITagCommand';
+import { Logger } from '../../Logger';
 
 /**
  * Core bundle
@@ -28,6 +29,9 @@ export class CoreBundle extends Bundle {
 
         config
             .node('kernel', { description: 'Kernel' })
+            .node('kernel.handleError', { description: 'Handle node errors', type: 'boolean', default: true, validate: (value) => {
+                if (value) this.handleError(container);
+            } })
             .node('kernel.rootDir', { description: 'Application root directory path', type: 'string', default: kernel.rootDir })
             .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: true })
             .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' });
@@ -53,6 +57,16 @@ export class CoreBundle extends Bundle {
 
     }
 
+    handleError(@Inject() serviceContainer: Container) {
+        process.on('uncaughtException', error => {
+            serviceContainer.invoke(Logger).error(error as any);
+        });
+
+        process.on('unhandledRejection', error => {
+            serviceContainer.invoke(Logger).error(error as any);
+        });
+    }
+
     getServices() {
         return [
             DumpProfilerCommand,
@@ -62,7 +76,9 @@ export class CoreBundle extends Bundle {
 
     boot( @Inject() container: Container ) {
 
-        let { services, kernel: kernelConfig } = container.get('config') || { services: {}, kernel: {} };
+        let _config: any = container.hasParameter('config') ? container.get('config') : {};
+
+        let { services, kernel: kernelConfig } = _config || { services: {}, kernel: {} };
         let kernel = container.invoke(Kernel)!;
 
         // Kernel configuration

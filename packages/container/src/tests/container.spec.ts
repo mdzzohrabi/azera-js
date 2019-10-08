@@ -491,12 +491,12 @@ describe('Container', () => {
             equal(container.invoke(C).container, container);
 
             
-            @Service({ private: false }) class Test {}
+            @Service({ private: false }) class Test { caseName = "Shared Object" }
 
             equal( container.getDefinition(Test).private, false );
             equal( container.getDefinition(Test).name, 'Test');
 
-            equal( container.invoke(Test), container.invoke(Test) , `Runtime-injection must create one instance of shared class`);
+            equal( container.invoke(Test), container.invoke(Test) , `Runtime-injection must create one instance from a class`);
 
         });
 
@@ -612,7 +612,7 @@ describe('Container', () => {
             equal(app.middlewares.length, 1);
             ok( app.logger instanceof Logger );
 
-            let result = container.invokeLater(App, 'run');
+            let result = container.invokeLater(app, 'run');
             let run = result('Masoud');
             ok( run.logger instanceof Logger );
             equal(run.name, 'Masoud');
@@ -811,6 +811,69 @@ describe('Container', () => {
             });
 
         })
+
+        describe('Factory decorated service', () => {
+            it('should use factory for decorated services', () => {
+
+                let container = new Container();
+
+                @Service({
+                    factory: () => new Connection("dev")
+                })
+                class Connection {
+                    constructor(public name = "default") {}
+                }
+
+                equal( container.invoke(Connection).name, "dev" );
+
+            });
+        })
+
+        describe('Conflict', () => {
+            it('should works with type-based factory', () => {
+
+                let c1 = new Container();
+                let c2 = new Container();
+
+                class Count extends Number {};
+                class CounterFactory {
+                    i = 1;
+                    create() {
+                        return this.i++;
+                    }
+                }
+
+                c1.setFactory(Count, CounterFactory);
+
+                equal(c1.invoke(Count), 1);
+                equal(c1.invoke(Count), 1);
+                ok(c2.invoke(Count) instanceof Count);
+
+            });
+
+            it('should not conflict with more than one container', () => {
+
+                let c1 = new Container();
+                let c2 = new Container();
+    
+                @Service({ tags: ['counter'] })
+                class CounterFactory {
+                    i = 1;
+                    create() {
+                        return this.i++;
+                    }
+                }
+    
+                equal(c1.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory`);
+    
+                deepEqual(c1.getByTag('counter'), [1]);
+                // deepEqual(c2.getByTag('counter'), [1]);
+    
+            });
+    
+
+        });
+
     });
 
     describe(`Async`, () => {

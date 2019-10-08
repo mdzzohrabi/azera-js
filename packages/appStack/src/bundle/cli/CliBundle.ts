@@ -4,6 +4,7 @@ import { Inject, Container } from '@azera/container';
 import { Command } from './Command';
 
 export const DI_TAG_COMMAND = 'cli.command';
+export const DI_PARAM_ARGV = 'cli.argv';
 
 /**
  * Command-line handle
@@ -30,7 +31,7 @@ export class CliBundle extends Bundle {
             command.configure(
                 commander
                     .command(command.name)
-                    .action(container.invokeLater(command, 'run'))
+                    .action(container.invokeLaterAsync(command, 'run'))
             )
         });
 

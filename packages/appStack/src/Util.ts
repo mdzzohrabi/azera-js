@@ -95,6 +95,11 @@ export function invariant(condition: any, format: string, ...params: any[]) {
 
 }
 
+
+export function enableSourceMap() {
+    require('source-map-support').install();
+}
+
 export class Util {
 
     /**

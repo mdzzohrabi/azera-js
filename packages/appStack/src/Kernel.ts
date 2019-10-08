@@ -46,7 +46,7 @@ export class Kernel {
 
     constructor(
         // Kernel environment
-        public env: string = 'dev',
+        public env: string = process.env.NODE_ENVIRONMENT || 'development',
         // Kernel bundles
         public bundles: Bundle[] = [],
         // Kernel dependency-injection container
@@ -76,10 +76,10 @@ export class Kernel {
 
         container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
-        
+
         // Initialize bundles
         this.bundles.forEach(bundle => this.container.invokeLater(bundle, 'init')() );
-
+                    
         // Configure container defaults
         configureContainer(container);
 
@@ -102,7 +102,7 @@ export class Kernel {
         let logger = await container.invokeAsync(Logger);
         
         logger.info('Kernel bootstrap');
-
+        
         // Bundles services
         bundles.forEach(bundle => {
             let services = container.invokeLater(bundle, 'getServices')();
@@ -116,6 +116,15 @@ export class Kernel {
         container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
 
         this.profiler.end('kernel.boot');
+
+        
+        // Freeze container
+        container.add =
+        container.addDefinition =
+        container.set =
+        container.setAlias =
+        container.setFactory = () => { throw Error(`Container cannot be modified after kernel bootstrap`); }
+
 
         return this;
         
@@ -278,6 +287,25 @@ export class Kernel {
 
         return pathName;
 
+    }
+
+    /**
+     * Create simple web app
+     * @param controllers Controllers
+     */
+    static async createWebApp(port: number, ...controllers: Function[]) {
+        let { HttpBundle, Controller, isDecoratedController } = await import('./bundle/http');
+        let { TwigBundle } = await import('./bundle/twig');
+
+        let kernel = new Kernel(undefined, [ new HttpBundle, new TwigBundle ], new Container());
+        kernel.setParameter(HttpBundle.DI_PARAM_PORT, port);
+        controllers.forEach(controller => {
+            if (controller instanceof Function && !isDecoratedController(controller)) {
+                Controller()(controller);
+            }
+        })
+        kernel.addService(...controllers);
+        return kernel;
     }
 
 }

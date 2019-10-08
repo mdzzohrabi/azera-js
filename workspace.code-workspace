@@ -31,5 +31,7 @@
 			"path": "packages/appStack"
 		}
 	],
-	"settings": {}
+	"settings": {
+		"typescript.tsdk": "appStack\\node_modules\\typescript\\lib"
+	}
 }

@@ -20,12 +20,13 @@
     "dependencies": {
         "@azera/ts": "^1.0.0",
         "@azera/util": "^1.0.12",
-        "tslib": "^1.9.3"
+        "tslib": "^1.9.3",
+        "typescript": "^3.6.3"
     },
     "devDependencies": {
-        "@types/mocha": "^2.2.46",
+        "@types/mocha": "^5.2.7",
         "@types/node": "^9.3.0",
-        "mocha": "^4.1.0",
+        "mocha": "^6.2.0",
         "ts-node": "^8.1.0",
         "typescript": "^3.5.3"
     }

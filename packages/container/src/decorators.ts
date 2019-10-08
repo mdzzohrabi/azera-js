@@ -185,14 +185,14 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
     };
 }
 
-export function Tag(...tags: string[]): ClassDecorator {
-    return target => {
+export function Tag(...tags: string[]) {
+    return (target: Function) => {
         Service({ tags })( target );
     };
 }
 
-export function Service(definition: Partial<IDefinition> | string = {}): ClassDecorator {
-    return target => {
+export function Service(definition: Partial<IDefinition> | string = {}) {
+    return (target: Function) => {
 
         if ( typeof definition === 'string' ) {
             definition = { name: definition };

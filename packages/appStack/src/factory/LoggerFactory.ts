@@ -13,7 +13,7 @@ export class LoggerFactory {
             transports: [
                 new transports.Console
             ],
-            defaultMeta: serviceContainer.getParameter('logger.metas')
+            defaultMeta: serviceContainer.hasParameter('logger.metas') ? serviceContainer.getParameter('logger.metas') : undefined
         })
 
     }

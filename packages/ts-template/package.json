@@ -25,5 +25,10 @@
         "typeorm": "^0.2.18",
         "typescript": "^3.5.1",
         "yargs": "^11.0.0"
+    },
+    "devDependencies": {
+        "@types/mocha": "^5.2.7",
+        "mocha": "^6.2.0",
+        "ts-node": "^8.4.1"
     }
 }

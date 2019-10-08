@@ -6,22 +6,26 @@ import { LoginController } from './LoginController';
 })
 export class IndexController {
 
-    @Middleware('/middle') engineHeader( req: Request, res: Response, next: Function ) {
-        console.log('Engine header middleware');
-        res.header('Engine', 'Azera AppStack');
-        next();
+    @Middleware('/') engineHeader( req: Request, res: Response, next: Function ) {
+        res.header('Engine', 'Azera AppStack'); return next();
     }
 
     ['/']( @Inject() res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
-        })
+        });
     }
 
     ['POST /native']( req: Request, res: Response ) {
         res.render('index.html.twig', {
             name: 'World'
         })
+    }
+
+    ['/array_to_json']() {
+        return {
+            name: 'Masoud'
+        }
     }
 
 }

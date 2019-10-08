@@ -23,7 +23,8 @@
         "/Controller/IndexController"
     ],
 	"kernel": {
-        "cacheConfig": false
+        "cacheConfig": false,
+        "handleError": false
     },
     "db": {
         "main": {

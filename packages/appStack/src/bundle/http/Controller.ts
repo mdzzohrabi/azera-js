@@ -1,6 +1,7 @@
 import { Service } from '@azera/container';
 import { HttpBundle } from './HttpBundle';
 import { RoutesCollection, HttpMethods, Route } from './Route';
+import { Constructor } from '@azera/util';
 
 export interface ControllerOptions {
     children?: Function[]
@@ -9,6 +10,10 @@ export interface ControllerOptions {
 export interface DecoratedController extends RoutesCollection {
     controllerOptions: ControllerOptions
     routePrefix: string
+}
+
+export function isDecoratedController(_func: Function): _func is Constructor<DecoratedController> {
+    return _func.prototype.controllerOptions !== undefined;
 }
 
 /**

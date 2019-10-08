@@ -8,15 +8,15 @@ import { IFactory } from '@azera/container';
 export class HttpCoreMiddlewareFactory implements IFactory {
 
     create( @Inject() serviceContainer: Container ) {
-        return function coreMiddleWare(req: any, res: any, next: any) {
+        return function AzeraHttpBundleCoreMiddleWare(req: Request, res: Response, next: any) {
 
             serviceContainer
-                // Request
-                .setFactory(Request, function requestFactory() { return req; })
-                // Response
-                .setFactory(Response, function responseFactory() { return res; });
+                .setParameter('http.req', req)
+                .setParameter('http.res', res)
+            ;
 
             next();
+
         }
     }
 

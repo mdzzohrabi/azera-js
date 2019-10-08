@@ -10,6 +10,10 @@ import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
+import { EventManager } from '../../EventManager';
+import { Request } from './Request';
+import { Response } from './Response';
+import { is } from '@azera/util';
 
 /**
  * Http Bundle
@@ -19,6 +23,9 @@ export class HttpBundle extends Bundle {
 
     static DI_TAG_MIDDLEWARE = 'http.middleware';
     static DI_TAG_CONTROLLER = 'http.controller';
+
+    static EVENT_LISTEN = 'http.listen';
+    static EVENT_EXPRESS = 'http.expresss';
 
     /** Http listen port */
     static DI_PARAM_PORT = 'httpPort';
@@ -42,6 +49,8 @@ export class HttpBundle extends Bundle {
     ) { super(); }
 
     init( @Inject() container: Container, @Inject() config: ConfigSchema, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
+
+        let httpBundle = this;
 
         // Configuration
         config
@@ -80,13 +89,18 @@ export class HttpBundle extends Bundle {
         
         let bundle = this;
 
+        
+        container
+            // Request
+            .setFactory(Request, function requestFactory(serviceContainer: Container) { return serviceContainer.getParameter('http.req'); })
+            // Response
+            .setFactory(Response, function responseFactory(serviceContainer: Container) { return serviceContainer.getParameter('http.res'); });
+
         container.setFactory(HttpBundle.DI_SERVER, async function expressFactory() {
             let server = bundle.server = express();
             let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
             let controllers = await container.getByTagAsync(HttpBundle.DI_TAG_CONTROLLER) as any[];
-            console.log(
-                middlewares
-            );
+            let events = container.invoke(EventManager);
 
             // Setup middlewares
             middlewares.forEach((middle: any) => {
@@ -126,18 +140,15 @@ export class HttpBundle extends Bundle {
 
                     let routePath = routePrefix + route.path;
                     let routeObj = router.route(routePath);
+                    let handler: Function;
     
                     if ( injectedMethods.includes(route.action) ) {
-                        // @ts-ignore
-                        routeObj[ route.method ]( function requestHandler() {
-                            // @ts-ignore
-                            return container.invokeLater(controller, route.action)();
-                        });
+                        handler = container.invokeLater(controller, route.action);
                     } else {
-                        let method = (<Function>controller[ route.action ]).bind( controller );
-                        // @ts-ignore
-                        routeObj[ route.method ]( method );
+                        handler = (<Function>controller[ route.action ]).bind( controller );
                     }
+
+                    routeObj[ route.method ]( httpBundle.$handleRequest( handler, events ) );
 
                     routeObj.controller = controller;
                     routeObj.methodName = route.action;
@@ -146,9 +157,18 @@ export class HttpBundle extends Bundle {
     
             });
 
+            container.invoke(EventManager).emit(HttpBundle.EVENT_EXPRESS, server);
+
             return server;
     
         });
+    }
+
+    $handleRequest(handle: Function, events: EventManager) {
+        return function httpRequestHandle(req: Request, res: Response, next: Function) {
+            let result = handle(req, res, next);
+            events.emit('http.result', result);
+        }
     }
 
     _normalizeViewsDir(appRoot: string, viewsDir: string) {
@@ -167,7 +187,7 @@ export class HttpBundle extends Bundle {
         return null;
     }
 
-    boot( @Inject() container: Container, @Inject('config') config : any ) {
+    boot( @Inject() container: Container ) {
 
         // Views path
         if ( !container.hasParameter(HttpBundle.DI_PARAM_VIEWS) && container.hasParameter(Kernel.DI_PARAM_ROOT) ) {
@@ -183,12 +203,16 @@ export class HttpBundle extends Bundle {
 
     }
 
-    run( @Inject() container: Container, @Inject(HttpBundle.DI_PARAM_PORT) httpPort: number, @Inject() logger: Logger, action?: string ) {
+    run(
+        @Inject() container: Container,
+        @Inject(HttpBundle.DI_PARAM_PORT) httpPort: number,
+        @Inject() logger: Logger,
+        action?: string ) {
 
         if (!action || action == 'web') {
             container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
-                console.log(server);
                 server.listen(httpPort, function serverStarted() {
+                    container.invoke(EventManager).emit(HttpBundle.EVENT_LISTEN, httpPort);
                     logger.info(`Server started on port ${ httpPort }`);
                 })
             });
