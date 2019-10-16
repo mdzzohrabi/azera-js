@@ -12,7 +12,7 @@ export interface MiddlewareItem {
 }
 
 export interface MiddlewaresCollection {
-    middlewares: MiddlewareItem[];
+    middlewares: (MiddlewareItem | Function)[];
 }
 
 /**
@@ -20,27 +20,43 @@ export interface MiddlewaresCollection {
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  * @decorator
  */
+export function Middleware(middlewares?: Function[]): any
 export function Middleware(path?: string): any
+export function Middleware(path?: any): any
 {
     return function middlewareDecorator(target: object | Function, methodName?: string | symbol, desc?: any) {
 
         // Class decorator ( Tag a class as middleware service )
-        if ( typeof target == 'function' ) {
+        if ( typeof target == 'function' && !Array.isArray(path) ) {
             target.prototype.middlewarePath = path;
             Service({ tags: [ 'http.middleware' ] })( target );
             return;
         }
 
-        // Method decorator ( Controller method as middleware )
-        if (!methodName) throw TypeError(`Method name not specified for middleware ${ target.constructor.name }`);
+        if (Array.isArray(path)) {
 
-        let items = target as MiddlewaresCollection;
+            if (!(typeof target == 'function')) throw Error(`Middleware annotated with middlewares collection only allowed for controller class`);
+        
+            let items = target.prototype as MiddlewaresCollection;
+            let middles = items[MIDDLEWARES_PROPERTY] = items[MIDDLEWARES_PROPERTY] || [];
 
-        // Add middleware to middlewares property
-        (items[MIDDLEWARES_PROPERTY] = items[MIDDLEWARES_PROPERTY] || []).push({
-            methodName,
-            path: path || ''
-        });
+            path.forEach(middle => middles.push(middle));
+
+        } else {
+        
+            let items = target as MiddlewaresCollection;
+            let middles = items[MIDDLEWARES_PROPERTY] = items[MIDDLEWARES_PROPERTY] || [];
+    
+            // Method decorator ( Controller method as middleware )
+            if (!methodName) throw TypeError(`Method name not specified for middleware ${ target.constructor.name }`);
+
+            // Add middleware to middlewares property
+            middles.push({
+                methodName,
+                path: path || ''
+            });
+
+        }
 
     }
 }

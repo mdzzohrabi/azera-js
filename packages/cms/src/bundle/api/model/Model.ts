@@ -1,17 +1,37 @@
-export interface Model {
-    name: string
-    description?: string
-    fields: ModelField[]
-    dataSourceName: string
+import { invariant } from '@azera/stack';
+import { EntitySchema } from 'typeorm';
+
+/**
+ * Data model
+ */
+export class Model {
+    constructor(
+        public name: string,
+        public description?: string,
+        public fields: ModelField[] = [],
+        public dataSource?: string,
+        public collection?: string
+    ) {
+        this.collection = collection = collection || name;
+        invariant(name, `Model must have a name`);
+        invariant(dataSource, `Data-source not defined for model ${ name }`);
+    }
 }
 
-export interface ModelField {
-    name: string
-    type: FieldType
-    size?: number
-    default?: any
-    required?: boolean
-    description?: string
+/**
+ * Dat model field
+ */
+export class ModelField {
+    constructor(
+        public name: string,
+        public type: FieldType,
+        public caption?: string,
+        public size?: number,
+        public defaults?: any,
+        public required?: boolean,
+        public description?: string,
+        public primary?: boolean
+    ) {}
 }
 
 export type FieldType = 'number' | 'string' | 'boolean';

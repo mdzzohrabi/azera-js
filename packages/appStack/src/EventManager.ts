@@ -1,7 +1,10 @@
+import { Container, Inject, Service } from '@azera/container';
+import { forEach } from '@azera/util';
 import { EventEmitter } from 'events';
-import { Inject, Service, Tag, Container } from '@azera/container';
 import { Logger } from './Logger';
-import { Kernel } from './Kernel';
+import { debugName } from './Util';
+
+export const EVENT_SUBSCRIBER_TAG = 'event.subsriber';
 
 /**
  * Event manager
@@ -10,11 +13,49 @@ import { Kernel } from './Kernel';
  */
 @Service({
     factory: ($env: string, serviceContainer: Container) => {
-        if ( $env == 'development' ) return new DebugEventManager(serviceContainer.invoke(Logger));
-        return new EventManager();
-    }
+        let manager = $env == 'development' ? new DebugEventManager(serviceContainer.invoke(Logger)) : new EventManager();
+        
+        let subscribers = serviceContainer.getByTag(EVENT_SUBSCRIBER_TAG);
+        subscribers.forEach(subscriber => manager.subscribe(subscriber as any));
+
+        return manager;
+    },
+
+    autoTags: [function eventSubscriberTagger(service) {
+        if (service.name.endsWith('EventSubscriber')) return [ EVENT_SUBSCRIBER_TAG ];
+        return [];
+    }]
 })
-export class EventManager extends EventEmitter {    
+export class EventManager extends EventEmitter {
+
+    subscribe(subscriber: IEventSubscriber) {
+
+        if (!subscriber || typeof subscriber['getSubscribedEvents'] != 'function') {
+            throw Error(`Event SubScriber must be instance of a IEventSubscriber, ${ debugName(subscriber) } given`);
+        }
+
+        let addListener = (eventName: string, listener: any) => {
+            if (typeof listener == 'string') {
+                this.on(eventName, (subscriber as any)[listener].bind(subscriber));
+            } else if (typeof listener == 'function') {
+                this.on(eventName, listener);
+            } else {
+                throw Error(`Event listener must be instance of Function or a method name that exists in subscriber`);
+            }
+        }
+
+        forEach( subscriber.getSubscribedEvents() , (listeners, eventName) => {
+            if (Array.isArray(listeners)) {
+                listeners.forEach((listener: any) => {
+                    addListener(eventName, listener);
+                });
+            } else {
+                addListener(eventName, listeners);
+            }
+        });
+
+    }
+
 }
 
 class DebugEventManager extends EventManager {
@@ -26,5 +67,22 @@ class DebugEventManager extends EventManager {
     emit(event: string, eventData: any) {
         this.logger.info(`Emit ${event}`);
         return super.emit(event, eventData);
+    }
+}
+
+export type SubscriberEventsCollections = {
+    [eventName: string]: Function | Function[] | string | string[]
+}
+
+export interface IEventSubscriber {
+    getSubscribedEvents(): SubscriberEventsCollections
+}
+
+
+export class Event {
+    public defaultPrevented: boolean = false;
+    
+    public preventDefault() {
+        this.defaultPrevented = true;
     }
 }

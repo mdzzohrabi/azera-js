@@ -28,11 +28,37 @@
     },
     "db": {
         "main": {
-            "driver": "mongo",
-            "username": "asd",
-            "password": "asdasd",
-            "port": 23
+            "type": "mongodb",
+            "host": "localhost",
+            "port": 27017,
+            "useNewUrlParser": true,
+            "useUnifiedTopology": true,
+            "database": "test"
         },
-        "test": {"driver": "mongo"}
+        "cmis": {
+            "type": "mssql",
+            "database": "ODCC_NEW",
+            "username": "mdzzohrabi",
+            "password": "md#1372#",
+            "host": "localhost"
+        }
+    },
+    "models": {
+        "User": {
+            "dataSource": "main",
+            "collection": "users",
+            "fields": [
+                { "name": "username", "type": "string" },
+                { "name": "age", "type": "number" }
+            ]
+        },
+        "Project": {
+            "dataSource": "cmis",
+            "collection": "CM.Project",
+            "fields": [
+                { "name": "Id", "type": "int", "primary": true },
+                { "name": "Name", "type": "varchar" }
+            ]
+        }
     }
 }

@@ -839,14 +839,21 @@ describe('Container', () => {
                 class CounterFactory {
                     i = 1;
                     create() {
-                        return this.i++;
+                        return new Count(this.i++);
                     }
                 }
 
                 c1.setFactory(Count, CounterFactory);
+                c2.setFactory(Count, CounterFactory);
 
+                deepEqual(Object.keys((c1 as any).instances), []);
                 equal(c1.invoke(Count), 1);
-                equal(c1.invoke(Count), 1);
+                deepEqual(Object.keys((c1 as any).instances), ['CounterFactory', 'Count']);
+
+                deepEqual(Object.keys((c2 as any).instances), []);
+                equal(c2.invoke(Count), 1);
+                deepEqual(Object.keys((c2 as any).instances), ['CounterFactory', 'Count']);
+
                 ok(c2.invoke(Count) instanceof Count);
 
             });
@@ -863,11 +870,20 @@ describe('Container', () => {
                         return this.i++;
                     }
                 }
+
+                c1.add(CounterFactory);
+                c2.add(CounterFactory);
     
-                equal(c1.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory`);
+                equal(c1.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory in container 1`);
+                equal(c2.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory in container 2`);
     
+                deepEqual(Object.keys((c1 as any).instances), []);
                 deepEqual(c1.getByTag('counter'), [1]);
-                // deepEqual(c2.getByTag('counter'), [1]);
+                deepEqual(Object.keys((c1 as any).instances), ['CounterFactory']);
+
+                deepEqual(Object.keys((c2 as any).instances), []);
+                deepEqual(c2.getByTag('counter'), [1]);
+                deepEqual(Object.keys((c2 as any).instances), ['CounterFactory']);
     
             });
     

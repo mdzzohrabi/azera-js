@@ -5,3 +5,5 @@ export * from './Response';
 export * from './Route';
 export * from './CoreMiddleware';
 export * from './Middleware';
+export * from './Events';
+export * from './Decorators';

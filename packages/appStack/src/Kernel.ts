@@ -46,12 +46,14 @@ export class Kernel {
 
     constructor(
         // Kernel environment
-        public env: string = process.env.NODE_ENVIRONMENT || 'development',
+        public env?: string,
         // Kernel bundles
         public bundles: Bundle[] = [],
         // Kernel dependency-injection container
         public container: Container = new Container()
     ) {
+
+        this.env = env = env || process.env.NODE_ENVIRONMENT || 'development';
 
         this.profiler.start('kernel.constructor');
 

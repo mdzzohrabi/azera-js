@@ -95,6 +95,16 @@ export function invariant(condition: any, format: string, ...params: any[]) {
 
 }
 
+export function debugName(value: any) {
+    if (typeof value == 'function') {
+        return value.name;
+    } else if (typeof value == 'object' && 'constructor' in value) {
+        return value.constructor.name;
+    } else {
+        typeof value;
+    }
+}
+
 
 export function enableSourceMap() {
     require('source-map-support').install();

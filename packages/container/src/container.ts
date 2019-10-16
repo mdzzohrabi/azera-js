@@ -175,22 +175,24 @@ export class Container implements IContainer {
     private resolveDefinition(definition: IDefinition, _stack: string[], options?: IInvokeOptions): any
     {
         let { context, override, async }: IInvokeOptions = options || {};
-        let service = override ? Object.assign(definition, override) : definition;
+        let service = override ? Object.assign({}, definition, override) : definition;
         let name = service.name;
         let result: any;
 
         if (!service.invoke && (name == undefined || is.Empty(name))) throw Error(`Service has no name`);
 
-        // Auto-tagger defined in service
-        if ( is.Array(service.autoTags) ) {
-            service.autoTags.forEach( item => {
-                if ( is.Function(item) ) this.autoTag( item );
-                else this.autoTag( item.class, item.tags );
-            });
-        }
+        if (!this.definitions[service.name]) {
+            // Auto-tagger defined in service
+            if ( is.Array(service.autoTags) ) {
+                service.autoTags.forEach( item => {
+                    if ( is.Function(item) ) this.autoTag( item );
+                    else this.autoTag( item.class, item.tags );
+                });
+            }
 
-        // Imports
-        this.resolveImports(service);
+            // Imports
+            this.resolveImports(service);
+        }
 
         // Factory
         if ( service.isFactory || service.factory || this.factories.has(service.service) ) {
@@ -675,6 +677,14 @@ export class Container implements IContainer {
         // Service decorated definition
         if ( definition.service && hasDefinition( definition.service ) ) {
             definition = Object.assign( getDefinition(definition.service), definition );
+        }
+
+        // Auto-tagger defined in service
+        if ( is.Array(definition.autoTags) ) {
+            definition.autoTags.forEach( item => {
+                if ( is.Function(item) ) this.autoTag( item );
+                else this.autoTag( item.class, item.tags );
+            });
         }
 
         // Auto tagging

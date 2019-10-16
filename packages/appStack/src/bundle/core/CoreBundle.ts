@@ -6,6 +6,7 @@ import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
 import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 import { DiTagCommand } from './Command/DITagCommand';
 import { Logger } from '../../Logger';
+import { EventManager } from '../../EventManager';
 
 /**
  * Core bundle
@@ -54,6 +55,8 @@ export class CoreBundle extends Bundle {
         .node('services.*.imports', { description: 'Service imports', type: 'array' })
         .node('services.*.private', { description: 'Service singleton or shared', type: 'boolean' })
         ;
+
+        container.add(EventManager);
 
     }
 

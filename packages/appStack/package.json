@@ -14,7 +14,7 @@
     "*.MD"
   ],
   "dependencies": {
-    "@azera/container": "^2.0.13",
+    "@azera/container": "^2.0.14",
     "@azera/reflect": "^1.0.4",
     "@azera/ts": "^1.0.0",
     "@azera/util": "^1.0.16",

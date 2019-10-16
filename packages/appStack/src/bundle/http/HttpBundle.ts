@@ -4,16 +4,19 @@ import * as express from 'express';
 import * as path from 'path';
 import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
+import { EventManager } from '../../EventManager';
 import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
 import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
+import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT } from './Events';
+import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
-import { RoutesCollection, ROUTES_PROPERTY } from './Route';
-import { EventManager } from '../../EventManager';
 import { Request } from './Request';
 import { Response } from './Response';
-import { is } from '@azera/util';
+import { RoutesCollection, ROUTES_PROPERTY } from './Route';
+import { isFunction } from 'util';
+import { debugName } from '../../Util';
 
 /**
  * Http Bundle
@@ -24,8 +27,8 @@ export class HttpBundle extends Bundle {
     static DI_TAG_MIDDLEWARE = 'http.middleware';
     static DI_TAG_CONTROLLER = 'http.controller';
 
-    static EVENT_LISTEN = 'http.listen';
-    static EVENT_EXPRESS = 'http.expresss';
+    static EVENT_LISTEN = EVENT_HTTP_LISTEN;
+    static EVENT_EXPRESS = EVENT_HTTP_EXPRESS;
 
     /** Http listen port */
     static DI_PARAM_PORT = 'httpPort';
@@ -104,6 +107,9 @@ export class HttpBundle extends Bundle {
 
             // Setup middlewares
             middlewares.forEach((middle: any) => {
+
+                if (!isFunction(middle)) throw Error(`Http Middleware must be a function, but ${ debugName(middle) } given`);
+
                 if ('middlewarePath' in middle) {
                     server.use(middle.middlewarePath, middle);
                 } else {
@@ -123,7 +129,7 @@ export class HttpBundle extends Bundle {
 
                 // Middlewares
                 let middlewares = (<MiddlewaresCollection>controller)[ MIDDLEWARES_PROPERTY ] || [];
-    
+   
                 // Controller service definition
                 let definition = container.getDefinition(controller.constructor);
     
@@ -132,7 +138,11 @@ export class HttpBundle extends Bundle {
 
                 // Register controller middlewares
                 middlewares.forEach(middle => {
-                    server.use( routePrefix + middle.path, container.invokeLater(controller, middle.methodName) );
+                    if ( typeof middle == 'function' ) {
+                        server.use( routePrefix , middle as any );
+                    } else {
+                        server.use( routePrefix + middle.path, container.invokeLater(controller, middle.methodName) );
+                    }
                 });
                
                 // Register controller routes
@@ -148,7 +158,10 @@ export class HttpBundle extends Bundle {
                         handler = (<Function>controller[ route.action ]).bind( controller );
                     }
 
-                    routeObj[ route.method ]( httpBundle.$handleRequest( handler, events ) );
+                    let event = new HttpActionEvent(routePath, route.method, route.action, controller, handler);
+                    events.emit(EVENT_HTTP_ACTION, event);
+
+                    routeObj[ event.method ]( httpBundle.$handleRequest( event.controller, event.action, event.method, event.handler, events ) );
 
                     routeObj.controller = controller;
                     routeObj.methodName = route.action;
@@ -164,10 +177,11 @@ export class HttpBundle extends Bundle {
         });
     }
 
-    $handleRequest(handle: Function, events: EventManager) {
+    $handleRequest(controller: any, action: string, method: string, handle: Function, events: EventManager) {
         return function httpRequestHandle(req: Request, res: Response, next: Function) {
             let result = handle(req, res, next);
-            events.emit('http.result', result);
+            let event = new HttpResultEvent(controller, action, method, result, req, res, next);
+            events.emit(EVENT_HTTP_RESULT, event);
         }
     }
 
@@ -221,7 +235,7 @@ export class HttpBundle extends Bundle {
     }
 
     getServices() {
-        return [ DumpRoutesCommand ];
+        return [ HttpEventSubscriber, DumpRoutesCommand ];
     }
 
     static bundleName = "Http";

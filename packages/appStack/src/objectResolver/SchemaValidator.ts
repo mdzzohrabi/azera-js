@@ -69,17 +69,20 @@ export class SchemaValidator {
             };
         }
         let node = this.schema[nodePath] || (this.schema[nodePath] = typeof schema == 'object' && schema || {});
-        node.nodePathTest = node.nodePathTest || new RegExp('^' + nodePath.replace('.', '[.|]').replace('**', '[^\\s]+').replace('*', '[^.|\\s]+') + '$');
+        node.nodePathTest = node.nodePathTest || new RegExp('^' + nodePath.replace(/\./g, '[.|]').replace(/\*{2}/g, '[^\\s]+').replace(/\*/g, '[^.|\\s]+') + '$');
         node.path = nodePath;
         if (typeof schema == 'function')
             schema(node);
         return this;
     }
 
+    searchCache: { [path: string]: ResolverSchemaField | undefined } = {};
+
     findNode(path: string | string[]) {
         if (Array.isArray(path)) path = path.join('|');
         else path = path.replace('.', '|');
-        return Object.values(this.schema).find(node => node.nodePathTest!.test(path as string));
+        if (path in this.searchCache) return this.searchCache[path];
+        return this.searchCache[path] = Object.values(this.schema).find(node => node.nodePathTest!.test(path as string));
     }
 
     /**
@@ -125,7 +128,7 @@ export class SchemaValidator {
                             break;
                     }
                     if (!ok)
-                        throw Error(`Node "${info.nodePath.join('.')}" must be a valid ${nodeSchema.type}, given type is ${typeof value}`);
+                        throw Error(`Node value must be a valid "${nodeSchema.type}" (schemaPath: ${ nodeSchema.path }), given type is "${typeof value}"`);
                 }
                 if (nodeSchema.skipChildren)
                     info.skipChildren = nodeSchema.skipChildren;

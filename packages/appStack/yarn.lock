@@ -2,10 +2,10 @@
 # yarn lockfile v1
 
 
-"@azera/container@^2.0.13":
-  version "2.0.13"
-  resolved "https://registry.yarnpkg.com/@azera/container/-/container-2.0.13.tgz#4d681fb5e1a2e8bb684997e4a342835fa7195354"
-  integrity sha512-wdi8rY0SMAS/lOTgU8NLWi0tudLDGRuAeqvqxb4JXOEn/TapJy1w6a9cc71N/WNel/Wsh8uc8lCrVbwjmIwDFA==
+"@azera/container@^2.0.14":
+  version "2.0.14"
+  resolved "https://registry.yarnpkg.com/@azera/container/-/container-2.0.14.tgz#eabe851afc8cf335fbf0f2e8f9b4447fc575dea4"
+  integrity sha512-nXON0kTHaS25C0JLoF3muo2t1UTDURdr9W5u1nzJy60GynVx7RhtUyz39lDHIyaB6wofC9/5s3ZrnOOZtWekEw==
   dependencies:
     "@azera/reflect" "^1.0.6"
     "@azera/util" "^1.0.17"
