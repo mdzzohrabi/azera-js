@@ -1,4 +1,4 @@
-import { Bundle, CliBundle, Container, HttpBundle, Inject, Kernel, TwigBundle, enableSourceMap, TypeORMBundle, EventManager, Request, Response } from "@azera/stack";
+import { Bundle, CliBundle, Container, enableSourceMap, HttpBundle, Inject, Kernel, TwigBundle, TypeORMBundle } from "@azera/stack";
 import { ApiBundle } from './bundle/api/ApiBundle';
 
 enableSourceMap();

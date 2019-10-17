@@ -563,6 +563,7 @@ describe('Container', () => {
                 .add(Command1, Command2);
 
             equal( container.findByTag('command').length, 2 );
+            equal( container.getByTag('command').length , 2);
 
             class Console {
                 @Inject( '$$command' ) commands: Command[];

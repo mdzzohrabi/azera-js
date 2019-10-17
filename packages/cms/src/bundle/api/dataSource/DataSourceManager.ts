@@ -1,6 +1,8 @@
-import { Connection, ConnectionManager, MongoEntityManager, SelectQueryBuilder, EntitySchema } from '@azera/stack';
+import { Connection, ORM } from '@azera/stack';
 import { Model } from '../model/Model';
 import { ModelManager } from '../model/ModelManager';
+
+// import { EntitySchema, ConnectionManager, MongoEntityManager, SelectQueryBuilder } = ORM;
 
 // let cm = new ConnectionManager
 
@@ -50,9 +52,9 @@ import { ModelManager } from '../model/ModelManager';
 
 export class ModelDataSource {
 
-    private schemas: { [name: string]: EntitySchema } = {};
+    private schemas: { [name: string]: ORM.EntitySchema } = {};
 
-    constructor(public modelManager: ModelManager, public connectionManager: ConnectionManager) {
+    constructor(public modelManager: ModelManager, public connectionManager: ORM.ConnectionManager) {
     }
 
     getModel(modelName: string) {
@@ -63,8 +65,8 @@ export class ModelDataSource {
         return this.connectionManager.get( this.getModel(model).dataSource );
     }
 
-    createQueryBuilder<T>(model: string, alias: string): Promise<SelectQueryBuilder<T>>
-    createQueryBuilder<T>(connection: Connection, model: string, alias: string): SelectQueryBuilder<T>
+    createQueryBuilder<T>(model: string, alias: string): Promise<ORM.SelectQueryBuilder<T>>
+    createQueryBuilder<T>(connection: Connection, model: string, alias: string): ORM.SelectQueryBuilder<T>
     createQueryBuilder(...args: any[])
     {
         let connection!: Connection;
@@ -87,7 +89,7 @@ export class ModelDataSource {
 
         if (this.schemas[model.name]) return this.schemas[model.name];
 
-        let schema = new EntitySchema({
+        let schema = new ORM.EntitySchema({
             name: model.name,
             columns: model.fields,
             tableName: model.collection,
@@ -96,7 +98,9 @@ export class ModelDataSource {
         this.schemas[model.name] = schema;
 
         let conn = this.getConnection(modelName);
+        // @ts-ignore
         conn.options.entities = [ ...(conn.options.entities || []) , schema ];
+        // @ts-ignore
         conn.buildMetadatas();
 
         return schema;
@@ -106,8 +110,8 @@ export class ModelDataSource {
         return this.getConnection(modelName).getRepository( this.getModelSchema(modelName) );
     }
 
-    isMongo(manager: any): manager is MongoEntityManager {
-        return manager instanceof MongoEntityManager || manager.connection.options.type == 'mongodb';
+    isMongo(manager: any): manager is ORM.MongoEntityManager {
+        return manager instanceof ORM.MongoEntityManager || manager.connection.options.type == 'mongodb';
     }
 
     async select(modelName: string, query: ModelSelectQuery = {}) {
