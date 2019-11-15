@@ -1,0 +1,49 @@
+#toolbar {
+    height: 60px;
+    background-color: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,.1);
+}
+
+.container {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: row;
+
+    .panel {
+        width: 250px;
+        padding: 40px 30px;
+
+        .menu-item {
+            display: block;
+            padding: 10px 20px;
+            border-radius: 20px;
+            transition-duration: .2s;
+            color: #444;
+            margin-bottom: 4px;
+            &.active {
+                background-color: #fff;
+                // box-shadow: 0 1px 3px rgba(0,0,0,.1);
+            }
+            &:not(.active):hover {
+                color: #00adff; 
+            }
+            svg {
+                margin: 0 5px 0 10px;
+            }
+        }
+    }
+
+    .content {
+        flex-grow: 1;
+        padding-top: 40px;
+    }
+}
+
+#app, .root, html, body {
+    height: 100%;
+}
+
+.root {
+    display: flex;
+    flex-direction: column;
+}

@@ -13,6 +13,7 @@ export class HttpCoreMiddlewareFactory implements IFactory {
             serviceContainer
                 .setParameter('http.req', req)
                 .setParameter('http.res', res)
+                .setParameter('http.next', next)
             ;
 
             next();

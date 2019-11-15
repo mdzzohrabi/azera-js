@@ -11,11 +11,15 @@ export * from './bundle/typeORM';
 export * from './objectResolver';
 export * from './Util';
 export * from './MicroKernel';
+export * from './ConfigSchema';
+export * from './ConfigResolver';
+export * from './Metadata';
+export * from './Profiler';
 
-// External libraries
-
+// // External libraries
 export * from '@azera/container';
 import * as Reflect from '@azera/reflect';
-export { Decorator, Constructor, ErrorHandler, is } from '@azera/util';
+export { HashMap } from '@azera/util/is';
+export { Decorator, Constructor, ErrorHandler, is, forEach, wait } from '@azera/util';
 
 export { Reflect };

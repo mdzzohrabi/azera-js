@@ -9,7 +9,7 @@ import configureContainer from './Container.Config';
 import { Logger } from './Logger';
 import { Profiler } from './Profiler';
 import { asyncEach, getPackageDir } from './Util';
-import "./JsExtensions";
+// import "./JsExtensions";
 
 /**
  * Application kernel

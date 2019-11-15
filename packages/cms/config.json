@@ -26,6 +26,7 @@
         "cacheConfig": false,
         "handleError": false
     },
+    
     "db": {
         "main": {
             "type": "mongodb",
@@ -44,7 +45,7 @@
         }
     },
     "models": {
-        "User": {
+        "UserA": {
             "dataSource": "main",
             "collection": "users",
             "fields": [
@@ -60,5 +61,13 @@
                 { "name": "Name", "type": "varchar" }
             ]
         }
+    },
+    "graph": {
+        "port": 2222
+    },
+    "assets": {
+        "storages": [
+            { "name": "local", "provider": "local", "path": "./public", "description": "Local Storage" }
+        ]
     }
 }

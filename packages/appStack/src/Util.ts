@@ -110,6 +110,36 @@ export function enableSourceMap() {
     require('source-map-support').install();
 }
 
+function functionGenerator<T extends string, U = { [K in T]?: string }> (keys: T[]): (p: U) => U {
+    return (p: U) => p
+  }
+
+export function convertArrToObject<
+    OK extends string,
+    OV extends string | number,
+    O extends { [K in OK]: OV },
+    RK extends OK,
+    RV extends OK
+>(arr: O[], key: RK, value: RV): { [Q in O[RK]]?: O[RV] }
+
+export function convertArrToObject<T extends string, V>(arr: T[], value?: ((v: T) => V) | V): { [K in T]?: V }
+export function convertArrToObject(arr: any[], key?: any, value?: any)
+{
+    if (!Array.isArray(arr)) throw Error(`Expected array but ${typeof arr} given`);
+    
+    let object = {} as any;
+
+    arr.forEach(v => {
+        if (typeof v == 'object') {
+            object[ v[key!] ] = v[value!];
+        } else {
+            object[v] = typeof key == 'function' ? key(v) : key;
+        }
+    });
+    
+    return object;
+}
+
 export class Util {
 
     /**

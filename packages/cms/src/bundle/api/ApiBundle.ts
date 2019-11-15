@@ -1,68 +1,97 @@
-import { Bundle, ConnectionManager, Container, Inject } from '@azera/stack';
-import { ConfigSchema } from '@azera/stack/dist/ConfigSchema';
-import { forEach } from '../../../../util';
-import { ModelDataSource } from './dataSource/DataSourceManager';
-import { Model } from './model/Model';
-import { ModelManager } from './model/ModelManager';
+import { Bundle, Container, Inject, Kernel, Request, Response } from '@azera/stack';
+import { compileFunction, createContext } from 'vm';
+import { ApiManager } from './ApiManager';
+import { ApiMiddlewareFactory } from './middleware/ApiMiddleware';
 
 export class ApiBundle extends Bundle {
 
     static bundleName = "api";
 
-    init( @Inject() container: Container, @Inject() config: ConfigSchema ) {
-
-        config
-            .node('models', { description: 'Api Models' })
-            .node('models.*', { description: 'Api Model', type: 'object' })
-            .node('models.*.fields', { description: 'Model Fields', type: 'array' })
-            .node('models.*.fields.*', { description: 'Field', type: 'object' })
-            .node('models.*.fields.*.name', { description: 'Field name', type: 'string' })
-            .node('models.*.fields.*.type', { description: 'Field type', type: 'string', default: 'string' })
-            .node('models.*.fields.*.length', { description: 'Field length', type: 'number' })
-            .node('models.*.fields.*.primary', { description: 'Primary', type: 'boolean', default: false })
-            .node('models.*.collection', { description: 'Database collection/table name', type: 'string' })
-            .node('models.*.dataSource', { description: 'Datasource name', type: 'string', default: 'main' })
-        ;
-
-        // Model manager factory
-        container.setFactory(ModelManager, function modelManagerFactory() {
-            let modelManager = new ModelManager();
-
-            let models: Model[] = (container.getParameter('config') || {}).models || [];
-
-            forEach(models, (model, name) => {
-                modelManager.addModel(Object.assign({ name }, model));
-            });
-
-            return modelManager;
-        });
-
-        // Model data source factory
-        container.setFactory(ModelDataSource, function modelDataSourceFactory() {
-            return new ModelDataSource(
-                container.invoke(ModelManager),
-                container.invoke(ConnectionManager)
-            );
-        });
-
+    getServices() {
+        return [ApiMiddlewareFactory];
     }
 
-    getServices = () => [
-    ]
+    init(@Inject() container: Container, @Inject() manager: ApiManager) {
 
-    async run( @Inject() modelDataSource: ModelDataSource, command: string ) {
-        if (command == 'api') {
+        manager.addFunction({
+            name: 'sum',
+            invoke : (one: number, two: number) => {
+                return one + two;
+            }
+        })
+        .addScript(`
+        function s(name: string) {
 
-        let users = await modelDataSource.select('User');
-        console.log(users);
-
-        console.log(await modelDataSource.select('Project', { fields: ['Name'] }));
-
-        console.log(
-         await modelDataSource.getRepository('Project').find()
-        )
-        
         }
+        `)
+        .addFunction(`
+        /**
+         * Min between two numbers
+         * @return {number}
+         */
+        function min(nOne, nTwo) { return nOne > nTwo ? nTwo : nOne; }`)
+        .addFunction(function avg(one: number, two: number) {
+            
+            /**
+             * Average two number
+             * Example: avg(5,10) => returns 7.5
+             * 
+             * @param one {number} Number one
+             * @param two {number} Number two
+             * @return {number}
+             */
+
+            return (one + two) / 2
+        })
+        .addFunction(function getKernel() {
+            /**
+             * Get application kernel
+             * @return {Kernel}
+             */
+            return container.invoke(Kernel);
+        })
+        .addFunction(function send(message: string) {
+            (container.getParameter('http.res') as Response).send(message);
+        })
+        .addFunction(function sendJSON(message: string) {
+            (container.getParameter('http.res') as Response).json(message);
+        })
+        .addMethod({
+            name: 'hello',
+            public: true,
+            endPoint: '/hello',
+            script: `
+            send("Hello Api Method")
+            `
+        })
+        ;
+    }
+
+    async run( @Inject() container: Container, command: string ) {
+
+        // let manager = container.invoke(ApiManager);
+       
+        // let result = { a: 1, b: 2 }
+        // console.time('Eval');
+        // for (let i = 0; i < 100000; i++) eval('result.a += result.b; this');
+        // console.timeEnd('Eval');
+        // console.log(result.a);
+
+        // // result.a = 2;
+        // // let script = new Script('a += b');
+        // // script.createCachedData();
+        
+        // // console.time('VM');
+        // // for (let i = 0; i < 100000; i++) script.runInContext(result);
+        // // console.timeEnd('VM');
+        // // console.log(result.a);
+        
+        // result.a = 3;
+        // let fn = compileFunction('a += b; this',[], { parsingContext: createContext(Object.assign(result, manager.getContext())) });
+        // console.time('VM2');
+        // for (let i = 0; i < 100000; i++) fn();
+        // console.timeEnd('VM2');
+        // console.log(result.a);
 
     }
 

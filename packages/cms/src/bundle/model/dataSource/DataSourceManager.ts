@@ -1,6 +1,6 @@
 import { Connection, ORM } from '@azera/stack';
-import { Model } from '../model/Model';
-import { ModelManager } from '../model/ModelManager';
+import { Model } from '../Model';
+import { ModelManager } from '../ModelManager';
 
 // import { EntitySchema, ConnectionManager, MongoEntityManager, SelectQueryBuilder } = ORM;
 
@@ -65,6 +65,12 @@ export class ModelDataSource {
         return this.connectionManager.get( this.getModel(model).dataSource );
     }
 
+    async connnect(model: string) {
+        let connection = this.getConnection(model);
+        if (!connection.isConnected) await connection.connect();
+        return connection;
+    }
+
     createQueryBuilder<T>(model: string, alias: string): Promise<ORM.SelectQueryBuilder<T>>
     createQueryBuilder<T>(connection: Connection, model: string, alias: string): ORM.SelectQueryBuilder<T>
     createQueryBuilder(...args: any[])
@@ -76,7 +82,7 @@ export class ModelDataSource {
         else [model, alias] = args;
 
         if (!connection) {
-            return this.getConnection(model).connect().then(connection => {
+            return this.connnect(model).then(connection => {
                 return connection.createQueryBuilder().from( this.getModel(model).collection!, alias);
             });
         }
@@ -114,6 +120,12 @@ export class ModelDataSource {
         return manager instanceof ORM.MongoEntityManager || manager.connection.options.type == 'mongodb';
     }
 
+    /**
+     * Select query over a model
+     * 
+     * @param modelName Model name
+     * @param query Query
+     */
     async select(modelName: string, query: ModelSelectQuery = {}) {
 
         let model = this.getModel(modelName);
@@ -123,7 +135,8 @@ export class ModelDataSource {
         // MongoDB
         if (this.isMongo(connection.manager)) {
             
-            await connection.connect();
+            if (!connection.isConnected)
+                await connection.connect();
 
             let $project: any = {};
             query.fields!.forEach(field => $project[field] = 1);

@@ -9,18 +9,26 @@
     "@azera/ts": "^1.0.0",
     "@types/commander": "^2.12.2",
     "@types/twig": "^1.12.2",
+    "apollo-server": "^2.9.7",
+    "axios": "^0.19.0",
     "commander": "^2.20.0",
+    "express-validator": "^6.2.0",
     "mongodb": "^3.3.2",
     "mssql": "^5.1.0",
-    "ts-node": "^8.2.0",
     "tslib": "^1.9.3",
     "twig": "^1.13.3",
     "typeorm": "^0.2.19",
-    "typescript": "^3.4.5"
+    "typescript": "^3.7.2"
+  },
+  "scripts": {
+    "db": "mongod --dbpath db",
+    "watch": "tsc -w",
+    "start": "node dist/index"
   },
   "devDependencies": {
     "@types/mocha": "^5.2.7",
     "mocha": "^6.2.0",
+    "node-watch": "^0.6.3",
     "ts-node": "^8.4.1"
   }
 }

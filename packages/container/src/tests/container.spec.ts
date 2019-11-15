@@ -942,4 +942,17 @@ describe('Container', () => {
         })
     });
 
+    describe('Expression injection', () => {
+
+        it('should resolve expression', () => {
+
+            let container = new Container();
+            container.setParameter('name', 'Masoud');
+
+            equal( container.invoke('=invoke("name")'), 'Masoud' );
+
+        });
+
+    });
+
 });

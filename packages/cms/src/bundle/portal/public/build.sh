@@ -1,0 +1,1 @@
+yarn parcel watch src/bundle/portal/public/index.html --out-dir dist/bundle/portal/public --public-url ./ --target browser

@@ -334,9 +334,15 @@ export class Container implements IContainer {
         if ( this.instances[name] ) return this.instances[name];
 
         // Tags
-        if ( name.substr(0,2) == '$$' ) return this.findByTag( name.substr(2) ).map( service => this._get(service.name, stack, options) ) as any;
+        if ( name.startsWith('$$') ) return this.findByTag( name.substr(2) ).map( service => this._get(service.name, stack, options) ) as any;
         // Parameter
-        else if ( name.substr(0,1) == '$' ) return this.getParameter(name.substr(1)) as any;
+        else if ( name.startsWith('$') ) return this.getParameter(name.substr(1)) as any;
+        // Expression
+        else if ( name.startsWith('=') ) {
+            // @ts-ignore
+            let invoke = this.invoke.bind(this);
+            return eval(name.substr(1));
+        }
         // Parameter
         else if (this.params[name]) return this.params[name];
 
@@ -414,7 +420,7 @@ export class Container implements IContainer {
                     // This
                     _context,
                     // Parameters
-                    ( _cached ? _cached : _cached = (_deps || []).map(dep => container._invoke(dep)) ).concat(params)
+                    (_deps || []).map(dep => container._invoke(dep)).concat(params)
                 );
             }
 
@@ -543,14 +549,16 @@ export class Container implements IContainer {
      * @param type Type
      * @param factory Factory
      */
-    setFactory(type: Function | string, factory: Factory)
+    setFactory(type: Function | string, factory: Factory, _private?: boolean)
     {
-        if (is.String(type)) {
-            this.set(type, {
-                factory
+        if (is.String(type) || _private !== undefined) {
+            this.set(type as any, {
+                factory,
+                private: _private
             });
             return this;
         }
+
         this.factories.set(type, factory);
         delete this.instances[ getDefinition(type).name ];
         return this;

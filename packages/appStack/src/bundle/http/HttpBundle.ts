@@ -13,7 +13,7 @@ import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent
 import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { Request } from './Request';
-import { Response } from './Response';
+import { Response, NextFn } from './Response';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 import { isFunction } from 'util';
 import { debugName } from '../../Util';
@@ -23,6 +23,8 @@ import { debugName } from '../../Util';
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class HttpBundle extends Bundle {
+
+    static static = express.static;
 
     static DI_TAG_MIDDLEWARE = 'http.middleware';
     static DI_TAG_CONTROLLER = 'http.controller';
@@ -95,10 +97,18 @@ export class HttpBundle extends Bundle {
         
         container
             // Request
-            .setFactory(Request, function requestFactory(serviceContainer: Container) { return serviceContainer.getParameter('http.req'); })
+            .setFactory(Request, function requestFactory(serviceContainer: Container) {
+                return serviceContainer.getParameter('http.req');
+            }, true)
             // Response
-            .setFactory(Response, function responseFactory(serviceContainer: Container) { return serviceContainer.getParameter('http.res'); });
-
+            .setFactory(Response, function responseFactory(serviceContainer: Container) {
+                return serviceContainer.getParameter('http.res');
+            }, true)
+            // Next
+            .setFactory(NextFn, function nextFnFactory(serviceContainer: Container) {
+                return serviceContainer.getParameter('http.next');
+            }, true)
+            
         container.setFactory(HttpBundle.DI_SERVER, async function expressFactory() {
             let server = bundle.server = express();
             let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
@@ -151,6 +161,7 @@ export class HttpBundle extends Bundle {
                     let routePath = routePrefix + route.path;
                     let routeObj = router.route(routePath);
                     let handler: Function;
+                    let middles = controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || [];
     
                     if ( injectedMethods.includes(route.action) ) {
                         handler = container.invokeLater(controller, route.action);
@@ -161,7 +172,7 @@ export class HttpBundle extends Bundle {
                     let event = new HttpActionEvent(routePath, route.method, route.action, controller, handler);
                     events.emit(EVENT_HTTP_ACTION, event);
 
-                    routeObj[ event.method ]( httpBundle.$handleRequest( event.controller, event.action, event.method, event.handler, events ) );
+                    routeObj[ event.method ]( middles, httpBundle.$handleRequest( event.controller, event.action, event.method, event.handler, events ) );
 
                     routeObj.controller = controller;
                     routeObj.methodName = route.action;
@@ -185,10 +196,18 @@ export class HttpBundle extends Bundle {
         }
     }
 
+    /**
+     * Resolve views path based on application root (used in Config resolution)
+     * @param appRoot Application root directory
+     * @param viewsDir Views directory
+     */
     _normalizeViewsDir(appRoot: string, viewsDir: string) {
+
+        // full-path directory (Windows-only)
         if (viewsDir.match(/:[\/\\]/)) return viewsDir;
+
+        // Default views path
         if ( !viewsDir && appRoot ) {
-            // Default views path
             return path.resolve( appRoot , './views' );
         }
         else if ( viewsDir ) {

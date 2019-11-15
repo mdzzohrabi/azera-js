@@ -17,6 +17,7 @@
         "@azera/reflect": "^1.0.4",
         "@azera/ts": "^1.0.0",
         "@types/twig": "^1.12.2",
+        "apollo-server": "^2.9.7",
         "debug": "^3.1.0",
         "mssql": "^5.1.0",
         "ncp": "^2.0.0",
@@ -29,6 +30,7 @@
     "devDependencies": {
         "@types/mocha": "^5.2.7",
         "mocha": "^6.2.0",
+        "node-watch": "^0.6.3",
         "ts-node": "^8.4.1"
     }
 }

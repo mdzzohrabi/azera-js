@@ -1,0 +1,10 @@
+{
+    "compilerOptions": {
+        "inlineSourceMap": true,
+        "jsx": "react",
+        "jsxFactory": "React.createElement",
+        "target": "es2015"
+    },
+    "include": ["./"],
+    "exclude": ["node_modules"]
+}

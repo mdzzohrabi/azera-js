@@ -1,5 +1,4 @@
 import { invariant } from '@azera/stack';
-import { EntitySchema } from 'typeorm';
 
 /**
  * Data model
@@ -10,7 +9,8 @@ export class Model {
         public description?: string,
         public fields: ModelField[] = [],
         public dataSource?: string,
-        public collection?: string
+        public collection?: string,
+        public lock?: boolean
     ) {
         this.collection = collection = collection || name;
         invariant(name, `Model must have a name`);

@@ -13,6 +13,7 @@ export interface MiddlewareItem {
 
 export interface MiddlewaresCollection {
     middlewares: (MiddlewareItem | Function)[];
+    methodMiddlewares: { [name: string]: Function[] };
 }
 
 /**
@@ -20,7 +21,7 @@ export interface MiddlewaresCollection {
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  * @decorator
  */
-export function Middleware(middlewares?: Function[]): any
+export function Middleware(middlewares: Function[]): any
 export function Middleware(path?: string): any
 export function Middleware(path?: any): any
 {
@@ -35,12 +36,15 @@ export function Middleware(path?: any): any
 
         if (Array.isArray(path)) {
 
-            if (!(typeof target == 'function')) throw Error(`Middleware annotated with middlewares collection only allowed for controller class`);
+            let items = (typeof target == 'function' ? target.prototype : target) as MiddlewaresCollection;
         
-            let items = target.prototype as MiddlewaresCollection;
-            let middles = items[MIDDLEWARES_PROPERTY] = items[MIDDLEWARES_PROPERTY] || [];
-
-            path.forEach(middle => middles.push(middle));
+            if (!methodName) {
+                let middles = items[MIDDLEWARES_PROPERTY] = items[MIDDLEWARES_PROPERTY] || [];
+                path.forEach(middle => middles.push(middle));
+            } else {
+                let middles = items.methodMiddlewares = items.methodMiddlewares || {};
+                middles[String(methodName)] = path;
+            }
 
         } else {
         

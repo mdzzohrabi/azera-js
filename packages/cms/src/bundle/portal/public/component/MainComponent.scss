@@ -1,0 +1,21 @@
+body {
+    padding: 0;
+    margin: 0;
+    background-color: #f5f6fa;
+    font: normal 10pt "Segoe UI", Tahoma;
+}
+
+a {
+    text-decoration: none;
+}
+
+.rtl {
+    direction: rtl;
+}
+
+table {
+    width: 100%;
+    th {
+        text-align: left;
+    }
+}

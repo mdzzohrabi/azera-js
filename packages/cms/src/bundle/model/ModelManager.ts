@@ -1,4 +1,4 @@
-import { ISerializable } from '../../../Serializer';
+import { ISerializable } from '../../Serializer';
 import { Model } from './Model';
 
 export class ModelManager extends Map<string, Model> implements ISerializable {
