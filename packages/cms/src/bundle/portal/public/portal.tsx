@@ -17,10 +17,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 title: 'Models',
                 link: '/models'
             })
-            menu.children.push({
-                title: 'API',
-                link: '/api'
-            })
         });
            
         hook('routes.main', routes => {
@@ -32,7 +28,6 @@ window.addEventListener('DOMContentLoaded', () => {
                 Hello Models
                 <Portal.Table dataSource="/api/models"></Portal.Table>
             </div>;
-            routes['/api'] = () => <div>Hello API</div>;
         });
     
 

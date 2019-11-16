@@ -1,4 +1,4 @@
-import { Service } from '@azera/container';
+import { Service, Container } from '@azera/container';
 import { HttpBundle } from './HttpBundle';
 import { RoutesCollection, HttpMethods, Route } from './Route';
 import { Constructor } from '@azera/util';

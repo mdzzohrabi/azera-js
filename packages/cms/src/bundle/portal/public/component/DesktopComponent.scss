@@ -2,16 +2,21 @@
     height: 60px;
     background-color: white;
     box-shadow: 0 2px 5px rgba(0,0,0,.1);
+    display: inline-table;
+    z-index: 100;
 }
 
 .container {
     flex-grow: 1;
     display: flex;
     flex-direction: row;
+    overflow: hidden;
 
     .panel {
         width: 250px;
         padding: 40px 30px;
+        overflow-x: hidden;
+        overflow-y: auto;
 
         .menu-item {
             display: block;
@@ -36,6 +41,7 @@
     .content {
         flex-grow: 1;
         padding-top: 40px;
+        overflow: auto;
     }
 }
 
@@ -46,4 +52,5 @@
 .root {
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }

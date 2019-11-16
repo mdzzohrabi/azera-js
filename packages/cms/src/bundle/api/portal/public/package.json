@@ -1,0 +1,16 @@
+{
+  "name": "azera-portal-api",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@monaco-editor/react": "^2.3.0",
+    "monaco-editor": "^0.18.1",
+    "parcel-bundler": "^1.12.4"
+  },
+  "scripts": {
+    "watch": "yarn worker-editor && yarn worker-typescript && parcel watch apiPortalModule.jsx --out-dir ../../../../../dist/bundle/api/portal/public",
+    "worker-editor": "parcel build node_modules/monaco-editor/esm/vs/editor/editor.worker.js  --out-dir ../../../../../dist/bundle/api/portal/public --no-source-maps",
+    "worker-typescript": "parcel build node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js  --out-dir ../../../../../dist/bundle/api/portal/public --no-source-maps"
+  }
+}

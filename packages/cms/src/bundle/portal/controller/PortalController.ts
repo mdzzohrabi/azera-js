@@ -1,4 +1,4 @@
-import { Controller, HttpBundle, Middleware, Request, Response, Inject } from '@azera/stack';
+import { Controller, HttpBundle, Middleware, Request, Response, Inject, Container } from '@azera/stack';
 import { readFile } from 'fs';
 
 @Controller('/portal')
@@ -8,9 +8,15 @@ import { readFile } from 'fs';
 export class PortalController {
     
 
-    ['/api/modules']() {
+    /**
+     * Return Portal modules url
+     */
+    ['/api/modules'](@Inject() container: Container) {
+
+        let modules = container.getByTag<any>('portal.module');
+
         return {
-            modules: []
+            modules: modules.filter(module => 'moduleAssetPath' in module).map(module => module.moduleAssetPath)
         }
     }
 

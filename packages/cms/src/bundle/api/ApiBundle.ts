@@ -2,13 +2,14 @@ import { Bundle, Container, Inject, Kernel, Request, Response } from '@azera/sta
 import { compileFunction, createContext } from 'vm';
 import { ApiManager } from './ApiManager';
 import { ApiMiddlewareFactory } from './middleware/ApiMiddleware';
+import { ApiPortalController } from './portal/ApiPortalController';
 
 export class ApiBundle extends Bundle {
 
     static bundleName = "api";
 
     getServices() {
-        return [ApiMiddlewareFactory];
+        return [ApiMiddlewareFactory, ApiPortalController];
     }
 
     init(@Inject() container: Container, @Inject() manager: ApiManager) {

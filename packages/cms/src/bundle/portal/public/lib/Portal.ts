@@ -28,7 +28,10 @@ export namespace Portal {
     export const VERSION = '1.0.0';
 
     // Modues api endPoint
-    const MODULES_API = 'api/modules';
+    const MODULES_API = '/portal/api/modules';
+
+    /** Declared modules */
+    export const $modules: IModule[] = [];
 
     /**
      * Load and execute a remote script
@@ -41,6 +44,7 @@ export namespace Portal {
             script.onerror = reject;
             script.type = 'text/javascript';
             script.src = src;
+            script.async = false;
             document.head.appendChild(script);
         });
     }
@@ -53,23 +57,92 @@ export namespace Portal {
         return loadScript(bundle);
     }
 
+    export type SeqFunc<T, V> = Promise<T> | ((param: V) => Promise<T> | T)
+
+    export function runInSeq<A, B>(
+        func1: SeqFunc<A, undefined>,
+        func2?: SeqFunc<B, A>): Promise<B>
+    export function runInSeq<A, B, C>(
+        func1: SeqFunc<A, undefined>,
+        func2?: SeqFunc<B, A>,
+        func3?: SeqFunc<C, B>): Promise<C>
+    export function runInSeq<A, B, C, D>(
+        func1: SeqFunc<A, undefined>,
+        func2?: SeqFunc<B, A>,
+        func3?: SeqFunc<C, B>,
+        func4?: SeqFunc<D, C>): Promise<D>
+    export function runInSeq<A, B, C, D, E>(
+        func1: SeqFunc<A, undefined>,
+        func2?: SeqFunc<B, A>,
+        func3?: SeqFunc<C, B>,
+        func4?: SeqFunc<D, C>,
+        func5?: SeqFunc<E, D>): Promise<E>
+    export function runInSeq<A, B, C, D, E, F, G, H>(
+        func1: SeqFunc<A, undefined>,
+        func2?: SeqFunc<B, A>,
+        func3?: SeqFunc<C, B>,
+        func4?: SeqFunc<D, C>,
+        func5?: SeqFunc<E, D>,
+        func6?: SeqFunc<F, E>,
+        func7?: SeqFunc<G, F>,
+        func8?: SeqFunc<H, G>,
+        ...funcs: Function[]): Promise<H>
+
+    export function runInSeq(...funcs: any[]) {
+        return new Promise((resolve, reject) => {
+
+            let len = funcs.length, i = 0, error = false;
+
+            function next(value?: any) {
+                if (i == len) return resolve(value);
+                let n = i++;
+                Promise.resolve(typeof funcs[n] == 'function' ? funcs[n].call(this, value) : funcs[n]).then(result => next(result)).catch(reject);
+            }
+
+            next();
+
+        });
+    }
+
     /**
      * Bootstrap portal
      */
     export function loadPortal() {
-        return fetch(MODULES_API).then(async res => {
-            let response = await res.json() as ModuleApiResponse,
-                { modules = [] } = response;
+        return runInSeq(
+            // Retreive modules url
+            fetch(MODULES_API).then(res => res.json() as Promise<ModuleApiResponse>),
+
+            // Load modules
+            ({ modules }) => Promise.all(modules.map(loadModule)),
             
-            // Load all modules
-            await Promise.all(modules.map(loadModule));
+            // Execute modules
+            () => Promise.all($modules.map(module => module.module(Portal))),
 
-            // Secure Portal Api
-            lock(Portal, loadPortal, loadModule);
-            // Object.freeze(routes);
+            // Lock Portal
+            () => lock(Portal, loadPortal, loadModule, hook, module),
 
-            return Portal;
-        }).catch(console.error);
+            // Return Portal
+            () => Portal
+        ).catch(console.error);
+
+        // return fetch(MODULES_API).then(async res => {
+
+        //     let response = await res.json() as ModuleApiResponse,
+        //         { modules: modulesUrl = [] } = response;
+            
+        //     // Load all modules
+        //     await Promise.all(modulesUrl.map(loadModule));
+
+        //     log($modules);
+        //     // Execute modules
+        //     await Promise.all($modules.map(module => module.module(Portal)));
+
+        //     // Secure Portal Api
+        //     lock(Portal, loadPortal, loadModule, hook);
+        //     // Object.freeze(routes);
+
+        //     return Portal;
+        // }).catch(console.error);
     }
     
     function locked() { throw Error(`This method locked and cannot be invoked`); }
@@ -113,13 +186,13 @@ export namespace Portal {
     /** Portal basic hooks */
     export const HOOKS = {
         /** Panel menu */
-        PANEL_MENU: 'panel.menu',
+        PANEL_MENU: 'panel.menu' as 'panel.menu',
 
         /** Main routes */
-        ROUTES: 'routes.main',
+        ROUTES: 'routes.main' as 'routes.main',
 
         /** Portal content routes */
-        ROUTES_DESKTOP: 'routes.desktop'
+        ROUTES_DESKTOP: 'routes.desktop' as 'routes.desktop'
     };
 
     /**
@@ -153,7 +226,24 @@ export namespace Portal {
         }
         return value;
     }
+
+    interface IModule {
+        name: string,
+        module: (portal: typeof Portal) => void
+    }
+
+    export function module(name: IModule['name'], module: IModule['module']) {
+        $modules.push({ name, module });
+    }
     
+    // Global scope
+    ( window || {} )['defineModule'] = module;
+
 }
 
-window['Portal'] = Portal;
+type IPortal = typeof Portal;
+
+
+declare global {
+    const defineModule: IPortal['module'];
+}

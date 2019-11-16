@@ -8,6 +8,7 @@ export interface TableComponentProps<T extends TableDataRow> {
     dataSource?: string | Promise<T[]> | T[]
     loading?: boolean
     columns?: TableColumn<T, keyof T>[]
+    mergeColumns?: boolean
 }
 
 export interface TableComponentState<T extends TableDataRow> {
@@ -57,6 +58,14 @@ export class TableConmponent<T> extends Component<TableComponentProps<T>, TableC
         return columns;
     }
 
+    populateColumns<T extends TableDataRow> (data: T[]) {
+        let { state: { columns: stateColumns }, props: { columns: propColumns, mergeColumns = false } } = this;
+        if ( stateColumns && stateColumns.length > 0 ) return stateColumns;
+        if ( propColumns && !mergeColumns ) return propColumns;
+        let columns = TableConmponent.estimateColumns(data);
+        return [ ...columns, ...(propColumns || []) ];
+    }
+
     componentDidMount() {
         let {
             props: {
@@ -70,7 +79,7 @@ export class TableConmponent<T> extends Component<TableComponentProps<T>, TableC
                 res.json().then(data => {
                     this.setState({
                         dataSource: data,
-                        columns: TableConmponent.estimateColumns(data),
+                        columns: this.populateColumns(data),
                         loading: false
                     })
                 })
@@ -90,7 +99,7 @@ export class TableConmponent<T> extends Component<TableComponentProps<T>, TableC
             <tbody>
                 { dataSource.map((row, index) => {
                     return <tr key={index}>
-                        { columns.map(column => <td key={column.name}>{ String(row[column.dataIndex]) }</td>)}
+                        { columns.map(column => <td key={column.name}>{ column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex]) }</td>)}
                     </tr>;
                 })}
             </tbody>

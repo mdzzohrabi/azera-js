@@ -393,7 +393,6 @@ export class Container implements IContainer {
     {
         let container = this;
         let _context: any;
-        let _cached: any[];
         let _deps: any[];
 
         if (!method) {
@@ -630,6 +629,10 @@ export class Container implements IContainer {
         else this.setParameter(name, value);
 
         return this;
+    }
+
+    hasDefinition(value: any) {
+        return hasDefinition(value);
     }
 
 

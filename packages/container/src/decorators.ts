@@ -20,11 +20,10 @@ export function getTarget(value: any): FunctionConstructor {
 
 /**
  * Check if a function or class has definition property
- * @param {Function} value Function or class to check
+ * @param {any} value Function or class to check
  */
-export function hasDefinition(value: Function): boolean {
-    //@ts-ignore
-    return !!getTarget(value)[ META_INJECT ];
+export function hasDefinition(value: any): boolean {
+    return Reflect.hasMetadata(META_INJECT, getTarget(value));
 }
 
 export function emitTypes() {
@@ -94,6 +93,12 @@ export function extendDefinition(value: any, definition: Partial<IDefinition>): 
     if ( definition.methods ) {
         definition.methods = Object.assign(old.methods, definition.methods);
     }
+
+    // Merge Tags
+    if ( definition.tags ) {
+        definition.tags = [ ...old.tags, ...definition.tags ];
+    }
+    
     //@ts-ignore
     return target[META_INJECT] = Definition( Object.assign( old, definition ) );
 }
