@@ -29,6 +29,9 @@
 		},
 		{
 			"path": "packages/appStack"
+		},
+		{
+			"path": "packages/cms/src/bundle"
 		}
 	],
 	"settings": {

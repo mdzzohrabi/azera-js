@@ -1,8 +1,9 @@
 import { Bundle, Container, Inject, ConfigSchema, forEach, ConnectionManager } from '@azera/stack';
 import { ModelManager } from './ModelManager';
 import { Model } from './Model';
-import { ModelDataSource } from './dataSource/DataSourceManager';
+import { ModelDataSource, ModelSelectQuery } from './dataSource/DataSourceManager';
 import { PortalModelController } from './controller/PortalModelController';
+import { ApiManager } from '../api/ApiManager';
 
 export class ModelBundle extends Bundle {
 
@@ -10,7 +11,7 @@ export class ModelBundle extends Bundle {
 
     getServices = () => [ PortalModelController ];
 
-    init(@Inject() container: Container, @Inject() config: ConfigSchema) {
+    init(@Inject() container: Container, @Inject() config: ConfigSchema, @Inject() apiManager: ApiManager) {
 
         config
             .node('models', { description: 'Api Models' })
@@ -45,6 +46,29 @@ export class ModelBundle extends Bundle {
                 container.invoke(ConnectionManager)
             );
         });
+
+        apiManager
+        .addDeclaration(() => {
+            let models = container.invoke(ModelManager).toArray().map(model => `'${model.name}'`);
+            if (models.length == 0) models.push('string');
+            return `type ModelName = ${ models.join(' | ') }`;
+        })
+        .addDeclaration(`interface ModelSelectQuery {
+            fields?: string[]
+            where?: any[]
+        }`)
+        .addFunction(function findAll(modelName: string, query?: ModelSelectQuery) {
+
+            /**
+             * Get a model
+             * @param modelName {ModelName} Model name
+             * @param query {ModelSelectQuery} Select query
+             * @return Promise<any[]>
+             */
+            return container.invoke(ModelDataSource).select(modelName, query);
+
+        });
     }
+
 
 }

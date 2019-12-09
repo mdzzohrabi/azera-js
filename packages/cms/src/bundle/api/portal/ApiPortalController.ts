@@ -16,20 +16,75 @@ export class ApiPortalController {
         });
     }
 
-    ['GET /type-definitions'](@Inject() apiManager: ApiManager, @Inject() res: Response) {
-        res.end(apiManager.typeDefs.join("\n\n"));
+    /**
+     * Type definitions file
+     * @param apiManager ApiManager
+     */
+    ['GET /type-definitions'](@Inject() apiManager: ApiManager, req: Request, res: Response) {
+        res.end(apiManager.typeDefs.toString());
     }
 
-    ['GET /methods'](@Inject() apiManager: ApiManager, @Inject() res: Response) {
-        return apiManager.apiMethods.map(({ name, public: published, description, endPoint }) => ({
-            name, description, endPoint, published
+    /**
+     * Api methods list
+     * @param apiManager ApiManager
+     */
+    ['GET /methods'](@Inject() apiManager: ApiManager) {
+        return apiManager.apiMethods.map(({ name, public: published, description, endPoint, lastRun, lastRunDelay }) => ({
+            name, description, endPoint, published, lastRun, lastRunDelay
         }));
     }
 
-    ['GET /methods/:name'](@Inject() apiManager: ApiManager, @Inject() req: Request) {
+    /**
+     * Retreive an api method properties
+     * @param apiManager ApiManager
+     * @param req Request
+     */
+    ['GET /methods/:name'](@Inject() apiManager: ApiManager, req: Request) {
+        if (!req.params) return { error: 'No request parameters' }
         return apiManager.apiMethods.find(method => method.name == req.params.name) || {
             error: `Method ${req.params.name} not found`
         };
+    }
+
+    /**
+     * Edit an api method properties
+     * @param apiManager ApiManager
+     * @param req Request
+     */
+    ['PUT /methods/:name'](@Inject() apiManager: ApiManager, req: Request) {
+
+        let apiName = req.params.name;
+        let body = req.body;
+        let method = apiManager.apiMethods.find(method => method.name == req.params.name);
+
+        if (!method) return {
+            error: `Method ${req.params.name} not found`
+        };
+
+        if (body.script)
+            method.script = body.script;
+        
+        return { ok: true, message: `Method modified successfull` };
+    }
+
+    /**
+     * Create a new api method properties
+     * @param apiManager ApiManager
+     * @param req Request
+     */
+    ['POST /methods'](@Inject() apiManager: ApiManager, req: Request) {
+
+        let body = req.body;
+
+        if (!body.name) return {
+            error: `Method has no name`
+        };
+
+        body.public = body.published === true;;
+
+        apiManager.addMethod(body);
+        
+        return { ok: true, message: `Method added successfull` };
     }
 
 }

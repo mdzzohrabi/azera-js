@@ -15,6 +15,7 @@ export * from './ConfigSchema';
 export * from './ConfigResolver';
 export * from './Metadata';
 export * from './Profiler';
+export * from './cache';
 
 // // External libraries
 export * from '@azera/container';

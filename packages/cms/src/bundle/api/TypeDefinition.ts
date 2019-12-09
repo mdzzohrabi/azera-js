@@ -3,7 +3,7 @@ import { Reflect } from '@azera/stack';
 /**
  * TypeScript TypeDefinition storage
  */
-export class TypeDefinition extends Array<string> {
+export class TypeDefinition extends Array<string | (() => string)> {
 
     static REGEX_COMMENT = /\/[*]{2,}(?<comment>[\w\W]*)?[*]\//
     static REGEX_STAR_STRIPER = /^\s*[*][ \t\r]*/gm
@@ -78,7 +78,7 @@ export class TypeDefinition extends Array<string> {
     }
 
     toString() {
-        return this.join("\n");
+        return this.map(item => typeof item == 'function' ? item() : item).join("\n").replace(/\bexport\s+/g, '').replace(/^import.*from.*(;|$)/gm, '');
     }
 
 }

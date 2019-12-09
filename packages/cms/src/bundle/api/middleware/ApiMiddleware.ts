@@ -14,9 +14,14 @@ export class ApiMiddlewareFactory implements IFactory {
         return function apiMiddleware(req: Request, res: Response, next: Function) {
 
             for (let method of apiManager.apiMethods) {
-                if (method.endPoint == req.path) {
-                    console.log(`Api Method`, method.endPoint, method.name);
-                    apiManager.run(method.script);
+                if (method.endPoint == req.path.replace(/\/$/, '') && method.public === true) {
+                    let start = method.lastRun = Date.now();
+                    let result = apiManager.run(method.script, {
+                        request: req,
+                        response: res
+                    });
+                    method.lastRunDelay = Date.now() - start;
+                    return result;
                 }
             }
 

@@ -3,7 +3,7 @@ import * as _ReactDOM from 'react-dom';
 import * as _ReactRouter from 'react-router-dom';
 import * as Locale from './i18n';
 import * as Strings from './Strings';
-import { TableConmponent } from './TableComponent';
+import { TableComponent } from './TableComponent';
 
 /**
  * Portal
@@ -16,7 +16,7 @@ export namespace Portal {
     
     export let { i18n } = Locale;
     export const { camelCase, snakeCase, humanize } = Strings;
-    export const Table = TableConmponent;
+    export const Table = TableComponent;
     
     // Export react
     export const React = _React;

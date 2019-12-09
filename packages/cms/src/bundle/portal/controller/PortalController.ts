@@ -6,7 +6,8 @@ import { readFile } from 'fs';
     HttpBundle.static(__dirname + '/../public'),
 ])
 export class PortalController {
-    
+ 
+    indexHtml!: string   
 
     /**
      * Return Portal modules url
@@ -20,10 +21,9 @@ export class PortalController {
         }
     }
 
-    indexHtml!: string
 
-    ['/*'](@Inject() response: Response) {
-        if (this.indexHtml) response.send(this.indexHtml);
+    ['/*'](req: Request, response: Response) {
+        if (false && this.indexHtml) response.send(this.indexHtml);
         else {
             readFile(__dirname + '/../public/index.html', (err, buffer) => {
                 if (buffer) {

@@ -1,5 +1,4 @@
 import * as React from 'react';
-import { Component } from 'react';
 import { humanize } from './Strings';
 
 export interface TableDataRow { [name: string]: any }
@@ -9,12 +8,8 @@ export interface TableComponentProps<T extends TableDataRow> {
     loading?: boolean
     columns?: TableColumn<T, keyof T>[]
     mergeColumns?: boolean
-}
-
-export interface TableComponentState<T extends TableDataRow> {
-    dataSource: T[]
-    loading: boolean
-    columns: TableColumn<T, keyof T>[]
+    allowAdd?: boolean
+    renderEditor?: (column: TableColumn<T, keyof T>, state: any, setState: (data: any) => void) => JSX.Element
 }
 
 export interface TableColumn<T extends TableDataRow, K extends keyof T> {
@@ -24,27 +19,39 @@ export interface TableColumn<T extends TableDataRow, K extends keyof T> {
     render?: (value: T[K], data: T) => JSX.Element
 }
 
-export class TableConmponent<T> extends Component<TableComponentProps<T>, TableComponentState<T>> {
+export function TableComponent<T>(props: TableComponentProps<T>) {
 
-    constructor(props) {
-        super(props);
-        this.state = {
-            dataSource: [],
-            loading: false,
-            columns: []
+    let [dataSource, setDataSource] = React.useState<T[]>([]);
+    let [loading, setLoading] = React.useState(false);
+    let [columns, setColumns] = React.useState<TableColumn<T, keyof T>[]>([]);
+    let [newRow, setNewRow] = React.useState({});
+
+    // Loading
+    React.useEffect(() => setLoading(props.loading), [props.loading]);
+
+    // DataSource
+    React.useEffect(() => {
+        if (typeof props.dataSource == 'string') {
+            setLoading(true);
+            fetch(props.dataSource).then(res => {
+                res.json().then(data => {
+                    setLoading(false);
+                    setDataSource(data);
+                    setColumns(populateColumns(data));
+                })
+            })
         }
+    }, [props.dataSource]);
+
+    function populateColumns<T extends TableDataRow> (data: T[]) {
+        let { columns: propColumns, mergeColumns = false } = props;
+        if ( columns && columns.length > 0 ) return columns;
+        if ( propColumns && !mergeColumns ) return propColumns;
+
+        return [ ...estimateColumns(data).filter(c => !(propColumns || []).find(a => a.name == c.name)) , ...(propColumns || []) ];
     }
 
-    static getDerivedStateFromProps(props: TableComponentProps<any>, state: TableComponentState<any>) {
-        if (props.loading && props.loading != state.loading) {
-            return {
-                loading: props.loading
-            }
-        }
-        return null;
-    }
-
-    static estimateColumns<T extends TableDataRow>(data: T[]) {
+    function estimateColumns<T extends TableDataRow>(data: T[]) {
         let columns: TableColumn<T, keyof T>[] = [];
         if (data.length > 0) {
             columns = Object.keys(data[0]).map(name => {
@@ -58,56 +65,22 @@ export class TableConmponent<T> extends Component<TableComponentProps<T>, TableC
         return columns;
     }
 
-    populateColumns<T extends TableDataRow> (data: T[]) {
-        let { state: { columns: stateColumns }, props: { columns: propColumns, mergeColumns = false } } = this;
-        if ( stateColumns && stateColumns.length > 0 ) return stateColumns;
-        if ( propColumns && !mergeColumns ) return propColumns;
-        let columns = TableConmponent.estimateColumns(data);
-        return [ ...columns, ...(propColumns || []) ];
-    }
-
-    componentDidMount() {
-        let {
-            props: {
-                dataSource
-            }
-        } = this;
-
-        if (typeof dataSource == 'string') {
-            this.setState({ loading: true });
-            fetch(dataSource).then(res => {
-                res.json().then(data => {
-                    this.setState({
-                        dataSource: data,
-                        columns: this.populateColumns(data),
-                        loading: false
-                    })
-                })
-            })
-        }
-    }
-
-    renderTableView() {
-        let { columns, dataSource } = this.state;
-
-        return <table>
-            <thead>
-                <tr>
-                    { columns.map(column => <th key={column.name}>{ column.title }</th>) }
-                </tr>
-            </thead>
-            <tbody>
-                { dataSource.map((row, index) => {
-                    return <tr key={index}>
-                        { columns.map(column => <td key={column.name}>{ column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex]) }</td>)}
-                    </tr>;
-                })}
-            </tbody>
-        </table>
-    }
-
-    render() {
-        return this.renderTableView();
-    }
+    return <table>
+        <thead>
+            <tr>
+                { columns.map(column => <th key={column.name}>{ column.title }</th>) }
+            </tr>
+        </thead>
+        <tbody>
+            { dataSource.map((row, index) => {
+                return <tr key={index}>
+                    { columns.map(column => <td key={column.name}>{ column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex]) }</td>)}
+                </tr>;
+            })}
+            { props.allowAdd ? <tr>
+                { columns.map(column => <td key={column.name}>{ props.renderEditor(column, newRow, setNewRow) }</td>)}
+            </tr> : null }
+        </tbody>
+    </table>
 
 }

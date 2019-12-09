@@ -4,6 +4,8 @@ import * as ts from 'typescript';
 import * as vm from 'vm';
 import { ApiFunction } from './ApiFunction';
 import { TypeDefinition } from './TypeDefinition';
+import * as workerThread from 'worker_threads';
+import { promises as fs } from 'fs';
 
 /**
  * ApiManager
@@ -15,6 +17,9 @@ export class ApiManager {
     /** TypeScript definition types */
     @Inject() typeDefs!: TypeDefinition;
 
+    /** Cache directory */
+    @Inject('=invoke("Kernel").resolvePath("./" + invoke("$config").kernel.cacheDir)') cacheDir!: string;
+
     /** Api context functions */
     public functions: HashMap<Function> = {};
 
@@ -24,12 +29,21 @@ export class ApiManager {
     /** ApiCollection */
     public apiMethods: ApiMethod[] = [];
 
+    /** Workers */
+    public workers: Worker[] = [];
+   
+    /** Running workers */
+    public runningWorkers: { name: string, worker: workerThread.Worker }[] = [];
+
+    /** Context variables */
+    public context: { [name: string]: any } = {}
+
     /**
      * Add declaration to TypeScript declaration storage
      * 
      * @param declaration Declaration string
      */
-    addDeclaration(declaration: string) {
+    addDeclaration(declaration: string | (() => string)) {
         this.typeDefs.push(declaration);
         return this;
     }
@@ -37,7 +51,8 @@ export class ApiManager {
     addScript(script: string) {
         let result = ts.transpileModule(script, {
             compilerOptions: {
-                module: ts.ModuleKind.AMD
+                module: ts.ModuleKind.AMD,
+                declaration: true
             }
         });
 
@@ -71,14 +86,14 @@ export class ApiManager {
 
     addMethod(method: ApiMethod) {
         this.apiMethods.push(method);
+        return this;
     }
 
     /**
      * Get VM Context
      */
-    getContext() {
-        let context = {} as any;
-        Object.assign(context, this.functions);
+    getContext(context: any = {}) {
+        Object.assign(context, this.functions, this.context);
         return vm.createContext(context, {
             name: 'ApiManager'
         });
@@ -95,24 +110,66 @@ export class ApiManager {
         })
     }
 
+    addContext(name: string, value: any) {
+        this.context[name] = value;
+        return this;
+    }
+
     /**
      * Run an script
      * 
      * @param script Script to run
      */
-    run(script: string) {
-        return vm.runInNewContext(script, this.getContext(), {
-            displayErrors: true
+    run(script: string, variables: any = {}) {
+        script = `(async function apiMethodInvoker() { ${script} })()`;
+        return vm.runInNewContext(script, this.getContext(variables), {
+            displayErrors: true,
+            timeout: 3000            
         })
+    }
+
+    addWorker(worker: Worker) {
+        this.workers.push(worker);
+    }
+
+    async runWorker(worker: Worker) {
+        let scriptTmpFile = this.cacheDir + `/worker-${worker.name}.js`;
+        if (!await fs.stat(this.cacheDir)) {
+            await fs.mkdir(this.cacheDir, { recursive: true });
+        }
+
+        await fs.writeFile(scriptTmpFile, worker.script);
+
+        let thread = new workerThread.Worker(scriptTmpFile, {
+            workerData: {},
+        });
+
+        thread.on('message', message => {
+            console.log('New Message from worker');
+            
+        })
+
+        setTimeout(() => {
+            thread.postMessage('Masoud')
+        }, 2000);
+
     }
 
 }
 
-export interface ApiMethod {
+export interface Worker {
     name: string
     script: string
-    public: boolean
+}
+
+export interface ApiMethod {
+    name: string
     description?: string
     endPoint?: string
+    public: boolean
+    debug?: boolean
+    lastRun?: number
+    lastRunDelay?: number
+    script: string
     $invoke?: Function
 }
