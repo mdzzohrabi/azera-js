@@ -7,11 +7,11 @@ import { ApiManager } from '../api/ApiManager';
 
 export class ModelBundle extends Bundle {
 
-    static bundleName = 'model';
+    static bundleName = 'Model';
 
     getServices = () => [ PortalModelController ];
 
-    init(@Inject() container: Container, @Inject() config: ConfigSchema, @Inject() apiManager: ApiManager) {
+    @Inject() init(container: Container, config: ConfigSchema, apiManager: ApiManager) {
 
         config
             .node('models', { description: 'Api Models' })

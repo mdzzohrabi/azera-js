@@ -6,18 +6,19 @@ export class Cli {
 
     public print(...params: any[]) {
         console.log( ...params.map(this._optimizeParameter) );
+        return this;
     }
 
     public success(...params: any[]) {
-        this.print(`<bg:green><black>Success</black></bg:green>`, ...params);
+        return this.print(`<bg:green><black>Success</black></bg:green>`, ...params);
     }
 
     public error(...params: any[]) {
-        this.print(`<bg:red><white>Error</white></bg:red>`, ...params);
+        return this.print(`<bg:red><white>Error</white></bg:red>`, ...params);
     }
 
     public warning(...params: any[]) {
-        this.print(`<bg:yellow><black>Warning</black></bg:yellow>`, ...params);
+        return this.print(`<bg:yellow><black>Warning</black></bg:yellow>`, ...params);
     }
 
     /** Table options */
@@ -35,16 +36,17 @@ export class Cli {
             ...options
         };
         this.tableBreakRow();
+        return this;
     }
 
     public tableBreakRow() {
         let { border, borderHorizontal, cellSizes, borderSeparator } = this.tableOptions;
-        if ( !border ) return;
+        if ( !border ) return this;
         if ( !cellSizes ) {
             this.table.push( '$break$' );
-            return;
+            return this;
         }
-        this.print( cellSizes.map(s => borderHorizontal!.repeat(s + borderSeparator!.length) ).join('') );
+        return this.print( cellSizes.map(s => borderHorizontal!.repeat(s + borderSeparator!.length) ).join('') );
     }
 
     public row(...cells: any[]) {
@@ -52,7 +54,7 @@ export class Cli {
         
         if ( !cellSizes ) {
             this.table.push(cells);
-            return;
+            return this;
         }
 
         this.print( cells.map((cell: string, i) => {
@@ -63,6 +65,8 @@ export class Cli {
         }).join(border ? borderSeparator : ' '));
         if ( rowBreakLine )
             this.tableBreakRow();
+
+        return this;
     }
 
     public endTable() {
@@ -86,6 +90,8 @@ export class Cli {
 
         this.table = [];
         this.tableOptions = {};
+
+        return this;
     }
 
     private _optimizeParameter(param: any) {

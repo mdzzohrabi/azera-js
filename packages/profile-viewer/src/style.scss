@@ -1,0 +1,87 @@
+table {
+    $border-color: #d5d5d5;
+    font: normal 9pt Tahoma;
+    width: 100%;
+    text-align: left;
+    border: 1px $border-color solid;
+    border-spacing: 0;
+    th {
+        background-color: $border-color;
+        padding: 5px 10px;
+    }
+    td {
+        padding: 10px 10px;
+        vertical-align: middle;
+        align-items: center;
+        align-content: center;
+    }
+    tr:not(:last-child) td {
+        border-bottom: 1px $border-color solid;
+    }
+    p {
+        margin: 0 0 10px 0;
+    }
+}
+
+.timeline {
+    width: 100%;
+    background-color: #f0f0f0;
+    // display: inline-block;
+    height: 2px;
+    align-self: center;
+    align-content: center;
+    align-items: center;
+    position: relative;
+    .time {
+        position: absolute;
+        height: 4px;
+        top: -1px;
+        background-color: green;
+        &:hover {
+            .tooltip {
+                display: block;
+            }
+        }
+    }
+
+}
+
+.tooltip {
+    display: none;
+    position: absolute;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 1px 3px rgba(0,0,0,.5);
+    padding: 10px;
+    bottom: 15px;
+    left: -20px;
+    .detail {
+        white-space: nowrap;
+        margin: 5px 0;
+        b {
+            display: inline-block;
+            text-align: right;
+            min-width: 50px;
+            padding: 5px 10px;
+        }
+        span {
+            display: inline-block;
+            margin-right: 10px;
+        }
+    }
+}
+
+.pointer {
+    cursor: pointer;
+}
+
+input[type="file"] {
+    border: 1px #ddd solid;
+    border-radius: 5px;
+    padding: 5px 10px;
+    margin: 10px 0;
+}
+
+body {
+    padding: 5%  10%
+}

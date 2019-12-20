@@ -11,7 +11,7 @@ export class RunGraphQlCommand extends Command {
     description: string = 'Run graphQl server';
     name: string = 'graphql';
 
-    async run(@Inject() kernel: Kernel) {
+    @Inject() async run(kernel: Kernel) {
         kernel.run('graphql');
     }
 

@@ -1,16 +1,18 @@
 import { existsSync } from 'fs';
 import { dirname } from 'path';
+import { is } from '@azera/util';
 
 /**
  * Get node package directory
  * @param pkgName Package name
  */
 export function getPackageDir(pkgName?: string) {
-    let dir: string;
-    if (!pkgName) dir = (<any>require.main).filename;
-    else dir = require.resolve(pkgName, { paths: (<any>require.main).paths });
+    let dir: string | undefined;
 
-    while ( !existsSync(dir + '/package.json') ) {
+    if (!pkgName) dir = process.mainModule?.filename;
+    else dir = require.resolve(pkgName, { paths: process.mainModule?.paths });
+
+    while ( dir && !existsSync(dir + '/package.json') ) {
         dir = dirname(dir);
     }
 
@@ -95,17 +97,30 @@ export function invariant(condition: any, format: string, ...params: any[]) {
 
 }
 
+/**
+ * Return a humanized name of an object for debug output
+ * ```
+ * // Example
+ * debugName(new Element()); // returns "Element"
+ * debugName(12); // returns "Number(12)"
+ * ```
+ * @param value Object
+ */
 export function debugName(value: any) {
     if (typeof value == 'function') {
         return value.name;
     } else if (typeof value == 'object' && 'constructor' in value) {
         return value.constructor.name;
+    } else if (typeof value == 'number') {
+        return `Number(${value})`;
     } else {
         typeof value;
     }
 }
 
-
+/**
+ * Enable source map for stack-trace
+ */
 export function enableSourceMap() {
     require('source-map-support').install();
 }
@@ -114,18 +129,36 @@ function functionGenerator<T extends string, U = { [K in T]?: string }> (keys: T
     return (p: U) => p
   }
 
+  
+/**
+ * Convert array to object
+ * ```
+ * // Example
+ * convertArrToObject([ { name: 'Ali', age: 21 } , { name: 'Reza', age: 30 } ], 'name', 'age');
+ * // Output
+ * // { Ali: 21, Reza: 30 }
+ * ```
+ */
 export function convertArrToObject<
     OK extends string,
     OV extends string | number,
     O extends { [K in OK]: OV },
     RK extends OK,
-    RV extends OK
->(arr: O[], key: RK, value: RV): { [Q in O[RK]]?: O[RV] }
+    RV extends OK>(arr: O[], key: RK, value: RV): { [Q in O[RK]]?: O[RV] }
 
+/**
+ * Convert array to object
+ * ```
+ * // Example
+ * convertArrToObject([ 'A', 'B' ], value => 'Hello ' + value);
+ * // Output
+ * // { A: 'Hello A', B: 'Hello B' }
+ * ```
+ */
 export function convertArrToObject<T extends string, V>(arr: T[], value?: ((v: T) => V) | V): { [K in T]?: V }
 export function convertArrToObject(arr: any[], key?: any, value?: any)
 {
-    if (!Array.isArray(arr)) throw Error(`Expected array but ${typeof arr} given`);
+    invariant(Array.isArray(arr), 'Expected array by %s given', typeof arr);
     
     let object = {} as any;
 
@@ -140,29 +173,29 @@ export function convertArrToObject(arr: any[], key?: any, value?: any)
     return object;
 }
 
-export class Util {
+/**
+ * Flatten an nested object
+ * ```
+ * flatObject({
+ *  http: { port: 9090  }
+ * })
+ * // Output
+ * // { "http.port": 9090 }
+ * ```
+ */
+export function flatObject(object: any, options?: { join?: string, flatArray?: boolean }) {
+    invariant(is.HashMap(object) || is.Array(object), 'Only arrays and objects can be flatten but "%s" given', typeof object);
 
-    /**
-     * Flatten an nested object
-     * ```json
-     * {
-     *  "http": {
-     *      "port": 9090
-     *  }
-     * }
-     * ```
-     * will be flatten as :
-     * ```json
-     * {
-     *  "http.port": 9090
-     * }
-     * ```
-     * @param object Object
-     * @param join Join character
-     */
-    static flatObject(object: any, join: string = '.') {
+    let { join = '.', flatArray = true } = options ?? {};
+    let result: {[key: string]: any} = {};
 
-
+    function flat(value: any, node: string = '') {
+        if (!is.HashMap(value) && (!flatArray || !is.Array(value))) return result[node] = value;
+        for (let k in value) {
+            flat((<any>value)[k], (node ? node + join : '') + k);
+        }
     }
 
+    flat(object);
+    return result;
 }

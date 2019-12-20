@@ -155,7 +155,7 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
                             endOfDep = true;
                             return null;
                         }
-                        if ( endOfDep ) throw Error(`Dependencies must come first in method ${target.constructor.name}${key}`);
+                        if ( endOfDep ) throw Error(`Dependencies must come first in method ${target.constructor.name}.${key} method, param types : ${ types.map(t => t && t.name).join(', ') }`);
                         return type;
                     }).filter( dep => !!dep );
 

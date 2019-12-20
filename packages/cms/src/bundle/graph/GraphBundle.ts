@@ -1,8 +1,8 @@
-import { Bundle, ConfigSchema, Container, Inject, Logger } from '@azera/stack';
+import { Bundle, ConfigSchema, Container, Inject, Logger, forEach } from '@azera/stack';
 import { ApolloServer, makeExecutableSchema } from 'apollo-server';
 import { RunGraphQlCommand } from './command/RunGraphQlCommand';
 import { DirectiveClass } from './decorator/Directive';
-import * as CoreDirectives from './directive';
+import CoreDirectives from './directive';
 import { CoreGraphQlExtension } from './extension/CoreGraphQlExtension';
 import { GraphQlExtension } from './extension/GraphQlExtension';
 import { GraphQlSchemaBuilder } from './GraphQlSchemaBuilder';
@@ -30,7 +30,7 @@ export class GraphBundle extends Bundle {
         return [RunGraphQlCommand, CoreGraphQlExtension];
     }
 
-    init(@Inject() container: Container, @Inject() config: ConfigSchema) {
+    @Inject() init(container: Container, config: ConfigSchema) {
 
         // Configuration
         config
@@ -38,7 +38,7 @@ export class GraphBundle extends Bundle {
         .node('graph.port', { type: 'number', description: 'GraphQl port', default: 1234 })
 
         // Inject Container to CoreDirectives
-        Object.values(CoreDirectives).forEach(directive => {
+        forEach(CoreDirectives, directive => {
             directive.prototype.container = container;
         });
 
@@ -77,7 +77,6 @@ export class GraphBundle extends Bundle {
             return schema;
         })
         .setFactory(ApolloServer, function graphqlServerFactory() {
-
             // Create GraphQl instance
             return new ApolloServer({
                 schema: container.invoke(GraphQLSchema),
@@ -97,10 +96,7 @@ export class GraphBundle extends Bundle {
 
     }
 
-    async run(
-        @Inject() container: Container,
-        command: string)
-    {
+    @Inject() async run( container: Container, command: string) {
         if (command == 'graphql') {
             let apolloServer = container.invoke(ApolloServer);
             let logger = container.invoke(Logger);

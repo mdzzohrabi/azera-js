@@ -1,6 +1,10 @@
 import { Inject, Container } from '@azera/container';
 import { Kernel } from '../../../Kernel';
 import { Command, CommandInfo } from '../../cli/Command';
+import { Cli } from '../../cli/Cli';
+import { forEach } from '@azera/util';
+import { existsSync, readFileSync } from 'fs';
+import { Profile } from '../../../Profiler';
 
 /**
  * Dump profiles
@@ -9,23 +13,72 @@ import { Command, CommandInfo } from '../../cli/Command';
 export class DumpProfilerCommand extends Command {
     
     description: string = 'Dump profiler';
-    name: string = 'profiler';
+    name: string = 'profiler [name]';
     
-    async run( @Inject() container: Container, visual: boolean ) {
-        let kernel = container.invoke(Kernel)!;
-        let profiles = kernel.profiler.profiles;
+    @Inject() async run( container: Container, cli: Cli, profileName: string ) {
+        setImmediate(() => {
 
-        console.log(visual);
 
-        console.log(`Profiles :`);
-        console.log(`${ 'Name'.padEnd(26, ' ') }|\tDuration`);
-        console.log( ''.padEnd(50, '-') );
-        Object.keys(profiles).forEach(name => {
-            let profile = profiles[name];
-            console.log(`${ name.padEnd(26, ' ') }|\t${ profile.lastEnd! - profile.firstStart } ms`);
+        let profiles!: Profile[];
+
+        if (!profileName) {
+            profiles = Object.values(container.invoke(Kernel).profiler.profiles);
+        } else {
+            if (!existsSync(profileName)) {
+                throw Error(`Profile ${profileName} not found`);
+            }
+
+            try {
+                profiles = Object.values(JSON.parse(readFileSync(profileName).toString('utf8')));
+            } catch (e) {
+                throw Error(`Given file is not a valid profiler output`);
+            }
+        }
+
+        cli
+            .print(`Profiles : ${ profileName || 'Current run' }`)
+            .startTable({ borderHorizontal: '─' })
+            .row('Name', 'Times', 'Duration (µs)', 'Percent (%)', 'Timeline');
+
+        forEach(profiles, profile => {
+            profile.duration = profile.times.map(t => t.end ? t.end - t.start : 0).reduce((p, c) => p + c);
         });
 
-    }
+        let max = profiles.find((value, index, arr) => !arr.find(a => a.duration! > value.duration!))?.duration;
+        let startTime = profiles.find(profile => !profiles.find(a => a.firstStart < profile.firstStart))?.firstStart;
+        let endTime = profiles.find(profile => !profiles.find(a => a.lastEnd! > profile.lastEnd!))?.lastEnd;
+
+
+        let timeLineScale = 50;
+        let timeLineLength = endTime! - startTime!;
+
+        let TimeLineTheme = {
+            Bg: '-',
+            Line: '▬',
+            Start: '►',
+            End: '◄',
+        }
+
+        forEach(profiles, profile => {          
+            let tlStart = Math.round((profile.firstStart - startTime!) * timeLineScale / timeLineLength);
+            let tlEnd = Math.round((profile.lastEnd! - startTime!) * timeLineScale / timeLineLength);
+
+            let totalTimeLine = TimeLineTheme.Bg.repeat(tlStart) + '<green>' + TimeLineTheme.Start + TimeLineTheme.Line.repeat(tlEnd-tlStart) + TimeLineTheme.End + '</green>' + TimeLineTheme.Bg.repeat(timeLineScale-tlEnd);
+            
+            cli.row(
+                profile.name,
+                profile.times.length,
+                profile.duration ? `${profile.duration} µs (${profile.duration / 1000} ms)` : 'Open',
+                max ? (profile.duration! * 100 / max).toFixed(2) + '%' : '-',
+                totalTimeLine
+            );
+        });
+
+        cli.endTable();
+
+        cli.print(`First profile time ${ startTime ? new Date(startTime / 1000).toLocaleString() : '-' } and last profile time is ${ endTime ? new Date(endTime / 1000).toLocaleString() : '-' }`)
+    })
+}
 
     configure(command: CommandInfo) {
         super.configure(command);

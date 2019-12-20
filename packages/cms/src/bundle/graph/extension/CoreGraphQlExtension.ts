@@ -5,16 +5,16 @@ export class CoreGraphQlExtension extends GraphQlExtension {
 
     build(schema: GraphQlSchemaBuilder) {
 
-        schema.directive('upper', {
-            resolver: function upperDirective(next, src, args, context) {
-                console.log('ASd');
+        // schema.directive('upper', {
+        //     resolver: function upperDirective(next, src, args, context) {
+        //         console.log('ASd');
                 
-                return next().then(value => {
-                    if (typeof(value) == 'string') return value.toUpperCase();
-                    return value;
-                })
-            }
-        });
+        //         return next().then(value => {
+        //             if (typeof(value) == 'string') return value.toUpperCase();
+        //             return value;
+        //         })
+        //     }
+        // });
 
         schema.add('Query', {
             description: 'Expressions',

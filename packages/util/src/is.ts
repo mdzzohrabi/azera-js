@@ -52,6 +52,8 @@ export namespace is {
 
     export let ClassObject = <T extends any>(value: T): value is T & { constructor: Function; } => value.__proto__ && is.Function(value.constructor) && value.constructor.name !== 'Function';
 
+    export let Iterable = (value: any): value is Iterable<any> => value && typeof value[Symbol.iterator] == 'function';
+
     export let ArrayOf = <T> (value: any[], type: Function): value is T[] => {
         if ( !isArray(value) ) return false;
         let length = value.length;

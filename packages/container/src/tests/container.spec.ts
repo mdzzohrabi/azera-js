@@ -847,13 +847,13 @@ describe('Container', () => {
                 c1.setFactory(Count, CounterFactory);
                 c2.setFactory(Count, CounterFactory);
 
-                deepEqual(Object.keys((c1 as any).instances), []);
+                deepEqual([ ...(c1 as any).instances.keys() ], []);
                 equal(c1.invoke(Count), 1);
-                deepEqual(Object.keys((c1 as any).instances), ['CounterFactory', 'Count']);
+                deepEqual([ ...(c1 as any).instances.keys() ], [CounterFactory, Count]);
 
-                deepEqual(Object.keys((c2 as any).instances), []);
+                deepEqual([ ...(c2 as any).instances.keys() ], []);
                 equal(c2.invoke(Count), 1);
-                deepEqual(Object.keys((c2 as any).instances), ['CounterFactory', 'Count']);
+                deepEqual([ ...(c2 as any).instances.keys() ], [CounterFactory, Count]);
 
                 ok(c2.invoke(Count) instanceof Count);
 
@@ -874,17 +874,19 @@ describe('Container', () => {
 
                 c1.add(CounterFactory);
                 c2.add(CounterFactory);
+
+                notEqual(c1.getDefinition(CounterFactory).namedService, true, `CounterFactory definition must be a non namedService`);
     
                 equal(c1.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory in container 1`);
                 equal(c2.getDefinition(CounterFactory).isFactory, true, `CounterFactory must be factory in container 2`);
     
-                deepEqual(Object.keys((c1 as any).instances), []);
+                deepEqual([ ...(c1 as any).instances.keys() ], []);
                 deepEqual(c1.getByTag('counter'), [1]);
-                deepEqual(Object.keys((c1 as any).instances), ['CounterFactory']);
+                deepEqual([ ...(c1 as any).instances.keys() ], [CounterFactory]);
 
-                deepEqual(Object.keys((c2 as any).instances), []);
+                deepEqual([ ...(c2 as any).instances.keys() ], []);
                 deepEqual(c2.getByTag('counter'), [1]);
-                deepEqual(Object.keys((c2 as any).instances), ['CounterFactory']);
+                deepEqual([ ...(c2 as any).instances.keys() ], [CounterFactory]);
     
             });
     
@@ -943,16 +945,34 @@ describe('Container', () => {
     });
 
     describe('Expression injection', () => {
-
         it('should resolve expression', () => {
-
             let container = new Container();
             container.setParameter('name', 'Masoud');
 
             equal( container.invoke('=invoke("name")'), 'Masoud' );
-
         });
+    });
 
+    describe(`Conflict`, () => {
+        it(`should not conflict two class with same name`, () => {
+
+            let A = {
+                Hello: class Hello { user = 'A' }
+            }
+
+            let B = {
+                Hello: class Hello { user = 'B' }
+            }
+
+            let container = new Container();
+            equal( container.invoke(A.Hello).user , 'A' );
+            equal( container.invoke(B.Hello).user , 'B' );
+            equal( container.invoke(A.Hello).user , 'A' );
+            container.invoke(A.Hello).user = 'Changed';
+            equal( container.invoke(A.Hello).user , 'Changed' );
+            equal( container.invoke(B.Hello).user , 'B' );
+            
+        });
     });
 
 });

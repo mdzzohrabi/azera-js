@@ -10,14 +10,14 @@ defineModule('api', ({ hook, log, HOOKS, React, React: { Component, createRef, u
     log(`Api Module loaded`);
 
     // Menu
-    hook(HOOKS.PANEL_MENU, menu => {
+    hook('panel.menu', menu => {
         menu.children.push({
             title: 'Api Management',
             link: '/api'
         });
     });
 
-    hook(HOOKS.ROUTES_DESKTOP, routes => {
+    hook('routes.desktop', routes => {
         routes['/api/:name'] = (router) => {
             // return <Editor language="typescript"/>
             return <ScriptEditor name={router.match.params.name}/>;

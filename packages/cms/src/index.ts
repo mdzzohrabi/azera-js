@@ -1,21 +1,17 @@
-import { CliBundle, enableSourceMap, HttpBundle, Kernel, TwigBundle, TypeORMBundle } from "@azera/stack";
+import { Kernel } from "@azera/stack";
 import { ApiBundle } from './bundle/api/ApiBundle';
-import { GraphBundle } from './bundle/graph/GraphBundle';
 import { AssetsBundle } from './bundle/assets/AssetsBundle';
+import { GraphBundle } from './bundle/graph/GraphBundle';
 import { ModelBundle } from './bundle/model/ModelBundle';
 import { PortalBundle } from './bundle/portal/PortalBundle';
 
-enableSourceMap();
+Kernel
+    .enableSourceMap()
+    .createFullStack([ new ApiBundle, new ModelBundle, new GraphBundle, new AssetsBundle, new PortalBundle  ])
+    .then(kernel => kernel.bootAndRun(__dirname + '/../app.config.yml', 'cli'))
+    .catch(console.error);
 
-new Kernel(undefined, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new ApiBundle, new ModelBundle, new GraphBundle, new AssetsBundle, new PortalBundle ])
-    // Run
-    .bootAndRun(__dirname + '/../config.json', 'cli')
-    // Catch exceptions
-    .catch(err => {
-        console.error(err);
-    });
-    
-// Kernel.createWebApp(9095, class IndexController {
+    // Kernel.createWebApp(9095, class IndexController {
 
 //     ['GET /']() {
 //         return { name: 'Hello world' };

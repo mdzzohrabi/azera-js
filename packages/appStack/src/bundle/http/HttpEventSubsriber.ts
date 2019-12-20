@@ -15,7 +15,11 @@ export class HttpEventSubscriber implements IEventSubscriber {
         if (event.defaultPrevented) return;
         let { result, response: res } = event;
         if ( result !== undefined && result !== null && typeof result != 'function' ) {
-            res.json(result);
+            if (typeof result == 'string') {
+                res.end(result);
+            } else {
+                res.json(result);
+            }
         }
     }
 

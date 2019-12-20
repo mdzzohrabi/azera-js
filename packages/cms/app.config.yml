@@ -1,26 +1,106 @@
-# $schema: ./config.schema.json
-$imports:
-    - '@azera/stack/config.yml'
+# Not used by yaml
+$schema: "./config.schema.json"
 
-config: { allowExtra: true }
+# AppStack default configuration
+$imports: "@azera/stack/default.config.yml"
 
-customConfig: Yes
+# Config resolver options
+config:
+    allowExtra: false
 
+# Container parameters
 parameters:
     httpPort: 8090
-    # httpViews: ./views
+    twigCache: true
 
-# Routes collection
-routes:
-    $imports: ./config/routes.yml
+# Http bundle configuration
+web:
+    forks: 1
+    port: 8090
+    routes:
+        /function: /Controller/FunctionController
+        /testLogin: /Controller/LoginController::loginAction
+        /public:
+            resource: ./public
+            type: static
 
+# Services
 services:
-    /Command/RunCommand: ~
-    /Command/DumpParametersCommand: ~
-    /Command/GetTaggedServicesCommand: ~
-    /Controller/IndexController: ~
+    - /Command/RunCommand
+    - /Command/DumpParametersCommand
+    - /Controller/IndexController
+    - /Command/TestCommand
 
+# Kernel
 kernel:
-
-    # Cache kernel resolved config
+    cacheDir: ./cache
     cacheConfig: false
+    handleError: false
+
+# Database connections
+typeOrm:
+    defaultConnection: cmis
+    connections:
+        main:
+            type: mongodb
+            host: localhost
+            port: 27017
+            useNewUrlParser: true
+            useUnifiedTopology: true
+            database: test
+        cmis:
+            type: mssql
+            database: ODCC_NEW
+            username: mdzzohrabi
+            password: md#1372#
+            host: localhost
+            entities:
+                - /entity/Project
+                - /entity/Config
+
+# Models
+models:
+    UserA:
+        dataSource: main
+        collection: users
+        fields:
+            - name: username
+              type: string
+            - name: age
+              type: number
+    Project:
+        dataSource: cmis
+        collection: CM.Project
+        fields:
+            - name: Id
+              type: int
+              primary: true
+            - name: Name
+              type: varchar
+
+# Graph bundle configuration
+graph:
+    port: 2222
+
+# Asset bundle
+assets:
+    # Storages
+    storages:
+        - name: local
+          provider: local
+          path: "./public"
+          description: Local Storage
+        
+# Web-client configuration
+web_client:
+    proxy: http://172.16.8.12:39741
+
+# Cache
+cache:
+    # Providers
+    providers:
+        temp:
+            type: file
+            path: "./cache"
+        memory:
+            type: memory

@@ -29,18 +29,18 @@ export function Route(path: string, method: RouteMethods = 'get'): MethodDecorat
     }
 }
 
-export function Get(path: string): MethodDecorator {
+export function Get(path: string = '/'): MethodDecorator {
     return Route(path, 'get');
 }
 
-export function Post(path: string): MethodDecorator {
+export function Post(path: string = '/'): MethodDecorator {
     return Route(path, 'post');
 }
 
-export function Put(path: string): MethodDecorator {
+export function Put(path: string = '/'): MethodDecorator {
     return Route(path, 'put');
 }
 
-export function Delete(path: string): MethodDecorator {
+export function Delete(path: string = '/'): MethodDecorator {
     return Route(path, 'delete');
 }

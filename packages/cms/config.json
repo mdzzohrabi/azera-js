@@ -69,5 +69,14 @@
         "storages": [
             { "name": "local", "provider": "local", "path": "./public", "description": "Local Storage" }
         ]
+    },
+    "web_client": {
+        "proxy": "http://172.16.8.12:39741"
+    },
+    "cache": {
+        "providers": {
+            "temp": { "type": "file", "path": "./cache" },
+            "memory": { "type": "memory" }
+        }
     }
 }

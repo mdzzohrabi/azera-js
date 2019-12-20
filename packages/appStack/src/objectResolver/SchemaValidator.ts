@@ -103,12 +103,14 @@ export class SchemaValidator {
                 parentNode = this.findNode(info.nodePath.slice(0, info.nodePath.length - 2));
             }
 
+            let nodeSchema = this.findNode(info.nodePath);
+
             // Array node
             if (isArrayItem && parentNode && parentNode.type == 'array') {
+                if (nodeSchema?.validate) return nodeSchema.validate(value, info);
                 return value;
             }
 
-            let nodeSchema = this.findNode(info.nodePath);
 
             if (nodeSchema) {
                 if (info.nonVisitedNodes[nodeSchema.path])

@@ -138,6 +138,10 @@ export class ApiManager {
             await fs.mkdir(this.cacheDir, { recursive: true });
         }
 
+        if (typeof worker.script === 'string') {
+            
+        }
+
         await fs.writeFile(scriptTmpFile, worker.script);
 
         let thread = new workerThread.Worker(scriptTmpFile, {
@@ -145,8 +149,7 @@ export class ApiManager {
         });
 
         thread.on('message', message => {
-            console.log('New Message from worker');
-            
+            console.log('New Message from worker', message);           
         })
 
         setTimeout(() => {

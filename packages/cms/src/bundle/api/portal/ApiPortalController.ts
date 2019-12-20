@@ -1,16 +1,17 @@
 import { Controller, Tag, Middleware, HttpBundle, Inject, Request, Response } from '@azera/stack';
 import { ApiManager } from '../ApiManager';
+import { IPortalModule } from '../../portal/IPortalModule';
 
 @Controller('/portal/api')
 @Tag('portal.module')
 @Middleware([ HttpBundle.static(__dirname + '/public') ])
-export class ApiPortalController {
+export class ApiPortalController implements IPortalModule {
 
     get moduleAssetPath() {
         return '/portal/api/apiPortalModule.js';
     }
 
-    ['GET /functions'](@Inject() apiManager: ApiManager) {
+    @Inject() ['GET /functions'](apiManager: ApiManager) {
         return Object.keys(apiManager.functions).map(funcName => {
             return { functionName: funcName };
         });
@@ -28,7 +29,7 @@ export class ApiPortalController {
      * Api methods list
      * @param apiManager ApiManager
      */
-    ['GET /methods'](@Inject() apiManager: ApiManager) {
+    @Inject() ['GET /methods'](apiManager: ApiManager) {
         return apiManager.apiMethods.map(({ name, public: published, description, endPoint, lastRun, lastRunDelay }) => ({
             name, description, endPoint, published, lastRun, lastRunDelay
         }));

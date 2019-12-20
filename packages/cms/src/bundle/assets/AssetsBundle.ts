@@ -1,7 +1,6 @@
-import { Bundle, Inject, Container, ConfigSchema } from '@azera/stack';
+import { Bundle, ConfigSchema, Container, Inject } from '@azera/stack';
 import { AssetManager } from './AssetManager';
 import { LocalAssetProvider } from './provider/LocalAssetProvider';
-import { readFileSync } from 'fs';
 
 /**
  * Assets bundle
@@ -10,11 +9,11 @@ import { readFileSync } from 'fs';
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class AssetsBundle extends Bundle {
-    static bundleName = "assets";
+    static bundleName = "Assets";
 
     getServices = () => [ AssetManager, LocalAssetProvider ]
 
-    init(@Inject() container: Container, @Inject() config: ConfigSchema) {
+    @Inject() init(config: ConfigSchema) {
 
         config
             .node('assets', { description: 'Assets bundle configuration' })
@@ -26,9 +25,7 @@ export class AssetsBundle extends Bundle {
         
     }
 
-    run(@Inject() assets: AssetManager) {
-
+    @Inject() run(assets: AssetManager) {
         // assets.delete('local', 'test.jpg').then(console.log).catch(console.error)
-
     }
 }

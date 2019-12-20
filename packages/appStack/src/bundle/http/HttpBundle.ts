@@ -16,7 +16,10 @@ import { Request } from './Request';
 import { Response, NextFn } from './Response';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 import { isFunction } from 'util';
-import { debugName } from '../../Util';
+import { debugName, invariant } from '../../Util';
+import { Profiler } from '../../Profiler';
+import * as cluster from 'cluster';
+import { forEach } from '@azera/util';
 
 /**
  * Http Bundle
@@ -56,27 +59,28 @@ export class HttpBundle extends Bundle {
     init( @Inject() container: Container, @Inject() config: ConfigSchema, @Inject(Kernel.DI_PARAM_ROOT) rootDir: string ) {
 
         let httpBundle = this;
+        let kernel = container.invoke(Kernel);
 
         // Configuration
         config
             .node('parameters.' + HttpBundle.DI_PARAM_VIEWS, { description: 'Web server views directory', type: 'string', required: true, validate: this._normalizeViewsDir.bind(this, rootDir), default: this._normalizeViewsDir.bind(this, rootDir, './views') })
             .node('parameters.' + HttpBundle.DI_PARAM_PORT, { description: 'Web server port', type: 'number', required: true, default: 9090 })
             .node('web', { description: 'Web server configuration', type: 'object' })
+            .node('web.forks', { description: 'Number of application forks', type: 'number', default: 1 })
+            .node('web.port', { description: 'Web server port', type: 'number' })
             .node('web.routes', { description: 'Route collection', type: 'object' })
-            .node('web.routes.**', {
+            .node('web.routes.*', {
                 description: 'Route item',
                 type: 'string|array|object',
-                validate: function routeValidate(value, info) {
-                    //info.skipChildren = !Array.isArray(value);
-                    if (typeof value == 'string') {
-                        return { controller: value };
-                    }
+                validate(value, node) {
+                    if (typeof value == 'string') return { controller: value, method: 'get', type: 'controller' };
                     return value;
                 }
             })
-            .node('web.routes.**.controller', { description: 'Route controller', type: 'string' })
-            .node('web.routes.**.type', { description: 'Route type', type: 'enum:static,controller', default: 'controller' })
-            .node('web.routes.**.resource', { description: 'Route resource (e.g: /home/public)', type: 'string', validate(value, info) {
+            .node('web.routes.*.controller', { description: 'Route controller', type: 'string', validate(controller) { return kernel.use(controller) } })
+            .node('web.routes.*.type', { description: 'Route type', type: 'enum:static,controller', default: 'controller' })
+            .node('web.routes.*.method', { description: 'Method', type: 'enum:get,post,put,delete,head', default: 'get' })
+            .node('web.routes.*.resource', { description: 'Route resource (e.g: /home/public)', type: 'string', validate(value, info) {
                 return info.resolvePath(value);
             } })
         ;
@@ -113,7 +117,9 @@ export class HttpBundle extends Bundle {
             let server = bundle.server = express();
             let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
             let controllers = await container.getByTagAsync(HttpBundle.DI_TAG_CONTROLLER) as any[];
+            let profiler = container.invoke(Profiler);
             let events = container.invoke(EventManager);
+            let config = container.getParameter('config', {});
 
             // Setup middlewares
             middlewares.forEach((middle: any) => {
@@ -172,7 +178,7 @@ export class HttpBundle extends Bundle {
                     let event = new HttpActionEvent(routePath, route.method, route.action, controller, handler);
                     events.emit(EVENT_HTTP_ACTION, event);
 
-                    routeObj[ event.method ]( middles, httpBundle.$handleRequest( event.controller, event.action, event.method, event.handler, events ) );
+                    routeObj[ event.method ]( middles, httpBundle.$handleRequestWithProfile( profiler, event.controller, event.action, event.method, event.handler, events ) );
 
                     routeObj.controller = controller;
                     routeObj.methodName = route.action;
@@ -181,6 +187,9 @@ export class HttpBundle extends Bundle {
     
             });
 
+
+            httpBundle.configureRoutesFromConfiguration(kernel, server, config?.web?.routes || {});
+
             container.invoke(EventManager).emit(HttpBundle.EVENT_EXPRESS, server);
 
             return server;
@@ -188,9 +197,64 @@ export class HttpBundle extends Bundle {
         });
     }
 
+    configureRoutesFromConfiguration(kernel: Kernel, app: express.Express, routes: { [path: string]: object | object[] }) {     
+
+        let container = kernel.container;
+        let eventManager = container.invoke(EventManager);
+        let profiler = container.invoke(Profiler);
+        let httpBundle = this;
+
+        forEach(routes, (route, routePath) => {
+            // Bug: ingore star
+            if (routePath == '*') return;
+            if (Array.isArray(route)) {
+                route.forEach(item => {
+                    let {handler, method} = resolveRoute(item);
+                    app[method](routePath, handler as any);
+                })
+            } else {
+                let {handler, method} = resolveRoute(route);
+                app[method](routePath, handler as any);
+            }
+        });
+
+        function resolveRoute(handler: { controller?: string, resource?: string, type?: string, method?: string }): { handler: Function, method: 'get' | 'put' | 'post' | 'use' | 'delete' | 'head' } {
+            if (typeof handler == 'object') {
+                let type = handler.type ?? 'controller';
+                let method = (handler.method ?? 'get').toLowerCase() as any;
+                switch (type) {
+                    case 'controller':
+                        invariant(handler.controller, 'Controller not defined for route');
+                        let [controller, action] = handler.controller!.split('::');
+                        let target = kernel.use(controller) as any;
+                        if (action) {
+                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, action, method, container.invokeLaterAsync( container.invoke(target) , action), eventManager), method };
+                        } else {
+                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, '', method, kernel.container.invokeLaterAsync(target), eventManager), method }
+                        }
+                    case 'static':
+                        invariant(handler.resource, 'Resource must be defined for route with static type');
+                        return { handler: express.static(handler.resource!), method: 'use' };
+                }
+            }
+            throw Error(`Invalid route type ${ typeof handler }`);
+        }
+    }
+
+    $handleRequestWithProfile(profiler: Profiler ,controller: any, action: string, method: string, handle: Function, events: EventManager) {
+        if (!profiler.enabled) return this.$handleRequest(controller, action, method, handle, events);
+        return async function httpRequestHandle(req: Request, res: Response, next: Function) {
+            let profile = profiler.start('http.action', { controller: controller && controller.name || controller.constructor.name || undefined , action, method });
+            let result = await Promise.resolve(handle(req, res, next));
+            let event = new HttpResultEvent(controller, action, method, result, req, res, next);
+            events.emit(EVENT_HTTP_RESULT, event);
+            profile?.end();
+        }
+    }
+
     $handleRequest(controller: any, action: string, method: string, handle: Function, events: EventManager) {
-        return function httpRequestHandle(req: Request, res: Response, next: Function) {
-            let result = handle(req, res, next);
+        return async function httpRequestHandle(req: Request, res: Response, next: Function) {
+            let result = await Promise.resolve(handle(req, res, next));
             let event = new HttpResultEvent(controller, action, method, result, req, res, next);
             events.emit(EVENT_HTTP_RESULT, event);
         }
@@ -236,21 +300,36 @@ export class HttpBundle extends Bundle {
 
     }
 
-    run(
-        @Inject() container: Container,
-        @Inject(HttpBundle.DI_PARAM_PORT) httpPort: number,
-        @Inject() logger: Logger,
-        action?: string ) {
-
+    @Inject() async run(container: Container, action?: string ) {
         if (!action || action == 'web') {
-            container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
+
+            let logger = await container.invokeAsync(Logger);
+            let { port: httpPort, forks } = container.getParameter('config', {}).web ?? {};
+
+            httpPort = Number(httpPort) || 9090;
+            forks = Number(forks) || 1;
+
+            if (forks > 1 && cluster.isMaster) {
+                // Create promise to prevent continue to next bundles run when forks are more than one
+                logger.info(`Fork application at scale ${forks}`);
+                for (let i = 0; i < forks; i++) {
+                    cluster.fork();
+                }
+
+                cluster.on('exit', (worker, code, signal) => {
+                    logger.info(`Worker ${worker.id} exit with code ${code} and signal ${signal}`);
+                })
+                return;
+            }
+
+
+            return container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
                 server.listen(httpPort, function serverStarted() {
                     container.invoke(EventManager).emit(HttpBundle.EVENT_LISTEN, httpPort);
                     logger.info(`Server started on port ${ httpPort }`);
                 })
             });
         }
-
     }
 
     getServices() {

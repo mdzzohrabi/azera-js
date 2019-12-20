@@ -124,25 +124,6 @@ export namespace Portal {
             // Return Portal
             () => Portal
         ).catch(console.error);
-
-        // return fetch(MODULES_API).then(async res => {
-
-        //     let response = await res.json() as ModuleApiResponse,
-        //         { modules: modulesUrl = [] } = response;
-            
-        //     // Load all modules
-        //     await Promise.all(modulesUrl.map(loadModule));
-
-        //     log($modules);
-        //     // Execute modules
-        //     await Promise.all($modules.map(module => module.module(Portal)));
-
-        //     // Secure Portal Api
-        //     lock(Portal, loadPortal, loadModule, hook);
-        //     // Object.freeze(routes);
-
-        //     return Portal;
-        // }).catch(console.error);
     }
     
     function locked() { throw Error(`This method locked and cannot be invoked`); }
@@ -172,7 +153,7 @@ export namespace Portal {
         modules: string[]
     }
 
-    export interface RouteCollection { [route: string]: () => JSX.Element }
+    export interface RouteCollection { [route: string]: (...params: any[]) => JSX.Element }
 
     export interface Menu {
         parent?: string

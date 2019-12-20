@@ -32,9 +32,15 @@
 		},
 		{
 			"path": "packages/cms/src/bundle"
+		},
+		{
+			"path": "packages/profile-viewer"
 		}
 	],
 	"settings": {
-		"typescript.tsdk": "appStack\\node_modules\\typescript\\lib"
+		"typescript.tsdk": "appStack\\node_modules\\typescript\\lib",
+		"yaml.schemas": {
+			"../../packages/cms/config.schema.json": "*.config.yml"
+		}
 	}
 }

@@ -65,7 +65,7 @@ class DebugEventManager extends EventManager {
     }
 
     emit(event: string, eventData: any) {
-        this.logger.info(`Emit ${event}`);
+        this.logger.debug(`EventManager emit '${event}'`);
         return super.emit(event, eventData);
     }
 }

@@ -8,7 +8,7 @@ import * as fs from 'fs';
 
 export class ApiBundle extends Bundle {
 
-    static bundleName = "api";
+    static bundleName = "Api";
 
     getServices() {
         return [ApiMiddlewareFactory, ApiPortalController];
@@ -100,18 +100,18 @@ export class ApiBundle extends Bundle {
 
         let manager = container.invoke(ApiManager);
 
-        manager.
-        runWorker({
-            name: 'testWorker',
-            script: `
-            let thread = require('worker_threads').parentPort;
-            console.log("Hello");
-            thread.on('message', message => {
-                console.log('New Message from parent');
+        // manager.
+        // runWorker({
+        //     name: 'testWorker',
+        //     script: `
+        //     let thread = require('worker_threads').parentPort;
+        //     console.log("Hello");
+        //     thread.on('message', message => {
+        //         console.log('New Message from parent');
                 
-            })
-            `
-        })
+        //     })
+        //     `
+        // })
        
         // let result = { a: 1, b: 2 }
         // console.time('Eval');

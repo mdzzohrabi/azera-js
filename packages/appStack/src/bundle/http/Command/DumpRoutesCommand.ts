@@ -1,7 +1,6 @@
-import { Command } from '../../cli';
 import { Inject } from '@azera/container';
 import { Express } from 'express';
-import { HttpBundle } from '../HttpBundle';
+import { Command } from '../../cli';
 import { Cli } from '../../cli/Cli';
 
 /**

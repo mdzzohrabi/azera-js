@@ -2,7 +2,6 @@
 export * from './Bundle';
 export * from './EventManager';
 export * from './Logger';
-export * from './factory/LoggerFactory';
 export * from './Kernel';
 export * from './bundle/http';
 export * from './bundle/cli';
@@ -16,6 +15,7 @@ export * from './ConfigResolver';
 export * from './Metadata';
 export * from './Profiler';
 export * from './cache';
+export * from './net';
 
 // // External libraries
 export * from '@azera/container';

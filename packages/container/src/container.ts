@@ -49,7 +49,7 @@ export class Container implements IContainer {
     /**
      * Invoked services in-memory cache
      */
-    private instances: HashMap<any> = {};
+    private instances = new Map<any, any>();
 
     /**
      * Container parameters collection
@@ -70,6 +70,11 @@ export class Container implements IContainer {
      * Type factories
      */
     private factories = new WeakMap <any, Factory>();
+
+    /**
+     * Service invokation pipelines
+     */
+    private pipes = new Map<any, Function[]>();
 
     /**
      * Container-specified class definitions
@@ -178,6 +183,7 @@ export class Container implements IContainer {
         let service = override ? Object.assign({}, definition, override) : definition;
         let name = service.name;
         let result: any;
+        let cacheKey = service.namedService ? name : service.service;
 
         if (!service.invoke && (name == undefined || is.Empty(name))) throw Error(`Service has no name`);
 
@@ -260,7 +266,7 @@ export class Container implements IContainer {
                     resolve(object);
                 });
 
-                if (!service.private) this.instances[name] = resolver;
+                if (!service.private) this.instances.set(cacheKey, resolver);
 
                 return resolver;
             }
@@ -273,9 +279,16 @@ export class Container implements IContainer {
 
         }
 
+        // Pipelines
+        if (service.service && this.pipes.has(service.service)) {
+            this.pipes.get(service.service)?.forEach(pipe => {
+                pipe(result, this);
+            });
+        }
+
         // Shared services
         if ( !service.private ) {
-            this.instances[ name ] = result;
+            this.instances.set( cacheKey, result );
         }
 
         return result;
@@ -331,7 +344,7 @@ export class Container implements IContainer {
         if (typeof name == 'function') return this._invoke(name, stack, options as any);
 
         // Cached
-        if ( this.instances[name] ) return this.instances[name];
+        if ( this.instances.has(name) ) return this.instances.get(name);
 
         // Tags
         if ( name.startsWith('$$') ) return this.findByTag( name.substr(2) ).map( service => this._get(service.name, stack, options) ) as any;
@@ -404,8 +417,8 @@ export class Container implements IContainer {
             _deps = this.getDefinition(getTarget(context)).methods[method!];
         }
 
-        let contextName = context && context.name || undefined;
-        let fnName = ( contextName ? contextName + '.' :'' ) + method + 'InvokeLater';
+        let contextName = context && context.name || context.constructor && context.constructor.name || undefined;
+        let fnName = ( contextName ? contextName + '.' :'' ) + method + '$InvokeLater';
 
         return {
 
@@ -450,8 +463,8 @@ export class Container implements IContainer {
             _deps = this.getDefinition(getTarget(context)).methods[method!];
         }
 
-        let contextName = context && context.name || undefined;
-        let fnName = ( contextName ? contextName + '.' :'' ) + method + 'InvokeLaterAsync';
+        let contextName = context && context.name || context.constructor && context.constructor.name || undefined;
+        let fnName = ( contextName ? contextName + '.' :'' ) + method + '$InvokeLaterAsync';
 
         return {
 
@@ -473,15 +486,38 @@ export class Container implements IContainer {
     }
 
     /**
+     * Execute a method from a class instance or a context
+     * @param target Class instance or object
+     * @param method Method name
+     */
+    invoke<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): ReturnType<T[M]>
+
+    /**
      * Invoke a function and resolve its dependencies
      * @param value Invokable value
      */
     invoke<T>(value: Invokable<T>): T
+    invoke(value: any, method?: any, ...params: any[])
     {
+        if (method) return this.invokeLater(value, method)(...params);
         return this._invoke(value);
     }
 
-    invokeAsync<T>(value: Invokable<T>): Promise<T> {
+    /**
+     * Execute a method from a class instance or a context async
+     * @param target Class instance or object
+     * @param method Method name
+     */
+    invokeAsync<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): Promise<ReturnType<T[M]>>
+
+    /**
+     * Invoke a function and resolve its dependencies async
+     * @param value Invokable value
+     */
+    invokeAsync<T>(value: Invokable<T>): Promise<T>
+    invokeAsync(value: any, method?: any, ...params: any[])
+    {
+        if (method) return this.invokeLaterAsync(value, method)(...params);
         return this._invoke(value, [], {
             async: true
         });
@@ -515,7 +551,7 @@ export class Container implements IContainer {
         if ( (_isClass = is.Class(value)) || (_isFunction = is.Function(value)) || (_isMethod = isMethod(value)) || is.Array(value) ) {
             let def = this.getDefinition(value);
             stack.push(`${def.name} (${ _isClass ? 'Class' : _isFunction ? 'Function' : _isMethod ? 'Method' : 'Array' })`);
-            if ( !_isMethod && !is.Empty(def.name) && this.instances[def.name] ) return this.instances[def.name];
+            if ( !_isMethod && !is.Empty(def.name) && this.instances.has(def.namedService ? def.name : def.service!) ) return this.instances.get(def.namedService ? def.name : def.service!);
             return this.resolveDefinition(def, stack, options as any) as any;
         }
 
@@ -559,7 +595,7 @@ export class Container implements IContainer {
         }
 
         this.factories.set(type, factory);
-        delete this.instances[ getDefinition(type).name ];
+        this.instances.delete( type );
         return this;
     }
 
@@ -572,6 +608,20 @@ export class Container implements IContainer {
         this.setFactory(type, function typeAlias() {
             return alias;
         });
+        return this;
+    }
+
+    /**
+     * Add a pipeline for specific service
+     * ```
+     * addPipe(Logger, logger => { logger.setLevel(12); })
+     * ```
+     * @param type Service
+     * @param pipe Pipeline callback
+     */
+    addPipe<T extends Function | string>(type: T, pipe: (service: T, container: Container) => void) {
+        if (!this.pipes.has(type)) this.pipes.set(type, []);
+        this.pipes.get(type)?.push(pipe);
         return this;
     }
 
@@ -685,6 +735,9 @@ export class Container implements IContainer {
         // Defaults
         definition = Definition(definition);
 
+        if (definition.service?.name !== definition.name)
+            definition.namedService = true;
+
         // Service decorated definition
         if ( definition.service && hasDefinition( definition.service ) ) {
             definition = Object.assign( getDefinition(definition.service), definition );
@@ -705,7 +758,7 @@ export class Container implements IContainer {
             });
 
 
-        delete this.instances[definition.name];
+        this.instances.delete(definition.namedService ? definition.name : definition.service);
         this.services[definition.name] = definition;
 
         this.resolveImports(definition);
@@ -717,8 +770,9 @@ export class Container implements IContainer {
      * Get parameter value
      * @param name Parameter name
      */
-    getParameter(name: string) {
+    getParameter<T>(name: string, _default?: T) {
         if ( this.hasParameter(name) ) return this.params[name];
+        if (undefined !== _default) return _default;
         throw Error(`Parameter ${name} not found`);
     }
 
@@ -861,7 +915,7 @@ export function isMethod(value: any): value is IMethod {
     return typeof value == 'object' && 'context' in value && 'method' in value;
 }
 
-const internalClasses = [ Object, Function, Number, String, undefined ];
+const internalClasses = [ Object, Function, Number, String, Boolean, undefined ];
 export function isInternalClass(value: any) {
     return internalClasses.includes(value);
 }

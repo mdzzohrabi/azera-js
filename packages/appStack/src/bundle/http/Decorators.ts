@@ -1,4 +1,4 @@
-import { createMetaDecorator, createDecorator, ValueType } from '../../Metadata';
+import { createDecorator, createMetaDecorator } from '../../Metadata';
 
 /**
  * Template annotation
@@ -12,6 +12,4 @@ export const Template = createMetaDecorator<string>('http:template', false, fals
  * 
  * Set header item for a controller or an action
  */
-export const Header = createDecorator(function (key: string, value: string) {
-    return { key, value };
-}, 'http:header');
+export const Header = createDecorator((key: string, value: string) => ({ key, value }), 'http:header', true);

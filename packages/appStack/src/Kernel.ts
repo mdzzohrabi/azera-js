@@ -8,7 +8,7 @@ import { ConfigSchema } from './ConfigSchema';
 import configureContainer from './Container.Config';
 import { Logger } from './Logger';
 import { Profiler } from './Profiler';
-import { asyncEach, getPackageDir } from './Util';
+import { enableSourceMap, getPackageDir } from './Util';
 // import "./JsExtensions";
 
 /**
@@ -46,21 +46,20 @@ export class Kernel {
 
     constructor(
         // Kernel environment
-        public env?: string,
+        public readonly env?: string,
         // Kernel bundles
-        public bundles: Bundle[] = [],
+        public readonly bundles: Bundle[] = [],
         // Kernel dependency-injection container
-        public container: Container = new Container()
+        public readonly container: Container = new Container()
     ) {
 
         this.env = env = env || process.env.NODE_ENVIRONMENT || 'development';
 
-        this.profiler.start('kernel.constructor');
-
         let kernel = this;
-        let rootDir = getPackageDir();
+        let rootDir = container.hasParameter(Kernel.DI_PARAM_ROOT) ? container.getParameter(Kernel.DI_PARAM_ROOT) : getPackageDir();
 
-        if ( existsSync(rootDir + '/dist') ) this.sourceDirectory = '/dist';
+        if ( container.hasParameter('kernel.sourceDir') ) this.sourceDirectory = container.getParameter('kernel.sourceDir');
+        else if ( existsSync(rootDir + '/dist') ) this.sourceDirectory = '/dist';
 
         // Container parameters
         container.setParameter(Kernel.DI_PARAM_ROOT, rootDir);
@@ -80,22 +79,19 @@ export class Kernel {
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
 
         // Initialize bundles
-        this.bundles.forEach(bundle => this.container.invokeLater(bundle, 'init')() );
+        this.bundles.forEach(bundle => this.container.invoke(bundle, 'init') );
                     
         // Configure container defaults
         configureContainer(container);
-
-        this.profiler.end('kernel.constructor');
     }
 
     /**
      * Bootstrap kernel
      */
-    async boot() {
-
-        this.profiler.start('kernel.boot');
-
-        let { container, bundles } = this;
+    async boot() {      
+        let { container, bundles, profiler } = this;
+        
+        profiler.start('kernel.boot');
 
         // Boot time
         container.setParameter(Kernel.DI_PARAM_BOOTSTART, Date.now());
@@ -107,17 +103,24 @@ export class Kernel {
         
         // Bundles services
         bundles.forEach(bundle => {
-            let services = container.invokeLater(bundle, 'getServices')();
+            let services = container.invoke(bundle, 'getServices');
             container.add(...services);
         });
 
+        profiler.start('kernel.boot.bundles', { bundles: bundles.map(bundle => bundle.bundleName)});
+        
         // Initialize bundles
-        await asyncEach( bundles, async bundle => await container.invokeLaterAsync(bundle, 'boot')() );
+        for (let bundle of bundles) {
+            profiler.start('kernel.boot.' + bundle.bundleName);
+            await container.invokeAsync(bundle, 'boot');
+            profiler.end('kernel.boot.' + bundle.bundleName);
+        }
+        profiler.end('kernel.boot.bundles');
 
         // Time of boot end
         container.setParameter(Kernel.DI_PARAM_BOOTEND, Date.now());
 
-        this.profiler.end('kernel.boot');
+        profiler.end('kernel.boot');
 
         
         // Freeze container
@@ -137,10 +140,19 @@ export class Kernel {
      * @param params Optional kernel parameters
      */
     async run(...params: any[]) {
-        this.container.setParameter(Kernel.DI_PARAM_PARAMETERS, params);
+        let { container, profiler, bundles } = this;
+       
+        profiler.start('kernel.run');
+        container.setParameter(Kernel.DI_PARAM_PARAMETERS, params);
 
         // Run bundles
-        await asyncEach( this.bundles, async bundle => await this.container.invokeLaterAsync(bundle, 'run')(...params));
+        for (let bundle of bundles) {
+            profiler.start(`kernel.run.${bundle.bundleName}`);
+            await container.invokeAsync(bundle, 'run', ...params);
+            profiler.end(`kernel.run.${bundle.bundleName}`);
+        }
+
+        profiler.end('kernel.run');
     }
 
     /**
@@ -167,14 +179,16 @@ export class Kernel {
      * @param config Configuration
      */
     async loadConfig(config: string | object) {
-        this.profiler.start('kernel.config');
+        let { container, profiler } = this;
+        profiler.start('kernel.config');
+        
         let cachePath = this.rootDir + this.cacheDirectory + '/config.cache.json';
         let resolvedConfig: any;
 
         if (existsSync(cachePath)) {
             resolvedConfig = JSON.parse( readFileSync(cachePath).toString() );
         } else {
-            resolvedConfig = await this.container.invoke(ConfigResolver).context({ kernel: this }).resolve(config);
+            resolvedConfig = await container.invoke(ConfigResolver).context({ kernel: this }).resolve(config);
 
             // Set cache directory
             if (resolvedConfig.kernel.cacheDir)
@@ -190,8 +204,8 @@ export class Kernel {
 
         this.loadParameters(resolvedConfig.parameters);
         this.config = resolvedConfig;
-        this.container.set('config', resolvedConfig);
-        this.profiler.end('kernel.config');
+        container.set('config', resolvedConfig);
+        profiler.end('kernel.config');
         return this;
     }
 
@@ -230,7 +244,10 @@ export class Kernel {
     }
 
     /**
-     * Load configuration file then Boot kernel and then run it
+     * Load configuration file then Boot kernel and then run it, e.g :
+     * ```
+     * Kernel.bootAndRun("./config.yml", "cli");
+     * ```
      * @param configFile Configuration file
      * @param params Run parameters
      */
@@ -246,14 +263,25 @@ export class Kernel {
 
     }
 
-    /** Get Profiler */
+    /**
+     * Debug profiler
+     */
     get profiler() { return this.container.invoke(Profiler)! }
 
-    /** Get application root directory */
+
+    /**
+     * Get application root directory, e.g :
+     * ```
+     * Kernel.rootDir; // returns "/home/app"
+     * ```
+     */
     get rootDir() { return this.container.getParameter(Kernel.DI_PARAM_ROOT); }
 
     /**
-     * Dynamic import
+     * Will require entered file and return the exported class according to file name, e.g :
+     * ```
+     * Kernel.use("/controller/home-controller"); // returns HomeController class
+     * ```
      * @param name Name
      */
     use<T>(name: string): T {
@@ -269,7 +297,11 @@ export class Kernel {
     }
 
     /**
-     * Resolve path
+     * Resolve path, e.g :
+     * ```
+     * Kernel.resolvePath("@azera/stack/package.json"); // returns "/home/app/node_modules/@azera/stack/package.json"
+     * Kernel.resolvePath("./package.json"); // returns "/home/app/package.json"
+     * ```
      * @param path Path
      */
     resolvePath(pathName: string) {
@@ -289,6 +321,33 @@ export class Kernel {
 
         return pathName;
 
+    }
+
+    /**
+     * Search for bundle instance
+     * ```
+     * getBundle(CoreBundle); // return CoreBundle instance
+     * ```
+     * @param bundle Bundle
+     */
+    getBundle(bundle: string | Function): Bundle | undefined {
+        for (let item of this.bundles) {
+            if (typeof bundle == 'string' && item.bundleName == bundle) return item;
+            else if (typeof bundle == 'function' && item instanceof bundle) return item;
+        }
+    }
+
+    static enableSourceMap() {
+        enableSourceMap();
+        return this;
+    }
+
+    static async createFullStack(bundles?: Bundle[], env?: string): Promise<Kernel> {
+        let { HttpBundle } = await import('./bundle/http');
+        let { CliBundle } = await import('./bundle/cli');
+        let { TwigBundle } = await import('./bundle/twig');
+        let { TypeORMBundle } = await import('./bundle/typeORM');
+        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, ...(bundles ?? []) ]);
     }
 
     /**

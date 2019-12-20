@@ -22,14 +22,12 @@ export interface IAutoTagger { (service: IDefinition): string[]; }
 export type ServiceDefinitionCollection = HashMap<Service>;
 
 export interface IContainer {
-
     set(values: { [name: string]: IDefinition | ContainerValue }[] ): this;
     set(name: string, value: IDefinition | ContainerValue ): this;
 
     get <T>(name: string): T | undefined;
 
     invoke <T>(value: Invokable<T>): T | undefined;
-
 }
 
 export interface IDefinition<T = Function> {
@@ -59,6 +57,8 @@ export interface IDefinition<T = Function> {
     imports: (string | Function)[];
     // Auto tagging definition
     autoTags: ({ class: Function, tags: string[] }|IAutoTagger)[];
+    // True if service is a named service
+    namedService?: boolean;
 }
 
 export interface IInternalDefinition extends IDefinition {
