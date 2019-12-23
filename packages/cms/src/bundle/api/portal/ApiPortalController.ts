@@ -1,15 +1,9 @@
-import { Controller, Tag, Middleware, HttpBundle, Inject, Request, Response } from '@azera/stack';
+import { Controller, HttpBundle, Inject, Middleware, Request } from '@azera/stack';
 import { ApiManager } from '../ApiManager';
-import { IPortalModule } from '../../portal/IPortalModule';
 
 @Controller('/portal/api')
-@Tag('portal.module')
 @Middleware([ HttpBundle.static(__dirname + '/public') ])
-export class ApiPortalController implements IPortalModule {
-
-    get moduleAssetPath() {
-        return '/portal/api/apiPortalModule.js';
-    }
+export class ApiPortalController {
 
     @Inject() ['GET /functions'](apiManager: ApiManager) {
         return Object.keys(apiManager.functions).map(funcName => {
@@ -21,8 +15,8 @@ export class ApiPortalController implements IPortalModule {
      * Type definitions file
      * @param apiManager ApiManager
      */
-    ['GET /type-definitions'](@Inject() apiManager: ApiManager, req: Request, res: Response) {
-        res.end(apiManager.typeDefs.toString());
+    @Inject() async ['GET /type-definitions'](apiManager: ApiManager) {
+        return await apiManager.typeDefs.getTypeDefinition();
     }
 
     /**
@@ -40,7 +34,7 @@ export class ApiPortalController implements IPortalModule {
      * @param apiManager ApiManager
      * @param req Request
      */
-    ['GET /methods/:name'](@Inject() apiManager: ApiManager, req: Request) {
+    @Inject() ['GET /methods/:name'](apiManager: ApiManager, req: Request) {
         if (!req.params) return { error: 'No request parameters' }
         return apiManager.apiMethods.find(method => method.name == req.params.name) || {
             error: `Method ${req.params.name} not found`
@@ -52,7 +46,7 @@ export class ApiPortalController implements IPortalModule {
      * @param apiManager ApiManager
      * @param req Request
      */
-    ['PUT /methods/:name'](@Inject() apiManager: ApiManager, req: Request) {
+    @Inject() ['PUT /methods/:name'](apiManager: ApiManager, req: Request) {
 
         let apiName = req.params.name;
         let body = req.body;

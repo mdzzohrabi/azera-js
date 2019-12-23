@@ -1,11 +1,11 @@
 import { Container } from '@azera/stack';
 import { gql, SchemaError } from 'apollo-server';
-import { SchemaDirectiveVisitor } from 'graphql-tools';
-import { Directive } from './decorator/Directive';
-import { ModelManager } from '../model/ModelManager';
-import { ModelDataSource } from '../model/dataSource/DataSourceManager';
-import { Model, ModelField } from '../model/Model';
 import { GraphQLField, GraphQLList, GraphQLObjectType } from 'graphql';
+import { SchemaDirectiveVisitor } from 'graphql-tools';
+import { ModelDataSource } from '../model/dataSource/ModelDataSource';
+import { Model } from '../model/Model';
+import { ModelManager } from '../model/ModelManager';
+import { Directive } from './decorator/Directive';
 
 export namespace GraphBundle.Directives {
 

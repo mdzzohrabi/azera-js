@@ -6,7 +6,6 @@
  */
 defineModule('api', ({ hook, log, HOOKS, React, React: { Component, createRef, useRef, useState, useEffect, useMemo }, Router: { Link }, ReactDOM: {render}, setTitle, Table }) => {
     // let Editor = require('@monaco-editor/react').default;
-
     log(`Api Module loaded`);
 
     // Menu
@@ -184,7 +183,6 @@ defineModule('api', ({ hook, log, HOOKS, React, React: { Component, createRef, u
     }
 
     // class ScriptEditor extends Component {
-
     //     constructor(props) {
     //         super(props);
     //         this.editorDiv = createRef();

@@ -8,6 +8,8 @@ import { MemoryCacheProvider } from './MemoryCacheProvider';
  */
 export class CacheManager {
 
+    defaultProvider?: string;
+
     providers: { [name: string]: ICacheProvider } = {};
 
     constructor() {
@@ -18,7 +20,11 @@ export class CacheManager {
         this.providers[provider.name] = provider;
     }
 
-    get(providerName: string = 'memory') {
+    get(providerName?: string) {
+        if (!providerName) {
+            providerName = this.defaultProvider;
+            if (!providerName) throw Error(`Cache manager has no default provider, please set defaultProvider for CacheManager`);
+        } 
         if (!this.providers[providerName]) throw Error(`No cache provider exists with name ${providerName}`);
         return this.providers[providerName];
     }

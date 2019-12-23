@@ -1,9 +1,8 @@
-import { Bundle, Container, Inject, ConfigSchema, forEach, ConnectionManager } from '@azera/stack';
-import { ModelManager } from './ModelManager';
-import { Model } from './Model';
-import { ModelDataSource, ModelSelectQuery } from './dataSource/DataSourceManager';
+import { Bundle, ConfigSchema, ConnectionManager, Container, forEach, Inject, Kernel } from '@azera/stack';
 import { PortalModelController } from './controller/PortalModelController';
-import { ApiManager } from '../api/ApiManager';
+import { ModelDataSource, ModelSelectQuery } from './dataSource/ModelDataSource';
+import { Model } from './Model';
+import { ModelManager } from './ModelManager';
 
 export class ModelBundle extends Bundle {
 
@@ -11,7 +10,7 @@ export class ModelBundle extends Bundle {
 
     getServices = () => [ PortalModelController ];
 
-    @Inject() init(container: Container, config: ConfigSchema, apiManager: ApiManager) {
+    @Inject() async init(container: Container, config: ConfigSchema, kernel: Kernel) {
 
         config
             .node('models', { description: 'Api Models' })
@@ -25,18 +24,14 @@ export class ModelBundle extends Bundle {
             .node('models.*.collection', { description: 'Database collection/table name', type: 'string' })
             .node('models.*.dataSource', { description: 'Datasource name', type: 'string', default: 'main' })
         ;
-        
-        // Model manager factory
-        container.setFactory(ModelManager, function modelManagerFactory() {
-            let modelManager = new ModelManager();
 
-            let models: Model[] = (container.getParameter('config') || {}).models || [];
+        // Model manager pipe
+        container.addPipe(ModelManager, function modelManagerPipe(modelManager, container) {
+            let models: Model[] = container.getParameter('config', {}).models || [];
 
             forEach(models, (model, name) => {
                 modelManager.addModel(Object.assign({ name, lock: true }, model));
             });
-
-            return modelManager;
         });
 
         // Model data source factory
@@ -47,27 +42,34 @@ export class ModelBundle extends Bundle {
             );
         });
 
+        if (kernel.hasBundle('Api'))
+            await this.initApiBundle(container);
+    }
+
+    async initApiBundle(container: Container) {
+
+        let { ApiManager } = await import('../api/ApiManager');
+        let apiManager = container.invoke(ApiManager);
+
         apiManager
-        .addDeclaration(() => {
-            let models = container.invoke(ModelManager).toArray().map(model => `'${model.name}'`);
-            if (models.length == 0) models.push('string');
-            return `type ModelName = ${ models.join(' | ') }`;
-        })
-        .addDeclaration(`interface ModelSelectQuery {
-            fields?: string[]
-            where?: any[]
-        }`)
-        .addFunction(function findAll(modelName: string, query?: ModelSelectQuery) {
-
-            /**
-             * Get a model
-             * @param modelName {ModelName} Model name
-             * @param query {ModelSelectQuery} Select query
-             * @return Promise<any[]>
-             */
-            return container.invoke(ModelDataSource).select(modelName, query);
-
-        });
+            .addDeclaration(() => {
+                let models = container.invoke(ModelManager).toArray().map(model => `'${model.name}'`);
+                if (models.length == 0) models.push('string');
+                return `type ModelName = ${ models.join(' | ') }`;
+            })
+            .addDeclaration(`interface ModelSelectQuery {
+                fields?: string[]
+                where?: any[]
+            }`)
+            .addFunction(function findAll(modelName: string, query?: ModelSelectQuery) {
+                /**
+                 * Get a model
+                 * @param modelName {ModelName} Model name
+                 * @param query {ModelSelectQuery} Select query
+                 * @return Promise<any[]>
+                 */
+                return container.invoke(ModelDataSource).select(modelName, query);
+            });
     }
 
 

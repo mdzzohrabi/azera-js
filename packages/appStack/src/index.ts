@@ -7,6 +7,7 @@ export * from './bundle/http';
 export * from './bundle/cli';
 export * from './bundle/twig';
 export * from './bundle/typeORM';
+export * from './bundle/message';
 export * from './objectResolver';
 export * from './Util';
 export * from './MicroKernel';
@@ -16,6 +17,8 @@ export * from './Metadata';
 export * from './Profiler';
 export * from './cache';
 export * from './net';
+export * from './helper';
+export * from './workflow';
 
 // // External libraries
 export * from '@azera/container';

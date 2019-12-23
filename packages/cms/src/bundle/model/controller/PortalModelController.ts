@@ -1,4 +1,4 @@
-import { Controller, Inject, Middleware, Request, Response, NextFn } from '@azera/stack';
+import { Controller, Inject, Middleware, Request, Response } from '@azera/stack';
 import { body as check, validationResult } from 'express-validator';
 import { ModelManager } from '../ModelManager';
 
@@ -26,7 +26,7 @@ export class PortalModelController {
      * Models list
      * @api
      */
-    ['GET /'](@Inject() models: ModelManager) {
+    @Inject() ['GET /'](models: ModelManager) {
         return models.toArray();
     }
     
@@ -43,16 +43,13 @@ export class PortalModelController {
             .isString().optional(),
         PortalModelController.validate
     ])
-    ['PUT /'](
-        @Inject() models: ModelManager,
-        @Inject() req: Request,
-        @Inject() next: NextFn)
+    ['PUT /'](@Inject() models: ModelManager, req: Request)
     {
         let model = models.get(req.body.name);
-        if (!model) return next(Error(`Model ${req.body.name} not found`));
+        if (!model) return Error(`Model ${req.body.name} not found`);
 
         if (model.lock) {
-            return next(Error(`Model ${model.name} is locked and cannot be modified`));
+            return Error(`Model ${model.name} is locked and cannot be modified`);
         }
 
         models.set(req.body.name, {

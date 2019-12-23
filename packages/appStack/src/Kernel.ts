@@ -1,5 +1,5 @@
 import { Container } from '@azera/container';
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, promises as fs } from 'fs';
 import * as path from 'path';
 import { Bundle } from './Bundle';
 import { CoreBundle } from './bundle/core/CoreBundle';
@@ -9,7 +9,7 @@ import configureContainer from './Container.Config';
 import { Logger } from './Logger';
 import { Profiler } from './Profiler';
 import { enableSourceMap, getPackageDir } from './Util';
-// import "./JsExtensions";
+import { Cli } from './bundle/cli';
 
 /**
  * Application kernel
@@ -44,6 +44,9 @@ export class Kernel {
     /** Cache directory */
     public cacheDirectory: string = '/cache';
 
+    /** Map path name to class name for import */
+    public importClassNameFormatter?: (value: string, fullName: string) => string;
+
     constructor(
         // Kernel environment
         public readonly env?: string,
@@ -74,12 +77,20 @@ export class Kernel {
         });
 
         this.bundles = ([ new CoreBundle ] as Bundle[]).concat( this.bundles );
+        this.bundles.forEach(bundle => {
+            this.container.add(bundle.constructor); 
+            this.container.setAlias(bundle.constructor, bundle);
+        });
 
         container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
 
-        // Initialize bundles
-        this.bundles.forEach(bundle => this.container.invoke(bundle, 'init') );
+            // Initialize bundles
+        container.invoke(this.bundles[0], 'init');
+        this.bundles.slice(1).forEach(bundle => {
+            container.invoke(Logger).info(`Initialize ${bundle.bundleName}`);
+            container.invoke(bundle, 'init')
+        });
                     
         // Configure container defaults
         configureContainer(container);
@@ -102,8 +113,8 @@ export class Kernel {
         logger.info('Kernel bootstrap');
         
         // Bundles services
-        bundles.forEach(bundle => {
-            let services = container.invoke(bundle, 'getServices');
+        bundles.forEach(async bundle => {
+            let services = await container.invokeAsync(bundle, 'getServices');
             container.add(...services);
         });
 
@@ -185,25 +196,32 @@ export class Kernel {
         let cachePath = this.rootDir + this.cacheDirectory + '/config.cache.json';
         let resolvedConfig: any;
 
-        if (existsSync(cachePath)) {
-            resolvedConfig = JSON.parse( readFileSync(cachePath).toString() );
-        } else {
-            resolvedConfig = await container.invoke(ConfigResolver).context({ kernel: this }).resolve(config);
+        try {
+            await fs
+            .readFile(cachePath)
+            .then(cachedBuffer => resolvedConfig = JSON.parse( cachedBuffer.toString('utf8') ))
+            .catch(async err => {
+                resolvedConfig = await container.invoke(ConfigResolver).context({ kernel: this }).resolve(config)
 
-            // Set cache directory
-            if (resolvedConfig.kernel.cacheDir)
-                this.cacheDirectory = resolvedConfig.kernel.cacheDir;
+                // Set cache directory
+                if (resolvedConfig.kernel.cacheDir)
+                    this.cacheDirectory = resolvedConfig.kernel.cacheDir;
 
-            // Cache resolved configuration
-            if ( resolvedConfig.kernel.cacheConfig ) {
-                if (!existsSync(cachePath))
-                    mkdirSync( path.dirname(cachePath), { recursive: true });
-                writeFileSync( cachePath, JSON.stringify(resolvedConfig));
-            }
+                // Cache resolved configuration
+                if ( true === resolvedConfig.kernel.cacheConfig ) {
+                    if (!existsSync(cachePath))
+                        await fs.mkdir( path.dirname(cachePath), { recursive: true });
+                    await fs.writeFile( cachePath, JSON.stringify(resolvedConfig));
+                }
+            });
+
+            await this.loadParameters(resolvedConfig.parameters);
+            this.config = resolvedConfig;
+
+        } catch (err) {
+            container.invoke(Cli).error(err.message);
         }
 
-        this.loadParameters(resolvedConfig.parameters);
-        this.config = resolvedConfig;
         container.set('config', resolvedConfig);
         profiler.end('kernel.config');
         return this;
@@ -213,7 +231,7 @@ export class Kernel {
      * Load parameters from json file or object
      * @param file Json File
      */
-    loadParameters(file: string | object) {
+    async loadParameters(file: string | object) {
         let parameters: any;
 
         if ( typeof file == 'string' ) {
@@ -222,7 +240,7 @@ export class Kernel {
                 this.container.setParameter(Kernel.DI_PARAM_ROOT, path.resolve( path.dirname(file)) );
             }
             if ( file.endsWith('.json') )
-                parameters = JSON.parse( readFileSync( file, { encoding: 'utf8' } ) );
+                parameters = JSON.parse( (await fs.readFile( file, { encoding: 'utf8' } )).toString() );
             else
                 parameters = require(file);
         } else {
@@ -281,19 +299,22 @@ export class Kernel {
      * Will require entered file and return the exported class according to file name, e.g :
      * ```
      * Kernel.use("/controller/home-controller"); // returns HomeController class
+     * Kernel.use("/controller/home-controller::indexAction"); // returns invokeLater(HomeController, 'indexAction') class
      * ```
-     * @param name Name
+     * @param fullName Name
      */
-    use<T>(name: string): T {
-
+    use<T>(fullName: string): T | Function {
+        let [name, method] = fullName.split('::');
         if ( name.startsWith('/') ) name = '.' + name;
 
         let filePath = this.resolvePath(name);
-        let className = name.split('/').pop()!;
+        let className = this.importClassNameFormatter ? this.importClassNameFormatter(name.split('/').pop()!, name) : name.split('/').pop()!;
 
         let module = require(filePath);
-
-        return module[className] || module.default;
+        let target = module[className] || module.default;
+        
+        if (method) return this.container.invokeLater(target, method);
+        return target;
     }
 
     /**
@@ -337,6 +358,15 @@ export class Kernel {
         }
     }
 
+    /**
+     * Check if given bundle registred
+     * @param bundle Bundle
+     */
+    hasBundle(bundle: string | Function): boolean {
+        return this.getBundle(bundle) !== undefined;
+    }
+
+
     static enableSourceMap() {
         enableSourceMap();
         return this;
@@ -347,7 +377,8 @@ export class Kernel {
         let { CliBundle } = await import('./bundle/cli');
         let { TwigBundle } = await import('./bundle/twig');
         let { TypeORMBundle } = await import('./bundle/typeORM');
-        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, ...(bundles ?? []) ]);
+        let { MessageBundle } = await import('./bundle/message');
+        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MessageBundle, ...(bundles ?? []) ]);
     }
 
     /**

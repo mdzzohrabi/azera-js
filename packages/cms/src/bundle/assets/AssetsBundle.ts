@@ -1,4 +1,4 @@
-import { Bundle, ConfigSchema, Container, Inject } from '@azera/stack';
+import { Bundle, ConfigSchema, Inject } from '@azera/stack';
 import { AssetManager } from './AssetManager';
 import { LocalAssetProvider } from './provider/LocalAssetProvider';
 

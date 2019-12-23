@@ -2,75 +2,48 @@ import { Connection, ORM } from '@azera/stack';
 import { Model } from '../Model';
 import { ModelManager } from '../ModelManager';
 
-// import { EntitySchema, ConnectionManager, MongoEntityManager, SelectQueryBuilder } = ORM;
-
-// let cm = new ConnectionManager
-
-// let s = new EntitySchema({
-//     name: 'User',
-//     tableName: 'Member',
-//     schema: 'CM',
-//     columns: {
-//         Id: {
-//             name: 'Id',
-//             type: 'int',
-//             primary: true,
-//             generated: true,
-//             generatedType: 'STORED'
-//         },
-//         Username: {
-//             name: 'Username',
-//             type: 'varchar',
-//             length: 50
-//         }
-//     },
-//     type: 'regular',
-//     target: class User {},
-//     synchronize: true
-// });
-
-// cm.create({
-//     name: 'mssql',
-//     host: '127.0.0.1',
-//     database: 'ODCC_NEW',
-//     type: 'mssql',
-//     username: 'mdzzohrabi',
-//     password: 'md#1372#',
-//     entities: [s]
-// });
-
-// cm.get('mssql').connect().then(async connection => {
-//     await connection.synchronize(false);
-
-//     console.log(await connection.manager.find(s));
-
-//     let result = await connection.query(`SELECT * FROM CM.[User]`);
-//     console.log(result);
-
-//     await connection.close();
-// });
-
+/**
+ * Model data source manager
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 export class ModelDataSource {
 
+    /** generated entity schemas from models */
     private schemas: { [name: string]: ORM.EntitySchema } = {};
 
-    constructor(public modelManager: ModelManager, public connectionManager: ORM.ConnectionManager) {
-    }
+    constructor(public modelManager: ModelManager, public connectionManager: ORM.ConnectionManager) {}
 
+    /**
+     * Get a model
+     * @param modelName Model name
+     */
     getModel(modelName: string) {
         return this.modelManager.get(modelName)!;
     }
 
+    /**
+     * Get connection for a model
+     * @param model Model name
+     */
     getConnection(model: string) {
         return this.connectionManager.get( this.getModel(model).dataSource );
     }
 
+    /**
+     * Connect to model connection
+     * @param model Model name
+     */
     async connnect(model: string) {
         let connection = this.getConnection(model);
         if (!connection.isConnected) await connection.connect();
         return connection;
     }
 
+    /**
+     * Create query builder for specified model
+     * @param model Model name
+     * @param alias Query alias
+     */
     createQueryBuilder<T>(model: string, alias: string): Promise<ORM.SelectQueryBuilder<T>>
     createQueryBuilder<T>(connection: Connection, model: string, alias: string): ORM.SelectQueryBuilder<T>
     createQueryBuilder(...args: any[])
@@ -90,6 +63,10 @@ export class ModelDataSource {
         return connection.createQueryBuilder().from( this.getModel(model).collection!, alias);
     }
 
+    /**
+     * Convert model to entity schema
+     * @param modelName Model name
+     */
     getModelSchema(modelName: string) {
         let model = this.getModel(modelName);
 
@@ -112,10 +89,18 @@ export class ModelDataSource {
         return schema;
     }
 
+    /**
+     * Get model repository
+     * @param modelName Model name
+     */
     getRepository(modelName: string) {
         return this.getConnection(modelName).getRepository( this.getModelSchema(modelName) );
     }
 
+    /**
+     * Check if given entity manager is a mongo entity manager
+     * @param manager EntityManager
+     */
     isMongo(manager: any): manager is ORM.MongoEntityManager {
         return manager instanceof ORM.MongoEntityManager || manager.connection.options.type == 'mongodb';
     }
@@ -153,8 +138,11 @@ export class ModelDataSource {
         }
     }
 
-    
-
+    /**
+     * Preparation a select query
+     * @param model Model
+     * @param query Query
+     */
     prepareSelectQuery(model: Model, query: ModelSelectQuery) {
         query = query || {};
 

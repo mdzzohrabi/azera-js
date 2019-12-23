@@ -1,18 +1,20 @@
 import { Container, Inject } from '@azera/container';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { Kernel } from '../../Kernel';
-import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
-import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
-import { DiTagCommand } from './Command/DITagCommand';
-import { Logger } from '../../Logger';
-import { EventManager } from '../../EventManager';
-import { WebClient } from '../../net';
-import { CacheManager, MemoryCacheProvider } from '../../cache';
 import { forEach } from '@azera/util';
-import { FileCacheProvider } from '../../cache/FileCacheProvider';
 import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
+import { Bundle } from '../../Bundle';
+import { CacheManager, MemoryCacheProvider } from '../../cache';
+import { FileCacheProvider } from '../../cache/FileCacheProvider';
+import { ConfigSchema } from '../../ConfigSchema';
+import { EventManager } from '../../EventManager';
+import { camelCase, pascalCase, snakeCase } from '../../helper';
+import { Kernel } from '../../Kernel';
+import { Logger } from '../../Logger';
+import { WebClient } from '../../net';
+import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
+import { DiTagCommand } from './Command/DITagCommand';
+import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
+import { WorkflowManager, Workflow } from '../../workflow';
 
 /**
  * Core bundle
@@ -44,8 +46,9 @@ export class CoreBundle extends Bundle {
                 if (value) this.handleError(container);
             } })
             .node('kernel.rootDir', { description: 'Application root directory path', type: 'string', default: kernel.rootDir })
-            .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: true })
-            .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' });
+            .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: false })
+            .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' })
+            .node('kernel.classNameFormatter', { description: 'Formatter to convert name to className for Kernel.use() method', default: 'pascalCase', type: 'enum:pascalCase,snakeCase,camelCase' });
 
         // Configuration parameters
         config.node('parameters', {
@@ -68,10 +71,31 @@ export class CoreBundle extends Bundle {
 
         config
             .node('cache', { description: 'Cache manager' })
+            .node('cache.defaultProvider', { description: 'Default cache provider', type: 'string' })
             .node('cache.providers', { description: 'Cache providers', type: 'object' })
             .node('cache.providers.*', { description: 'Cache provider' })
             .node('cache.providers.*.type', { description: 'Cache provider type', type: 'enum:memory,file' })
             .node('cache.providers.*.path', { description: 'Cache provider path', type: 'string' })
+
+        config
+            .node('workflow', { description: 'Workflow manager' })
+            .node('workflow.workflows', { description: 'Workflows', type: 'object' })
+            .node('workflow.workflows.*', { description: 'Workflow', type: 'object' })
+            .node('workflow.workflows.*.supports', { description: 'Supported types', type: 'string|array' })
+            .node('workflow.workflows.*.places', { description: 'States', type: 'array' })
+            .node('workflow.workflows.*.initial', { description: 'Initial state', type: 'string' })
+            .node('workflow.workflows.*.property', { description: 'Object property name', type: 'string' })
+            .node('workflow.workflows.*.transitions', { description: 'Workflow transitions', type: 'object' })
+            .node('workflow.workflows.*.transitions.*', { description: 'Workflow transition', type: 'object' })
+            .node('workflow.workflows.*.transitions.*.from', { description: 'Source states', type: 'string|array' })
+            .node('workflow.workflows.*.transitions.*.to', { description: 'Destination state', type: 'string' })
+            .node('workflow.workflows.*.transitions.*.metadata', { description: 'Supported types', type: 'string|array' })
+
+        config
+            .node('event_manager', { description: 'Event manager' })
+            .node('event_manager.events', { description: 'Event listeners' })
+            .node('event_manager.events.*', { description: 'Event', type: 'object' })
+            .node('event_manager.events.*.*', { description: 'Event listener', type: 'array' })
 
         container.add(EventManager);
 
@@ -89,7 +113,9 @@ export class CoreBundle extends Bundle {
         // CacheManager
         container.setFactory(CacheManager, function cacheManagerFactory($config) {
             let manager = new CacheManager();
+            let defaultProvider = $config?.cache?.defaultProvider;
             let providers = $config?.cache?.providers || {};
+            manager.defaultProvider = defaultProvider;
             forEach(providers, (config: any, name) => {
                 let type = config?.type || 'memory';
                 switch (type) {
@@ -126,6 +152,37 @@ export class CoreBundle extends Bundle {
             })
         });
 
+        // Workflow
+        container.addPipe(WorkflowManager, workflowManager => {
+            let workflows = container.getParameter('config', {}).workflow?.workflows ?? {};
+            forEach(workflows, (workflow: Workflow, name) => {
+                if (typeof workflow.supports == 'string') {
+                    workflow.supports = [workflow.supports];
+                }
+                
+                workflowManager.addWorkflow(new Workflow(
+                    name,
+                    workflow.places,
+                    workflow.initial,
+                    (workflow.supports ?? []).map(support => kernel.use(support as any)),
+                    workflow.transitions,
+                    workflow.property
+                ));
+            });
+        });
+
+        // EventManager
+        container.addPipe(EventManager, eventManager => {
+            let events = container.getParameter('config', {}).event_manager?.events ?? {};
+            
+            forEach(events, (listeners: string[], name) => {
+                listeners.map(listener => kernel.use(listener)).forEach(listener => {
+                    if (typeof listener !== 'function') throw Error(`Event listener must be a function but type of "${typeof listener}" given`);
+                    eventManager.on(name, listener as any);
+                });
+            });
+        });
+
     }
 
     @Inject() handleError(serviceContainer: Container) {
@@ -146,25 +203,43 @@ export class CoreBundle extends Bundle {
     }
 
     @Inject() boot(container: Container) {
-
-        let profile = container.getParameter('debug.profile', false);
-        let config: any = container.getParameter('config', {});
-
-        let { services, kernel: kernelConfig } = config || { services: {}, kernel: {} };
+        
         let kernel = container.invoke(Kernel)!;
+        let config = container.getParameter('config', {
+            services: {} as any,
+            kernel: {
+                rootDir: undefined,
+                classNameFormatter: 'pascalCase',
+                cacheConfig: false
+            }
+        });
+
+        let { services, kernel: kernelConfig } = config;
 
         // Kernel configuration
         if ( kernelConfig ) {
-
             // Root directory
             if ( kernelConfig.rootDir )
                 container.setParameter(Kernel.DI_PARAM_ROOT, kernelConfig.rootDir);
 
+            switch (kernelConfig.classNameFormatter) {
+                case 'pascalCase':
+                    kernel.importClassNameFormatter = pascalCase;
+                    break;
+                case 'snakeCase':
+                    kernel.importClassNameFormatter = snakeCase;
+                    break;
+                case 'camelCase':
+                    kernel.importClassNameFormatter = camelCase;
+                    break;
+                default:
+                    throw Error(`Import formatter "${ kernelConfig.classNameFormatter }" not defined`);
+            }
         }
 
         // Configuration services
         if (services) {
-            profile && kernel.profiler.start('core.services');
+            kernel.profiler.start('core.services');
             Object.keys(services).forEach(serviceName => {
                 let service = services[serviceName];
                 // Added services
@@ -178,7 +253,7 @@ export class CoreBundle extends Bundle {
                 }
 
             });
-            profile && kernel.profiler.end('core.services');
+            kernel.profiler.end('core.services');
         }   
 
     }

@@ -1,53 +1,52 @@
 import * as React from 'react';
+import { useState, useEffect } from 'react';
 import { humanize } from './Strings';
+import { classNames } from './Util';
 
-export interface TableDataRow { [name: string]: any }
-
-export interface TableComponentProps<T extends TableDataRow> {
-    dataSource?: string | Promise<T[]> | T[]
-    loading?: boolean
-    columns?: TableColumn<T, keyof T>[]
-    mergeColumns?: boolean
-    allowAdd?: boolean
-    renderEditor?: (column: TableColumn<T, keyof T>, state: any, setState: (data: any) => void) => JSX.Element
-}
-
-export interface TableColumn<T extends TableDataRow, K extends keyof T> {
-    name: string
-    title: string
-    dataIndex?: K
-    render?: (value: T[K], data: T) => JSX.Element
-}
-
+/**
+ * Table
+ * @param props Component properties
+ */
 export function TableComponent<T>(props: TableComponentProps<T>) {
 
-    let [dataSource, setDataSource] = React.useState<T[]>([]);
-    let [loading, setLoading] = React.useState(false);
-    let [columns, setColumns] = React.useState<TableColumn<T, keyof T>[]>([]);
-    let [newRow, setNewRow] = React.useState({});
+    let { dataSource, loading: propLoading, columns: propColumns, mergeColumns = false , allowAdd = false, allowSort = true, renderEditor, ...attrs } = props;
+
+    let [data, setData] = useState<T[]>([]);
+    let [loading, setLoading] = useState(false);
+    let [columns, setColumns] = useState<TableColumn<T, keyof T>[]>([]);
+    let [newRow, setNewRow] = useState({});
+    let [sortBy, setSortBy] = useState<{ column: TableColumn<T, keyof T>, asc: boolean }[]>([]);
 
     // Loading
-    React.useEffect(() => setLoading(props.loading), [props.loading]);
+    useEffect(() => setLoading(propLoading), [propLoading]);
 
     // DataSource
-    React.useEffect(() => {
-        if (typeof props.dataSource == 'string') {
+    useEffect(() => {
+        if (typeof dataSource == 'string') {
             setLoading(true);
-            fetch(props.dataSource).then(res => {
+            fetch(dataSource).then(res => {
                 res.json().then(data => {
                     setLoading(false);
-                    setDataSource(data);
+                    setData(data);
                     setColumns(populateColumns(data));
                 })
             })
         }
-    }, [props.dataSource]);
+    }, [dataSource]);
 
+    // Sort
+    useEffect(() => {
+        setData(data.sort((a, b) => {
+            let result = 0;
+            sortBy.forEach(sort => result = sort.column.sort(a, b, sort.asc));
+            return result;
+        }));
+    }, [sortBy]);
+
+    // Populate columns
     function populateColumns<T extends TableDataRow> (data: T[]) {
-        let { columns: propColumns, mergeColumns = false } = props;
         if ( columns && columns.length > 0 ) return columns;
         if ( propColumns && !mergeColumns ) return propColumns;
-
         return [ ...estimateColumns(data).filter(c => !(propColumns || []).find(a => a.name == c.name)) , ...(propColumns || []) ];
     }
 
@@ -58,29 +57,78 @@ export function TableComponent<T>(props: TableComponentProps<T>) {
                 return {
                     name,
                     title: humanize(name),
-                    dataIndex: name
+                    dataIndex: name,
+                    sort: (a, b, asc) => a[name] < b[name] ? (asc ? 1 : -1) : a[name] > b[name] ? (asc ? -1 : 1) : 0,
+                    allowSort: true
                 }
             });
         }
         return columns;
     }
 
-    return <table>
-        <thead>
-            <tr>
-                { columns.map(column => <th key={column.name}>{ column.title }</th>) }
-            </tr>
-        </thead>
+    function setSort(column: TableColumn<any, any>) {
+        let sorted = sortBy.find(a => a.column.name == column.name) ?? { column, asc: false };
+        sorted.asc = !sorted.asc;
+        setSortBy([sorted]);
+    }
+
+    attrs.className = attrs.className || classNames({
+        'data-grid': true,
+        'sortable': allowSort,
+        'allow-add': allowAdd
+    });
+
+
+
+    console.log('asd');
+    
+
+    return <table { ...attrs }>
+        <Head allowSort={allowSort} columns={columns} sortBy={sortBy} setSort={setSort}/>
         <tbody>
-            { dataSource.map((row, index) => {
+            { data.map((row, index) => {
                 return <tr key={index}>
                     { columns.map(column => <td key={column.name}>{ column.render ? column.render(row[column.dataIndex], row) : String(row[column.dataIndex]) }</td>)}
                 </tr>;
             })}
-            { props.allowAdd ? <tr>
-                { columns.map(column => <td key={column.name}>{ props.renderEditor(column, newRow, setNewRow) }</td>)}
+            { allowAdd ? <tr>
+                { columns.map(column => <td key={column.name}>{ renderEditor(column, newRow, setNewRow) }</td>)}
             </tr> : null }
         </tbody>
-    </table>
+    </table>;
+}
 
+let Head = React.memo(({columns, sortBy, allowSort, setSort}: any) => {
+    console.log('ggg');
+    
+    return <thead>
+        <tr>
+            { columns.map(column => <th onClick={e => setSort(column)} key={column.name} className={classNames({
+                'sortable': allowSort && column.allowSort,
+                'sorted': sortBy.findIndex(a => a.column.name == column.name) >= 0,
+                'desc': sortBy.find(a => a.column.name == column.name)?.asc === false
+            })}>{ column.title }</th>) }
+        </tr>
+    </thead>;
+})
+
+export interface TableDataRow { [name: string]: any }
+
+export interface TableComponentProps<T extends TableDataRow> extends React.HTMLAttributes<HTMLTableElement> {
+    dataSource?: string | Promise<T[]> | T[]
+    loading?: boolean
+    columns?: TableColumn<T, keyof T>[]
+    mergeColumns?: boolean
+    allowAdd?: boolean
+    allowSort?: boolean
+    renderEditor?: (column: TableColumn<T, keyof T>, state: any, setState: (data: any) => void) => JSX.Element
+}
+
+export interface TableColumn<T extends TableDataRow, K extends keyof T> {
+    name: string
+    title: string
+    dataIndex?: K
+    allowSort?: boolean
+    sort?: (prev: T, curr: T, asc: boolean) => number
+    render?: (value: T[K], data: T) => JSX.Element
 }

@@ -16,9 +16,9 @@ export class TypeORMBundle extends Bundle {
         .node('typeOrm.defaultConnection', { description: 'Default connection name (default: main)', default: 'main' })
         .node('typeOrm.connections', { description: 'Database connections', type: 'object' })
         .node('typeOrm.connections.*', { description: 'Database connection', type: 'object' })
-        .node('typeOrm.connections.*.type', { description: 'Database driver', type: 'enum:mongodb,mssql,mysql,postgres,cockroachdb,mariadb,sqlite,cordova,nativescript,oracle,sqljs,react-native', required: true })
+        .node('typeOrm.connections.*.type', { description: 'Database driver', type: 'enum:mongodb,mssql,mysql,postgres,cockroachdb,mariadb,sqlite,cordova,nativescript,oracle,sqljs,react-native' })
         .node('typeOrm.connections.*.charset', { description: 'The charset for the connection. This is called "collation" in the SQL-level of MySQL (like utf8_general_ci). If a SQL-level charset is specified (like utf8mb4) then the default collation for that charset is used. (Default: UTF8_GENERAL_CI).', type: 'string' })
-        .node('typeOrm.connections.*.host', { description: 'Database host', type: 'string', default: 'localhost' })
+        .node('typeOrm.connections.*.host', { description: 'Database host', type: 'string' })
         .node('typeOrm.connections.*.port', { description: 'Database port', type: 'string|number' })
         .node('typeOrm.connections.*.username', { description: 'Database username', type: 'string' })
         .node('typeOrm.connections.*.password', { description: 'Database password', type: 'string' })
@@ -32,6 +32,7 @@ export class TypeORMBundle extends Bundle {
         .node('typeOrm.connections.*.maxQueryExecutionTime ', { description: 'If query execution time exceed this given max execution time (in milliseconds) then logger will log this query.', type: 'number' })
         .node('typeOrm.connections.*.useNewUrlParser', { description: 'MongoDb useNewUrlParser', type: 'boolean', default: false })
         .node('typeOrm.connections.*.useUnifiedTopology', { description: 'MongoDb useUnifiedTopology', type: 'boolean', default: false })
+        .node('typeOrm.proxy', { description: 'Proxy', type: 'string' })
 
         container.setFactory(ConnectionManager, this.connectionManagerFactory);
     }
@@ -42,6 +43,7 @@ export class TypeORMBundle extends Bundle {
      */
     connectionManagerFactory($config: any, serviceContainer: Container) {
         let profiler = serviceContainer.invoke(Profiler);
+        let proxy = $config?.typeOrm?.proxy;
         
         let manager = new ConnectionManager;
         let connections = $config?.typeOrm?.connections ?? {};

@@ -1,10 +1,9 @@
-import { SchemaDirectiveVisitor } from 'graphql-tools';
-import { Directive } from '../decorator/Directive';
+import { Container } from '@azera/stack';
 import { gql, SchemaError } from 'apollo-server';
 import { GraphQLField, GraphQLList, GraphQLObjectType } from 'graphql';
-import { Container, ORM } from '@azera/stack';
-import { ModelDataSource } from '../../model/dataSource/DataSourceManager';
-import { ModelManager } from '../../model/ModelManager';
+import { SchemaDirectiveVisitor } from 'graphql-tools';
+import { ModelDataSource } from '../../model/dataSource/ModelDataSource';
+import { Directive } from '../decorator/Directive';
 
 @Directive({
     name: 'findAll',

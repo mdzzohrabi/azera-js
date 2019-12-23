@@ -1,3 +1,3 @@
 export interface IPortalModule {
-    moduleAssetPath: string
+    getPortalModules(...params: any[]): { [entry: string]: string }
 }

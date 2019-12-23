@@ -1,11 +1,10 @@
 
-import { HashMap, Inject, Reflect } from '@azera/stack';
-import * as ts from 'typescript';
+import { HashMap, Inject, Kernel, Reflect } from '@azera/stack';
+import { promises as fs } from 'fs';
 import * as vm from 'vm';
+import * as workerThread from 'worker_threads';
 import { ApiFunction } from './ApiFunction';
 import { TypeDefinition } from './TypeDefinition';
-import * as workerThread from 'worker_threads';
-import { promises as fs } from 'fs';
 
 /**
  * ApiManager
@@ -19,6 +18,8 @@ export class ApiManager {
 
     /** Cache directory */
     @Inject('=invoke("Kernel").resolvePath("./" + invoke("$config").kernel.cacheDir)') cacheDir!: string;
+
+    @Inject() kernel!: Kernel;
 
     /** Api context functions */
     public functions: HashMap<Function> = {};
@@ -43,12 +44,21 @@ export class ApiManager {
      * 
      * @param declaration Declaration string
      */
-    addDeclaration(declaration: string | (() => string)) {
+    addDeclaration(declaration: string | (() => string | Promise<string>)) {
         this.typeDefs.push(declaration);
         return this;
     }
 
-    addScript(script: string) {
+    addDeclarationFile(declaration: string) {
+        this.typeDefs.push(async () => {
+            const buffer = await fs.readFile(this.kernel.resolvePath(declaration));
+            return buffer.toString('utf8');
+        });
+        return this;
+    }
+
+    async addScript(script: string) {
+        let ts = await import('typescript');
         let result = ts.transpileModule(script, {
             compilerOptions: {
                 module: ts.ModuleKind.AMD,

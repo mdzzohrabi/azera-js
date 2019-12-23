@@ -1,12 +1,11 @@
-import { Bundle } from '../../Bundle';
+import { Container, Inject } from '@azera/container';
 import * as commander from 'commander';
-import { Inject, Container } from '@azera/container';
-import { Command } from './Command';
+import { writeFileSync } from 'fs';
+import * as process from 'process';
+import { Bundle } from '../../Bundle';
 import { Logger } from '../../Logger';
 import { Profiler } from '../../Profiler';
-import * as process from 'process';
-import { writeFileSync } from 'fs';
-import { debugName } from '../../Util';
+import { Command } from './Command';
 
 export const DI_TAG_COMMAND = 'cli.command';
 export const DI_PARAM_ARGV = 'cli.argv';

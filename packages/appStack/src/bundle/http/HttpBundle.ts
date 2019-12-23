@@ -20,6 +20,7 @@ import { debugName, invariant } from '../../Util';
 import { Profiler } from '../../Profiler';
 import * as cluster from 'cluster';
 import { forEach } from '@azera/util';
+import { HttpStartCommand } from './Command/HttpStartCommand';
 
 /**
  * Http Bundle
@@ -100,6 +101,7 @@ export class HttpBundle extends Bundle {
 
         
         container
+            .ignoreInvokeLaterDep(Request, Response)
             // Request
             .setFactory(Request, function requestFactory(serviceContainer: Container) {
                 return serviceContainer.getParameter('http.req');
@@ -157,7 +159,7 @@ export class HttpBundle extends Bundle {
                     if ( typeof middle == 'function' ) {
                         server.use( routePrefix , middle as any );
                     } else {
-                        server.use( routePrefix + middle.path, container.invokeLater(controller, middle.methodName) );
+                        server.use( routePrefix + middle.path, container.invokeLaterAsync(controller, middle.methodName) );
                     }
                 });
                
@@ -170,7 +172,7 @@ export class HttpBundle extends Bundle {
                     let middles = controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || [];
     
                     if ( injectedMethods.includes(route.action) ) {
-                        handler = container.invokeLater(controller, route.action);
+                        handler = container.invokeLaterAsync(controller, route.action);
                     } else {
                         handler = (<Function>controller[ route.action ]).bind( controller );
                     }
@@ -333,7 +335,7 @@ export class HttpBundle extends Bundle {
     }
 
     getServices() {
-        return [ HttpEventSubscriber, DumpRoutesCommand ];
+        return [ HttpEventSubscriber, DumpRoutesCommand, HttpStartCommand ];
     }
 
     static bundleName = "Http";

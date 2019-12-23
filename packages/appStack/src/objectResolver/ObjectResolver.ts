@@ -1,14 +1,13 @@
-import { promisify } from 'util';
-import { readFile } from 'fs';
-import * as path from 'path';
-import * as yaml from 'js-yaml';
-import { getPackageDir, asyncEach } from '../Util';
 import * as deepExtend from 'deep-extend';
+import { promises as fs } from 'fs';
+import * as yaml from 'js-yaml';
+import * as path from 'path';
 import { runInNewContext } from 'vm';
-import { SchemaValidator, ResolverSchema } from './SchemaValidator';
+import { asyncEach, getPackageDir } from '../Util';
+import { ResolverSchema, SchemaValidator } from './SchemaValidator';
 
 /** Promisify readFile method */
-const readFilePromise = promisify(readFile);
+const readFilePromise = fs.readFile;
 
 /**
  * Object resolver data types (resolver types)

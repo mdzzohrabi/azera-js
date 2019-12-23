@@ -89,6 +89,9 @@ export class Container implements IContainer {
     /** Exception on async dependencies when invoke called synchrounosly */
     public strictAsync = true;
 
+    /** Ignored invoke later deps */
+    private ignoredInvokeLaterDeps: Function[] = [];
+
     constructor(services?: HashMap<Service> , parameters?: HashMap<any> , autoTags?: IAutoTagger[]) {
         if ( autoTags ) this.autoTags = autoTags;
         if ( services ) this.set(services);
@@ -385,9 +388,9 @@ export class Container implements IContainer {
      * Get tagged services definitions
      * @param tag Tag
      */
-    findByTag(tag: string): IDefinition[] {
-        let services: IDefinition[] = [];
-        forEach(this.services, service => {
+    findByTag<T = Function>(tag: string): IDefinition<T>[] {
+        let services: IDefinition<T>[] = [];
+        forEach(this.services, (service: IDefinition<any>) => {
             if ( is.Array(service.tags) && service.tags.includes(tag) )
                 services.push( service );
         });
@@ -410,13 +413,14 @@ export class Container implements IContainer {
 
         if (!method) {
             let _def = this.getDefinition(context);
-            _deps = _def.parameters;
+            _deps = _def.parameters || [];
             context = { callable: _def.service };
             method = 'callable';
         } else {
-            _deps = this.getDefinition(getTarget(context)).methods[method!];
+            _deps = this.getDefinition(getTarget(context)).methods[method!] || [];
         }
 
+        _deps = _deps.filter(dep => this.ignoredInvokeLaterDeps.indexOf(dep) < 0);
         let contextName = context && context.name || context.constructor && context.constructor.name || undefined;
         let fnName = ( contextName ? contextName + '.' :'' ) + method + '$InvokeLater';
 
@@ -456,13 +460,14 @@ export class Container implements IContainer {
 
         if (!method) {
             let _def = this.getDefinition(context);
-            _deps = _def.parameters;
+            _deps = _def.parameters || [];
             context = { callable: _def.service };
             method = 'callable';
         } else {
-            _deps = this.getDefinition(getTarget(context)).methods[method!];
+            _deps = this.getDefinition(getTarget(context)).methods[method!] || [];
         }
 
+        _deps = _deps.filter(dep => this.ignoredInvokeLaterDeps.indexOf(dep) < 0);
         let contextName = context && context.name || context.constructor && context.constructor.name || undefined;
         let fnName = ( contextName ? contextName + '.' :'' ) + method + '$InvokeLaterAsync';
 
@@ -478,7 +483,7 @@ export class Container implements IContainer {
                     // This
                     _context,
                     // Parameters
-                    ( _cached ? _cached : _cached = await Promise.all((_deps || []).map(dep => container._invoke(dep, [], { async: true }))) ).concat(params)
+                    ( _cached ? _cached : _cached = await Promise.all(_deps.map(dep => container._invoke(dep, [], { async: true }))) ).concat(params)
                 );
             }
 
@@ -619,7 +624,7 @@ export class Container implements IContainer {
      * @param type Service
      * @param pipe Pipeline callback
      */
-    addPipe<T extends Function | string>(type: T, pipe: (service: T, container: Container) => void) {
+    addPipe<T>(type: Invokable<T>, pipe: (service: T, container: Container) => void) {
         if (!this.pipes.has(type)) this.pipes.set(type, []);
         this.pipes.get(type)?.push(pipe);
         return this;
@@ -770,10 +775,12 @@ export class Container implements IContainer {
      * Get parameter value
      * @param name Parameter name
      */
-    getParameter<T>(name: string, _default?: T) {
-        if ( this.hasParameter(name) ) return this.params[name];
-        if (undefined !== _default) return _default;
-        throw Error(`Parameter ${name} not found`);
+    getParameter<T = any>(name: string, _default?: T): T extends object ? T & { [k: string]: any } : T {
+        if ( !this.hasParameter(name) && !_default ) {
+            throw Error(`Parameter ${name} not found`);
+        }
+
+        return this.params[name] || _default;
     }
 
     /**
@@ -816,6 +823,11 @@ export class Container implements IContainer {
             let definition = this.getDefinition(service);
             this.set( definition.name, definition );
         });
+        return this;
+    }
+
+    ignoreInvokeLaterDep(...types: Function[]) {
+        this.ignoredInvokeLaterDeps.push(...types);
         return this;
     }
 

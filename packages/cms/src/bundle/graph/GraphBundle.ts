@@ -1,14 +1,6 @@
-import { Bundle, ConfigSchema, Container, Inject, Logger, forEach } from '@azera/stack';
-import { ApolloServer, makeExecutableSchema } from 'apollo-server';
+import { Bundle, ConfigSchema, Container, forEach, Inject, Logger } from '@azera/stack';
 import { RunGraphQlCommand } from './command/RunGraphQlCommand';
-import { DirectiveClass } from './decorator/Directive';
-import CoreDirectives from './directive';
 import { CoreGraphQlExtension } from './extension/CoreGraphQlExtension';
-import { GraphQlExtension } from './extension/GraphQlExtension';
-import { GraphQlSchemaBuilder } from './GraphQlSchemaBuilder';
-import * as g from 'graphql/execution/execute';
-import { GraphQLSchema } from 'graphql';
-
 /**
  * Graph bundle
  * 
@@ -30,7 +22,13 @@ export class GraphBundle extends Bundle {
         return [RunGraphQlCommand, CoreGraphQlExtension];
     }
 
-    @Inject() init(container: Container, config: ConfigSchema) {
+    @Inject() async init(container: Container, config: ConfigSchema) {
+
+        let { ApolloServer, makeExecutableSchema } = await import('apollo-server');
+        let { GraphQLSchema } = await import('graphql');
+        let { default: CoreDirectives } = await import('./directive');
+        let { GraphQlExtension } = await import('./extension/GraphQlExtension');
+        let { GraphQlSchemaBuilder } = await import('./GraphQlSchemaBuilder');
 
         // Configuration
         config
@@ -55,20 +53,20 @@ export class GraphBundle extends Bundle {
             let schemaBuilder = container.invoke(GraphQlSchemaBuilder);
 
             // GraphQl Extensions
-            container.getByTag<GraphQlExtension>(GraphBundle.DI_GRAPHQL_EXTENSION).forEach(extension => {
+            container.getByTag<import('./extension/GraphQlExtension').GraphQlExtension>(GraphBundle.DI_GRAPHQL_EXTENSION).forEach(extension => {
                 extension.build(schemaBuilder);
             });
 
 
             directives.forEach(directive => {
-                let _class = directive as DirectiveClass | undefined;
+                let _class = directive as import('./decorator/Directive').DirectiveClass | undefined;
                 schemaDirectives[_class!.directiveName] = _class;
             });
 
             let schemaBuilderScheme = schemaBuilder.build();
 
             let schema = makeExecutableSchema({
-                typeDefs: [ require('./Schema').default, ...directives.map(directive => (directive as DirectiveClass | undefined)!.typeDef), schemaBuilderScheme.typeDefs ],
+                typeDefs: [ require('./Schema').default, ...directives.map(directive => (directive as import('./decorator/Directive').DirectiveClass | undefined)!.typeDef), schemaBuilderScheme.typeDefs ],
                 directiveResolvers: schemaBuilderScheme.directiveResolvers,
                 schemaDirectives,
                 resolvers: schemaBuilderScheme.resolvers
@@ -98,6 +96,8 @@ export class GraphBundle extends Bundle {
 
     @Inject() async run( container: Container, command: string) {
         if (command == 'graphql') {
+            let { ApolloServer } = await import('apollo-server');
+
             let apolloServer = container.invoke(ApolloServer);
             let logger = container.invoke(Logger);
 

@@ -5,6 +5,9 @@ import { DesktopComponent } from './component/DesktopComponent';
 
 const { hook, log, loadPortal, React, ReactDOM: { render }, i18n: {trans} } = Portal;
 
+/**
+ * Bootstrap
+ */
 window.addEventListener('DOMContentLoaded', () => {
     log(`Portal version: ${ Portal.VERSION }`);
 
@@ -30,7 +33,6 @@ window.addEventListener('DOMContentLoaded', () => {
             </div>;
         });
     
-
         // Render app
         render(<MainComponent/>, document.querySelector('#app'));
     });

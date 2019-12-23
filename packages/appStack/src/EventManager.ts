@@ -3,6 +3,7 @@ import { forEach } from '@azera/util';
 import { EventEmitter } from 'events';
 import { Logger } from './Logger';
 import { debugName } from './Util';
+import { Profiler } from './Profiler';
 
 export const EVENT_SUBSCRIBER_TAG = 'event.subsriber';
 
@@ -13,7 +14,7 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subsriber';
  */
 @Service({
     factory: ($env: string, serviceContainer: Container) => {
-        let manager = $env == 'development' ? new DebugEventManager(serviceContainer.invoke(Logger)) : new EventManager();
+        let manager = $env == 'development' ? new DebugEventManager(serviceContainer.invoke(Logger), serviceContainer.invoke(Profiler)) : new EventManager();
         
         let subscribers = serviceContainer.getByTag(EVENT_SUBSCRIBER_TAG);
         subscribers.forEach(subscriber => manager.subscribe(subscriber as any));
@@ -28,6 +29,10 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subsriber';
 })
 export class EventManager extends EventEmitter {
 
+    /**
+     * Subscribe an event subscriber
+     * @param subscriber Event subsriber
+     */
     subscribe(subscriber: IEventSubscriber) {
 
         if (!subscriber || typeof subscriber['getSubscribedEvents'] != 'function') {
@@ -56,17 +61,25 @@ export class EventManager extends EventEmitter {
 
     }
 
+    raise<T>(name: string, event: T) {
+        this.emit(name, event);
+        return event;
+    }
+
 }
 
 class DebugEventManager extends EventManager {
 
-    constructor(@Inject() private logger: Logger) {
-        super();
-    }
+    constructor(
+    @Inject() private logger: Logger,
+    @Inject() private profiler: Profiler) { super() }
 
     emit(event: string, eventData: any) {
         this.logger.debug(`EventManager emit '${event}'`);
-        return super.emit(event, eventData);
+        let profiler = this.profiler.start('event.' + event);
+        let result = super.emit(event, eventData);
+        profiler?.end();
+        return result;
     }
 }
 

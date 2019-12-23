@@ -104,3 +104,30 @@ cache:
             path: "./cache"
         memory:
             type: memory
+
+message:
+    transports:
+        crawler:
+            transport: amqp://localhost/crawl
+            types:
+                - /message/CrawlMessage
+
+# Workflows
+workflow:
+    workflows:
+        blog_post:
+            places:
+                - saved
+                - posted
+                - accepted
+            transitions:
+                post: { from: saved, to: posted }
+                accept: { from: posted, to: accepted }
+            initial: saved
+            property: status
+            supports: /model/Post
+
+event_manager:
+    events:
+        workflow.transition:
+            - /events/WorkflowListener::beforeTransition

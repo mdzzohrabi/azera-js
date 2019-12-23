@@ -1,7 +1,7 @@
 import { getDefinition } from '@azera/container/build/decorators';
 import { CacheManager } from './CacheManager';
 
-export function Cache(key: string, duration?: number, provider: string = 'memory'): MethodDecorator {
+export function Cache(key: string, duration?: number, provider?: string): MethodDecorator {
     return function methodCache(target: any, method: string, descriptor) {
         let originalAction = target[method];
         let service = getDefinition(target);

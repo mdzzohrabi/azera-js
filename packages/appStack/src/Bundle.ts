@@ -39,7 +39,7 @@ export class Bundle {
      * Add services to container
      * @param params Services
      */
-    getServices(...params: any[]): Function[] {
+    getServices(...params: any[]): Function[] | Promise<Function[]> {
         return [];
     }
 

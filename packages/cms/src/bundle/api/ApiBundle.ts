@@ -1,29 +1,44 @@
-import { Bundle, Container, Inject, Kernel, Request, Response as HttpResponse, CacheManager } from '@azera/stack';
-import { compileFunction, createContext } from 'vm';
+import { Bundle, CacheManager, Container, Inject, Kernel, Tag } from '@azera/stack';
+import * as http from 'http';
+import { IPortalModule } from '../portal/IPortalModule';
 import { ApiManager } from './ApiManager';
 import { ApiMiddlewareFactory } from './middleware/ApiMiddleware';
 import { ApiPortalController } from './portal/ApiPortalController';
-import * as http from 'http';
-import * as fs from 'fs';
 
-export class ApiBundle extends Bundle {
+@Tag('portal.module')
+export class ApiBundle extends Bundle implements IPortalModule {
 
+    get moduleAssetPath() {
+        return '/portal/api/apiPortalModule.js';
+    }
+
+    @Inject() getPortalModules() {
+        let srcDir = './../src/bundle/api/portal/public';
+        let distDir = './bundle/api/portal/public';
+
+        return {
+            [srcDir + '/apiPortalModule.tsx']: distDir,
+            [srcDir + '/node_modules/monaco-editor/esm/vs/editor/editor.worker.js']: distDir,
+            [srcDir + '/node_modules/monaco-editor/esm/vs/language/typescript/ts.worker.js']: distDir
+        }
+    }
+ 
     static bundleName = "Api";
 
     getServices() {
         return [ApiMiddlewareFactory, ApiPortalController];
     }
 
-    init(@Inject() container: Container, @Inject() manager: ApiManager) {
+    @Inject() init(container: Container, manager: ApiManager) {
 
         let kernel = container.invoke(Kernel);
 
         manager
-        .addDeclaration(() => fs.readFileSync(__dirname + '/BaseDeclaration.d.ts').toString('utf8'))
-        .addDeclaration(() => fs.readFileSync(kernel.resolvePath('@azera/stack/dist/Logger.d.ts')).toString('utf8'))
-        .addDeclaration(() => fs.readFileSync(kernel.resolvePath('@azera/stack/dist/cache/CacheManager.d.ts')).toString('utf8'))
-        .addDeclaration(() => fs.readFileSync(kernel.resolvePath('@azera/stack/dist/cache/ICacheProvider.d.ts')).toString('utf8'))
-        .addDeclaration(() => fs.readFileSync(kernel.resolvePath('@azera/stack/dist/cache/MemoryCacheProvider.d.ts')).toString('utf8'))
+        .addDeclarationFile(__dirname + '/BaseDeclaration.d.ts')
+        .addDeclarationFile('@azera/stack/dist/Logger.d.ts')
+        .addDeclarationFile('@azera/stack/dist/cache/CacheManager.d.ts')
+        .addDeclarationFile('@azera/stack/dist/cache/ICacheProvider.d.ts')
+        .addDeclarationFile('@azera/stack/dist/cache/MemoryCacheProvider.d.ts')
         .addDeclaration(() => {
             return `interface Container {
                 ${ container.names.map(service => `invoke(name: '${service}'): ${container.getDefinition(service).service?.name};`).join(`\n`) }
