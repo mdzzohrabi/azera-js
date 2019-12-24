@@ -43,7 +43,7 @@ export function Middleware(path?: any): any
                 path.forEach(middle => middles.push(middle));
             } else {
                 let middles = items.methodMiddlewares = items.methodMiddlewares || {};
-                middles[String(methodName)] = path;
+                middles[String(methodName)] = (middles[String(methodName)] || []).concat(...path);
             }
 
         } else {

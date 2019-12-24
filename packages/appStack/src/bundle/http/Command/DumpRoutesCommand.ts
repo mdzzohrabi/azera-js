@@ -1,6 +1,6 @@
 import { Inject } from '@azera/container';
 import { Express } from 'express';
-import { Command } from '../../cli';
+import { Command, CommandInfo,  } from '../../cli';
 import { Cli } from '../../cli/Cli';
 
 
@@ -9,11 +9,13 @@ export class DumpRoutesCommand extends Command {
     name = "http:routes"
     description = "Dump http routes"
 
-    async run( @Inject('http.server') express: Express, @Inject() cli: Cli ): Promise<void> {
+    async run( @Inject('http.server') express: Express, @Inject() cli: Cli, command: any ): Promise<void> {
 
+        
         // Routes collection
         let stack = express._router.stack as RouteLayer[];
         let i = 0;
+        let { middleware } = command;
 
         cli.print(`Http routes collection`);
         cli.startTable({ rowBreakLine: false });
@@ -27,13 +29,19 @@ export class DumpRoutesCommand extends Command {
                     cli.row(++i, route!.path, route!.controller ? route!.controller!.constructor.name + '::' + route!.methodName : routeLayer.handle.name, routeLayer.method!.toUpperCase());
                 })
             } else {
-                let pattern = layer.regexp.source.replace('^', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g,'/') || '/';
-                cli.row( ++i, `${pattern} [M]`, layer.handle.name, 'All');
+                if (middleware) {
+                    let pattern = layer.regexp.source.replace('^', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g,'/') || '/';
+                    cli.row( ++i, `${pattern} [M]`, layer.handle.name, 'All');
+                }
             }
         });
 
         cli.endTable();
 
+    }
+
+    configure(command: CommandInfo) {
+        command.option('-m, --middleware', 'Include middlewares');
     }
 }
 
