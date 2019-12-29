@@ -63,6 +63,9 @@ export class CoreBundle extends Bundle {
                     return service;
                 }
             })
+            .node('services.*.methods', { description: 'Service method calls', type: 'object' })
+            .node('services.*.methods.*', { description: 'Service method call', type: 'object' })
+            .node('services.*.methods.*', { description: 'Service method call', type: 'object' })
             .node('services.*.tags', { description: 'Service tags', type: 'array', skipChildren: true })
             .node('services.*.service', { description: 'Service name', type: 'string' })
             .node('services.*.imports', { description: 'Service imports', type: 'array' })
@@ -248,7 +251,7 @@ export class CoreBundle extends Bundle {
                 } else if ( typeof service == 'string' ) {
                     container.add(kernel.use(service));
                 } else {
-                    service.service = kernel.use(service.service);
+                    service.service = kernel.use(service.service || serviceName);
                     container.set(serviceName, service);
                 }
 
