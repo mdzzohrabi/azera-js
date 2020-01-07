@@ -2,9 +2,10 @@ import * as net from 'net';
 import * as url from 'url';
 
 export function wrapCreateConnectionWithProxy(proxy: string, func: Function) {
-    return function (...params: any[]) {
+    return function (this: any, ...params: any[]) {
         let mainCreateConnection = net.createConnection;
-        let {host, port} = url.parse(proxy);
+        let {hostname: host, port} = url.parse(proxy);
+        
         // @ts-ignore
         net.createConnection = function createConnectionThroughProxy(options: { family: number, host: string, port: number }) {
             let queue: any[] = [];
@@ -44,7 +45,7 @@ export function wrapCreateConnectionWithProxy(proxy: string, func: Function) {
             return connection;
         }
         
-        let result = func(...params);
+        let result = func.apply(this, params);
         // @ts-ignore
         net.createConnection = mainCreateConnection;
         return result;
