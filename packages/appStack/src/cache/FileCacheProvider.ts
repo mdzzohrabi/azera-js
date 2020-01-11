@@ -1,4 +1,4 @@
-import { ICacheProvider } from './ICacheProvider';
+import { ICacheProvider, CacheProviderOptions, CacheProviderHit } from './ICacheProvider';
 import { promises as fs, exists } from 'fs';
 
 /**
@@ -18,24 +18,39 @@ export class FileCacheProvider implements ICacheProvider {
         });
     }
     
-    set(key: string, value: any): Promise<void> {
-        return fs.writeFile(this.path + '/' + key, JSON.stringify({ value, updated: Date.now() }));
+    async set<T>(key: string, value: T): Promise<T> {
+        await fs.writeFile(this.path + '/' + key, JSON.stringify({ value, updated: Date.now() }));
+        return value;
     }
 
     async get<T>(key: string, expire?: number | undefined): Promise<T | undefined> {
-        if (await this.has(key)) {
-            let hit = JSON.parse((await fs.readFile(this.path + '/' + key)).toString('utf8'));
+        let hit = await this.hit<T>(key);
+        if (hit) {
             if (expire && (Date.now() - hit.updated) > expire) return undefined;
             return hit.value;
         }
         return undefined;
     }
 
-    async memo<T>(key: string, value: () => Promise<T>, expire?: number | undefined): Promise<T> {
+    async memo<T>(key: string, value: () => Promise<T>, options?: CacheProviderOptions): Promise<T>
+    async memo<T>(key: string, value: () => Promise<T>, expire?: number): Promise<T>
+    async memo<T>(key: string, value: () => Promise<T>, options?: any): Promise<T>
+    {
+        if (typeof options == 'number') options = { expire: options };
+        let { expire, silent = false } = options;
         let data = await this.get<T>(key, expire);
         if (undefined === data) {
             await this.set(key, data = await value());
         }
         return data;
     }
+
+    async hit<T>(key: string): Promise<CacheProviderHit<T> | undefined> {
+        if (await this.has(key)) {
+            let hit = JSON.parse((await fs.readFile(this.path + '/' + key)).toString('utf8'));
+            return hit;
+        }
+        return undefined;
+    }
+
 }

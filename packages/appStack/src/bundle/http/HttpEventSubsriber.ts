@@ -17,6 +17,8 @@ export class HttpEventSubscriber implements IEventSubscriber {
         if ( result !== undefined && result !== null && typeof result != 'function' ) {
             if (typeof result == 'string') {
                 res.end(result);
+            } else if (Buffer.isBuffer(result)) {
+                res.end(result);
             } else {
                 res.json(result);
             }

@@ -1,4 +1,4 @@
-import { ICacheProvider } from './ICacheProvider';
+import { ICacheProvider, CacheProviderOptions, CacheProviderHit } from './ICacheProvider';
 
 /**
  * Memory cache provider
@@ -8,10 +8,11 @@ import { ICacheProvider } from './ICacheProvider';
 export class MemoryCacheProvider implements ICacheProvider {
     name: string = 'memory';
 
-    cache: { [key: string]: { value: any, updated: number } } = {};
+    cache: { [key: string]: CacheProviderHit<any> } = {};
     
-    async set(key: string, value: any) {
+    async set<T>(key: string, value: T) {
         this.cache[key] = { value, updated: Date.now() };
+        return value;
     }
 
     async get<T>(key: string, expire?: number | undefined): Promise<T | undefined> {
@@ -21,13 +22,34 @@ export class MemoryCacheProvider implements ICacheProvider {
         return hit.value;
     }
 
-    async memo<T>(key: string, value: () => Promise<T>, expire?: number | undefined): Promise<T> {
-        let data = await this.get<T>(key, expire);
-        if (undefined === data) {
-            await this.set(key, data = await value());
+    async memo<T>(key: string, value: () => Promise<T>, options?: CacheProviderOptions): Promise<T>
+    async memo<T>(key: string, value: () => Promise<T>, expire?: number): Promise<T>
+    async memo<T>(key: string, value: () => Promise<T>, options?: any): Promise<T>
+    {
+        if (typeof options == 'number') options = { expire: options };
+        let {expire, silent = false} = options;
+        
+        if (silent) {
+            let hit = await this.hit<T>(key);
+            if (hit) {
+                if (Date.now() - hit.updated > expire) {
+                    value().then(result => this.set(key, result));
+                }
+                return hit.value;
+            } else {
+                return await this.set(key, await value());
+            }
+        } else {
+            let data = await this.get<T>(key, expire);
+            if (undefined === data) {
+                await this.set(key, data = await value());
+            }
+            return data;
         }
-        return data;
     }
 
+    async hit<T>(key: string): Promise<CacheProviderHit<T> | undefined> {
+        return this.cache[key];
+    }
 
 }
