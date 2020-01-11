@@ -21,7 +21,7 @@ export interface MiddlewaresCollection {
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  * @decorator
  */
-export function Middleware(middlewares: Function[]): any
+export function Middleware(middlewares: (Function | any[])[]): any
 export function Middleware(path?: string): any
 export function Middleware(path?: any): any
 {
@@ -43,7 +43,7 @@ export function Middleware(path?: any): any
                 path.forEach(middle => middles.push(middle));
             } else {
                 let middles = items.methodMiddlewares = items.methodMiddlewares || {};
-                middles[String(methodName)] = (middles[String(methodName)] || []).concat(...path);
+                middles[String(methodName)] = (middles[String(methodName)] || []).concat(path);                
             }
 
         } else {

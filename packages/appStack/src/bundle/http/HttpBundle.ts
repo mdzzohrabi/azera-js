@@ -158,6 +158,8 @@ export class HttpBundle extends Bundle {
                 middlewares.forEach(middle => {
                     if ( typeof middle == 'function' ) {
                         server.use( routePrefix , middle as any );
+                    } else if ( Array.isArray(middle) ) {
+                        server.use( routePrefix , container.invokeLaterAsync(middle) );
                     } else {
                         server.use( routePrefix + middle.path, container.invokeLaterAsync(controller, middle.methodName) );
                     }
@@ -169,7 +171,10 @@ export class HttpBundle extends Bundle {
                     let routePath = routePrefix + route.path;
                     let routeObj = router.route(routePath);
                     let handler: Function;
-                    let middles = controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || [];
+                    let middles = (controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || []).map(middle => {
+                         if (Array.isArray(middle)) return container.invokeLaterAsync(middle);
+                        return middle;
+                    });
     
                     if ( injectedMethods.includes(route.action) ) {
                         handler = container.invokeLaterAsync(controller, route.action);

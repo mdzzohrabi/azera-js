@@ -135,11 +135,11 @@ export class Kernel {
 
         
         // Freeze container
-        container.add =
-        container.addDefinition =
-        container.set =
-        container.setAlias =
-        container.setFactory = () => { throw Error(`Container cannot be modified after kernel bootstrap`); }
+        // container.add =
+        // container.addDefinition =
+        // container.set =
+        // container.setAlias =
+        // container.setFactory = () => { throw Error(`Container cannot be modified after kernel bootstrap`); }
 
 
         return this;

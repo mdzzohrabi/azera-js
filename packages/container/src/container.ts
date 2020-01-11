@@ -726,6 +726,7 @@ export class Container implements IContainer {
 
         if ( customDeps ) {
             def = Object.assign({}, def);
+            def.service = target as any;
             def.parameters = customDeps;
         }
 
