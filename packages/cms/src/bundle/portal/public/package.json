@@ -22,6 +22,7 @@
     "watch": "parcel watch index.html --out-dir ../../../../dist/bundle/portal/public --public-url ./ --target browser"
   },
   "dependencies": {
+    "antd": "^3.26.6",
     "react-icons": "^3.8.0",
     "regenerator-runtime": "^0.13.3"
   }

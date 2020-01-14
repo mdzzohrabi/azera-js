@@ -88,7 +88,7 @@ export class Kernel {
             // Initialize bundles
         container.invoke(this.bundles[0], 'init');
         this.bundles.slice(1).forEach(bundle => {
-            container.invoke(Logger).info(`Initialize ${bundle.bundleName}`);
+            container.invoke(Logger).debug(`Initialize ${bundle.bundleName}`);
             container.invoke(bundle, 'init')
         });
                     
@@ -110,7 +110,7 @@ export class Kernel {
         // Logger
         let logger = await container.invokeAsync(Logger);
         
-        logger.info('Kernel bootstrap');
+        logger.debug('Kernel bootstrap');
         
         // Bundles services
         bundles.forEach(async bundle => {

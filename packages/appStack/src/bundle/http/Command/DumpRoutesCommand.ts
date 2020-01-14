@@ -22,12 +22,16 @@ export class DumpRoutesCommand extends Command {
         cli.row( '#', 'Path', 'Controller', 'Verbs' );
         cli.tableBreakRow();
         stack.forEach(layer => {
-            let route = layer.route;
+            let route = layer.route;           
             
             if ( route ) {
-                route.stack.forEach(routeLayer => {
-                    cli.row(++i, route!.path, route!.controller ? route!.controller!.constructor.name + '::' + route!.methodName : routeLayer.handle.name, routeLayer.method!.toUpperCase());
-                })
+                if (route.controller && !middleware) {
+                    cli.row(++i, route!.path, route!.controller!.constructor.name + '::' + route!.methodName, Object.keys(route.methods).map(method => method.toUpperCase()).join(', ') );
+                } else {
+                    route.stack.forEach(routeLayer => {
+                        cli.row(++i, route!.path, routeLayer.handle.name, routeLayer.method!.toUpperCase());
+                    });
+                }
             } else {
                 if (middleware) {
                     let pattern = layer.regexp.source.replace('^', '').replace('\\/?(?=\\/|$)', '').replace(/\\\//g,'/') || '/';

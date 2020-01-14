@@ -4,6 +4,7 @@ import * as _ReactRouter from 'react-router-dom';
 import * as Locale from './i18n';
 import * as Strings from './Strings';
 import { TableComponent } from './TableComponent';
+import * as AntDesign from 'antd';
 
 /**
  * Portal
@@ -23,6 +24,7 @@ export namespace Portal {
     export const ReactDOM = _ReactDOM;
     export const Router = _ReactRouter;
     export const Component = React.Component;
+    export const Antd = AntDesign;
     
     // Portal version
     export const VERSION = '1.0.0';

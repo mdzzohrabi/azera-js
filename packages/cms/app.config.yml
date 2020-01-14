@@ -104,6 +104,7 @@ cache:
             path: "./cache"
         memory:
             type: memory
+    defaultProvider: memory
 
 message:
     transports:

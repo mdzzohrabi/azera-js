@@ -27,7 +27,7 @@ export class MemoryCacheProvider implements ICacheProvider {
     async memo<T>(key: string, value: () => Promise<T>, options?: any): Promise<T>
     {
         if (typeof options == 'number') options = { expire: options };
-        let {expire, silent = false} = options;
+        let {expire, silent = false} = options || {};
         
         if (silent) {
             let hit = await this.hit<T>(key);

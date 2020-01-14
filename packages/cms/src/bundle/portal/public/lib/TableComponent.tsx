@@ -78,11 +78,6 @@ export function TableComponent<T>(props: TableComponentProps<T>) {
         'allow-add': allowAdd
     });
 
-
-
-    console.log('asd');
-    
-
     return <table { ...attrs }>
         <Head allowSort={allowSort} columns={columns} sortBy={sortBy} setSort={setSort}/>
         <tbody>
@@ -98,9 +93,7 @@ export function TableComponent<T>(props: TableComponentProps<T>) {
     </table>;
 }
 
-let Head = React.memo(({columns, sortBy, allowSort, setSort}: any) => {
-    console.log('ggg');
-    
+let Head = (({columns, sortBy, allowSort, setSort}: any) => {
     return <thead>
         <tr>
             { columns.map(column => <th onClick={e => setSort(column)} key={column.name} className={classNames({
