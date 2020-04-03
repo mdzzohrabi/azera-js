@@ -1,13 +1,15 @@
 {
 	"name": "@azera/stack",
-	"version": "1.0.2",
+	"version": "1.0.3",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
 	"license": "MIT",
 	"files": [
 		"dist/**/*",
-		"*.MD"
+		"*.MD",
+		"tsconfig.json",
+		"default.config.yml"
 	],
 	"scripts": {
 		"bundle": "parcel src/index.ts --out-dir=./bundle --target=node --bundle-node-modules",
