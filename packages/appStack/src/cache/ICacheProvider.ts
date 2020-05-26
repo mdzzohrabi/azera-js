@@ -22,4 +22,6 @@ export interface ICacheProvider {
 
     hit<T>(key: string): Promise<CacheProviderHit<T> | undefined>
 
+    delete(key: string): Promise<number>
+
 }

@@ -975,4 +975,38 @@ describe('Container', () => {
         });
     });
 
+    describe('setAlias()', () => {
+        it('should works and not cache service (Direct invoke)', () => {
+
+            class Counter { public count: number = 10; }
+
+            let container = new Container;
+
+            // Direct invoke
+            equal(container.invoke(Counter).count, 10);
+            container.setAlias(Counter, { count: 12 });
+            equal(container.invoke(Counter).count, 12);
+        });
+
+        it('should works and not cache service (Method injected mode)', async () => {
+
+            class Counter { public count: number = 10; }
+            
+            class Controller {
+                howMuch(@Inject() counter: Counter) {
+                    return counter.count;
+                }
+            }
+
+            let container = new Container;
+            let howMuch = container.invokeLaterAsync(Controller, 'howMuch');
+
+            equal(await howMuch(), 10);
+            container.setAlias(Counter, { count: 12 }, 'setAlias not work for method injected service');
+            equal(await howMuch(), 12);
+
+        });
+
+    });
+
 });

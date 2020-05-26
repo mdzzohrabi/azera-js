@@ -1,8 +1,8 @@
-import { Response as BaseResponse, NextFunction } from 'express';
+import * as express from 'express-serve-static-core';
 
-export abstract class Response implements BaseResponse {}
-export interface Response extends BaseResponse {}
-export class NextFn implements NextFunction {}
+export abstract class Response implements express.Response {}
+export interface Response extends express.Response {}
+export class NextFn implements express.NextFunction {}
 export declare interface NextFn {
     (err?: any): void
 }

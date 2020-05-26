@@ -9,7 +9,7 @@ import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
 import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
-import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT } from './Events';
+import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT, EVENT_HTTP_ERROR, HttpErrorEvent } from './Events';
 import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { Request } from './Request';
@@ -35,6 +35,7 @@ export class HttpBundle extends Bundle {
 
     static EVENT_LISTEN = EVENT_HTTP_LISTEN;
     static EVENT_EXPRESS = EVENT_HTTP_EXPRESS;
+    static EVENT_ERROR = EVENT_HTTP_ERROR;
 
     /** Http listen port */
     static DI_PARAM_PORT = 'httpPort';
@@ -88,7 +89,7 @@ export class HttpBundle extends Bundle {
 
         // Register middlewares
         this.middlewares.forEach((middle, i) => {
-            container.set( 'http.middleware_' + i + '_' + middle.name, { tags: [ HttpBundle.DI_TAG_MIDDLEWARE ], service: function middleFactory() { return middle; } });
+            container.set( 'http.middleware_' + i + '_' + (middle as any).name, { tags: [ HttpBundle.DI_TAG_MIDDLEWARE ], service: function middleFactory() { return middle; } });
         })
 
         // Default middlewares
@@ -197,7 +198,14 @@ export class HttpBundle extends Bundle {
 
             httpBundle.configureRoutesFromConfiguration(kernel, server, config?.web?.routes || {});
 
-            container.invoke(EventManager).emit(HttpBundle.EVENT_EXPRESS, server);
+            // Event handler
+            if ( events.listenerCount(HttpBundle.EVENT_ERROR) > 0 ) {
+                server.use(function builtInErrorHandler(err: Error, req: Request, res: Response, next: NextFn) {
+                    events.emit(HttpBundle.EVENT_ERROR, new HttpErrorEvent(err, req, res, next));
+                });
+            }
+
+            events.emit(HttpBundle.EVENT_EXPRESS, server);
 
             return server;
     

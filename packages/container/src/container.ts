@@ -455,7 +455,6 @@ export class Container implements IContainer {
     {
         let container = this;
         let _context: any;
-        let _cached: any[];
         let _deps: any[];
 
         if (!method) {
@@ -483,7 +482,7 @@ export class Container implements IContainer {
                     // This
                     _context,
                     // Parameters
-                    ( _cached ? _cached : _cached = await Promise.all(_deps.map(dep => container._invoke(dep, [], { async: true }))) ).concat(params)
+                    (await Promise.all(_deps.map(dep => container._invoke(dep, [], { async: true })))).concat(params)
                 );
             }
 

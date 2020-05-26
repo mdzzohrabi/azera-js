@@ -142,6 +142,17 @@ export class SchemaValidator {
             }
             return value;
         },
+        '*:after': (value: any, info: ResolverInfo) => {
+
+            let nodeSchema = this.findNode(info.nodePath);
+
+            if (nodeSchema && nodeSchema.afterResolve) {
+                return nodeSchema.afterResolve(value, info);
+            }
+
+            return value;
+
+        },
         afterResolve: (value: any, info: ResolverInfo) => {
             let nonVisitedNodes: ResolverSchema = info.nonVisitedNodes || {};
             Object.keys(nonVisitedNodes).forEach(nodePath => {
@@ -277,6 +288,7 @@ export interface ResolverSchemaField {
     description?: string
     required?: boolean
     validate?: (value: any, info: ResolverInfo) => any
+    afterResolve?: (value: any, info: ResolverInfo) => any
     type?: string
     nodePathTest?: RegExp
     default?: any

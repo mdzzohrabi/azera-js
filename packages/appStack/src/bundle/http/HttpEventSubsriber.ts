@@ -1,21 +1,36 @@
 import { IEventSubscriber } from '../../EventManager';
 import { getMeta } from '../../Metadata';
 import { Header, Template } from './Decorators';
-import { EVENT_HTTP_RESULT, HttpResultEvent } from './Events';
+import { EVENT_HTTP_RESULT, HttpResultEvent, EVENT_HTTP_ERROR, HttpErrorEvent } from './Events';
 
 export class HttpEventSubscriber implements IEventSubscriber {
     
     getSubscribedEvents() {
         return {
-            [EVENT_HTTP_RESULT]: [ this.headerAnnotation, this.templateAnnotation, this.jsonResponse ]
+            [EVENT_HTTP_RESULT]: [ this.headerAnnotation, this.templateAnnotation, this.returnedResponse ],
+            [EVENT_HTTP_ERROR]: this.errorHandler
         }
     }
 
-    jsonResponse(event: HttpResultEvent) {
+    errorHandler(event: HttpErrorEvent) {
+        if (event.request.headers['content-type']?.includes('application/json')) {
+            event.response.status(500).json({ error: event.error.message || 'Unexpected error' });
+        } else {
+            event.response.status(500).end(event.error.message || 'Unexpected error');
+        }
+    }
+
+    returnedResponse(event: HttpResultEvent) {
         if (event.defaultPrevented) return;
-        let { result, response: res } = event;
+        let { result, response: res, request: req } = event;
         if ( result !== undefined && result !== null && typeof result != 'function' ) {
-            if (typeof result == 'string') {
+            if (result instanceof Error) {
+                if (req.headers["content-type"]?.includes('application/json')) {
+                    res.status(500).json({ error: result?.message ?? "Something wrong" });
+                } else {
+                    res.status(500).end(result?.message ?? "Something wrong");
+                }
+            } else  if (typeof result == 'string') {
                 res.end(result);
             } else if (Buffer.isBuffer(result)) {
                 res.end(result);

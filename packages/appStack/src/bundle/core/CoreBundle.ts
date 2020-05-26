@@ -15,6 +15,8 @@ import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
 import { DiTagCommand } from './Command/DITagCommand';
 import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 import { WorkflowManager, Workflow } from '../../workflow';
+import { CacheCleanCommand } from './Command/CacheCleanCommand';
+import { DiParametersCommand } from './Command/DIParametersCommand';
 
 /**
  * Core bundle
@@ -53,7 +55,11 @@ export class CoreBundle extends Bundle {
         // Configuration parameters
         config.node('parameters', {
             description: 'Container parameters',
-            type: 'object'
+            type: 'object',
+            afterResolve(value, info) {
+                Object.assign(info.context, value);
+                return value;
+            }
         });
 
         config
@@ -202,7 +208,9 @@ export class CoreBundle extends Bundle {
         return [
             DumpProfilerCommand,
             ConfigSchemaCommand,
-            DiTagCommand ];
+            DiTagCommand,
+            DiParametersCommand,
+            CacheCleanCommand ];
     }
 
     @Inject() boot(container: Container) {

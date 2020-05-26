@@ -52,4 +52,16 @@ export class MemoryCacheProvider implements ICacheProvider {
         return this.cache[key];
     }
 
+    async delete(key: string): Promise<number> {
+        let re = new RegExp('^' + key.replace('*','.*') + '$');
+        let count = 0;
+        for (let key in this.cache) {
+            if (re.test(key)) {
+                count++;
+                delete this.cache[key];
+            }
+        }
+        return count;
+    }
+
 }

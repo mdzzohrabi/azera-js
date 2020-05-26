@@ -1,5 +1,5 @@
 import { Bundle } from '../../Bundle';
-import { Inject, Container } from '@azera/container';
+import { Inject, Container, ContainerAware } from '@azera/container';
 import { MessageTransport } from './transport/MessageTransport';
 import { MessageManager } from './MessageManager';
 import { ConfigSchema } from '../../ConfigSchema';
@@ -43,7 +43,12 @@ export class MessageBundle extends Bundle {
                     if (!transportProvider) {
                         throw Error(`Transport provider for protocol "${options.protocol}" not provided`);
                     }
-                    messageManager.transports.push(new (transportProvider as any)({ ...options, name }));
+                    let object = new (transportProvider as any)({ ...options, name });
+
+                    if ('container' in object) {
+                        object.container = container;
+                    }
+                    messageManager.transports.push(object);
                 });                
             })
         ;

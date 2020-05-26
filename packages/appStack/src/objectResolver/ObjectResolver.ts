@@ -2,7 +2,7 @@ import * as deepExtend from 'deep-extend';
 import { promises as fs } from 'fs';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
-import { runInNewContext } from 'vm';
+import { runInNewContext, createContext } from 'vm';
 import { asyncEach, getPackageDir } from '../Util';
 import { ResolverSchema, SchemaValidator } from './SchemaValidator';
 
@@ -48,6 +48,9 @@ export interface ResolverInfo {
      * @param path Path to resolve
      */
     resolvePath(path: string): string
+
+    /** Resolve evaluation context */
+    context: { [name: string]: any }
 }
 
 /**
@@ -80,6 +83,7 @@ export class ObjectResolver {
         // Default resolvers
         this.valueResolvers = {
             '*': [],
+            '*:after': [],
             'object': [
                 this.resolveObject.bind(this)
             ],
@@ -119,7 +123,9 @@ export class ObjectResolver {
         this._context.$ = info.result;
         this._context.env = process.env;
 
-        if (value.startsWith('=')) return runInNewContext( value.substr(1), this._context );
+        if (value.startsWith('=')) {
+            return runInNewContext( value.substr(1), this._context );
+        }
         else if (value.indexOf('%') >= 0) {
             value = value.replace(/%(.*)?%/, (t, expr) => {
                 return runInNewContext(expr, this._context);
@@ -261,7 +267,7 @@ export class ObjectResolver {
         let result = value;
 
         // Resolve info
-        info = info || { configFileStack: [], nodePath: [], result, skipChildren: false, resolvePath(_path: string) {
+        info = info || { configFileStack: [], nodePath: [], result, skipChildren: false, context: this._context, resolvePath(_path: string) {
             if ( this.configFileStack.length == 0 ) return path.resolve(_path);
             let lastConfPath = this.configFileStack[ this.configFileStack.length -1 ];
             return path.resolve( path.dirname(lastConfPath) , _path );
@@ -287,6 +293,10 @@ export class ObjectResolver {
                     result = await resolver(result, info!);
                 });
             }
+
+            await asyncEach( this.valueResolvers['*:after'], async resolver => {
+                result = await resolver(result, info!);
+            });
 
 
             // After resolve resolvers (Total result as node value)

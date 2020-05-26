@@ -1,5 +1,6 @@
 import { ICacheProvider, CacheProviderOptions, CacheProviderHit } from './ICacheProvider';
 import { promises as fs, exists } from 'fs';
+import * as path from 'path';
 
 /**
  * File-system cache provider
@@ -51,6 +52,21 @@ export class FileCacheProvider implements ICacheProvider {
             return hit;
         }
         return undefined;
+    }
+
+    async delete(key: string): Promise<number> {
+        let re = new RegExp('^' + key.replace('*','.*') + '$');
+        let count = 0;
+
+        let files = await fs.readdir(this.path);
+
+        for (let file of files) {
+            if (re.test(file)) {
+                await fs.unlink( path.resolve(this.path, file) );
+                count++;
+            }
+        }
+        return count;
     }
 
 }

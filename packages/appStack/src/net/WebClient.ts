@@ -7,6 +7,15 @@ export interface WebClientRequestOptions extends http.RequestOptions {
     body?: any
 }
 
+export interface WebClientGraphqlOptions extends WebClientRequestOptions {
+    body: {
+        operationName?: string,
+        query?: any,
+        mutation?: any,
+        variables?: any
+    }
+}
+
 /**
  * Web client
  * 
@@ -43,7 +52,12 @@ export class WebClient {
     request(url: string, options?: WebClientRequestOptions): Promise<http.IncomingMessage> {
         return new Promise((resolve, reject) => {
             options = { ...this.defaults, ...options };
-            let request = http.request(url, options || {}, resolve);
+            let request: http.ClientRequest;
+            if (url.startsWith('https:')) {
+                request = https.request(url, options || {}, resolve);
+            } else {
+                request = http.request(url, options || {}, resolve);
+            }
             request.on('error', reject);
             if (options?.body) {
                 let body = typeof options.body == 'string' ? options.body : JSON.stringify(options.body);
@@ -79,6 +93,18 @@ export class WebClient {
         options.headers['Content-Type'] = 'application/json';
         let buffer = await this.requestBuffer(url, options);
         return JSON.parse(buffer.toString('utf8'));
+    }
+
+    /**
+     * Make an graphql request and returns data
+     * @param url End-point url
+     * @param options Request options
+     */
+    async requestGraphQl<T = any>(url: string, options?: WebClientGraphqlOptions): Promise<T> {
+        options = options || {
+            body: {}
+        };
+        return this.requestJson<{ data: T }>(url, { method: 'POST' , ...options }).then(response => response.data);
     }
 
 }

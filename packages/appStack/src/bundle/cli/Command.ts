@@ -1,6 +1,6 @@
-import { Command as CommandInfo } from 'commander';
+import * as commander from 'commander';
 
-export { CommandInfo };
+export interface CommandInfo extends commander.Command {}
 
 /**
  * Abstract command-line command
