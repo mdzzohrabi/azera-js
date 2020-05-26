@@ -2,7 +2,7 @@
     "name": "@azera/container",
     "description": "Javascript dependecy injection container",
     "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
-    "version": "2.0.17",
+    "version": "2.0.18",
     "main": "build/index.js",
     "types": "build/index.d.ts",
     "directories": {
@@ -23,7 +23,7 @@
         "*.MD"
     ],
     "dependencies": {
-        "@azera/reflect": "^1.0.6",
+        "@azera/reflect": "^1.0.7",
         "@azera/util": "^1.0.17",
         "reflect-metadata": "^0.1.13",
         "tslib": "^1.10.0"
