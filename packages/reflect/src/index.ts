@@ -4,14 +4,14 @@ export const CLASS_REGEX = /class\b/;
 
 const NO_NAME_CLASS_REGEX = /class\W*\{/;
 const NO_NAME_FUNC_REGEX = /function\W*\(/;
-const CLASS_PARAM_REGEX = /constructor\s*\(\s*((\w+)\s*\,\s*)+\s*\)/;
+// const CLASS_PARAM_REGEX = /constructor\s*\(\s*((\w+)\s*\,\s*)+\s*\)/;
 const PARAM_OFFSET_REGEX = /\(/;
 const CLASS_PARAM_OFFSET_REGEX = /constructor\s*\(/;
 const PARAM_SEPARATOR = /\s*\,\s*/;
 const ASYNC_FUNC_REGEX = /^(async\s+)?function/;
 const METHOD_FUNC_REGEX = /^[a-zA-Z_][0-9a-zA-Z_]*\(/;
 const OBJECT_DESTRUCTOR_REGEX = /\{.*?\}/;
-const COMMENT_REGEX = /\/\*([\W\w]*?)\*\//g;
+const COMMENT_REGEX = /\/\*([\W\w]*?)\*\/|[\/]{2}.*\r?\n/g;
 
 export interface IClass {
     new (...params: any[]): any;

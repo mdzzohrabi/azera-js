@@ -10,7 +10,8 @@
         "skipLibCheck": true,
         "importHelpers": true,
         "strictFunctionTypes": false,
-        "inlineSourceMap": true
+        "inlineSourceMap": true,
+        "noImplicitAny": true
     },
     "include": ["src"],
     "exclude": ["node_modules"]

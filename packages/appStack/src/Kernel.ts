@@ -76,16 +76,20 @@ export class Kernel {
             return new ConfigResolver().context({ kernel }).resolver( container.invoke(ConfigSchema)!.resolver );
         });
 
+        // Prepend CoreBundle
         this.bundles = ([ new CoreBundle ] as Bundle[]).concat( this.bundles );
+
+        // Set alias for bundles in container
         this.bundles.forEach(bundle => {
             this.container.add(bundle.constructor); 
             this.container.setAlias(bundle.constructor, bundle);
         });
 
+        // Set bundles names as container parameter
         container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
             (bundle.constructor as any).bundleName || bundle.constructor.name ));
 
-            // Initialize bundles
+        // Initialize bundles
         container.invoke(this.bundles[0], 'init');
         this.bundles.slice(1).forEach(bundle => {
             container.invoke(Logger).debug(`Initialize ${bundle.bundleName}`);

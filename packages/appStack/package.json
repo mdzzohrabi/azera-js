@@ -13,10 +13,12 @@
 	],
 	"scripts": {
 		"bundle": "parcel src/index.ts --out-dir=./bundle --target=node --bundle-node-modules",
-		"test": "mocha -r ts-node/register tests/*.spec.ts"
+		"test": "sh ./scripts/test.sh",
+		"test:watch": "sh ./scripts/test-watch.sh",
+		"test-all": "mocha -r ts-node/register tests/*.spec.ts"
 	},
 	"dependencies": {
-		"@azera/container": "^2.0.17",
+		"@azera/container": "^2.0.18",
 		"@azera/reflect": "^1.0.6",
 		"@azera/util": "^1.0.17",
 		"@types/amqplib": "^0.5.13",
@@ -55,10 +57,15 @@
 		"winston": "^3.2.1"
 	},
 	"devDependencies": {
+		"@babel/preset-typescript": "^7.9.0",
 		"@types/mocha": "^7.0.2",
 		"mocha": "^7.2.0",
 		"node-watch": "^0.6.4",
 		"parcel-bundler": "^1.12.4",
 		"ts-node": "^8.10.1"
+	},
+	"jest": {
+		"testRegex": ".*\\.test\\.ts$",
+		"preset": "typescript"
 	}
 }

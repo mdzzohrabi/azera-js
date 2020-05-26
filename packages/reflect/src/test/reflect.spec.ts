@@ -116,6 +116,18 @@ describe('getParameters()', () => {
             ['param1', 'param2']
         );
 
+        deepEqual(
+            getParameters(class {
+                constructor(
+                    /** parameter 1 */ param1: any,
+                    // Parameter 2
+                    param2: any,        // ASD
+                    param3: number
+                ) { }
+            }),
+            ['param1', 'param2', 'param3']
+        );
+
     })
 
     it('should resolve parameters with default values', () => {
