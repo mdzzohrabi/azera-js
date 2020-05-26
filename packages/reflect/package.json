@@ -3,13 +3,13 @@
     "description": "Reflection util",
     "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
     "license": "MIT",
-    "version": "1.0.6",
+    "version": "1.0.7",
     "main": "index.js",
     "scripts": {
         "clean": "rm -f *.d.ts *.js *.map && rm -rf test",
         "build": "tsc",
         "test": "mocha test/*.spec.js",
-        "ts:test": "mocha -r ts-node/register src/test/*.ts",
+        "ts:test": "mocha -r ts-node/register src/test/*.ts --watch --watch-files src/**/*.ts",
         "git:commit": "git add * & git commit -m",
         "git:push": "git push origin master"
     },
@@ -18,18 +18,15 @@
         "index.d.ts"
     ],
     "dependencies": {
-        "@azera/ts": "^1.0.0",
-        "@azera/util": "^1.0.12",
-        "apollo-server": "^2.9.7",
-        "tslib": "^1.9.3",
-        "typescript": "^3.6.3"
+        "@azera/util": "^1.0.17",
+        "tslib": "^2.0.0"
     },
     "devDependencies": {
-        "@types/mocha": "^5.2.7",
+        "@azera/ts": "^1.0.3",
+        "@types/mocha": "^7.0.2",
         "@types/node": "^9.3.0",
-        "mocha": "^6.2.0",
-        "node-watch": "^0.6.3",
-        "ts-node": "^8.1.0",
-        "typescript": "^3.5.3"
+        "mocha": "^7.2.0",
+        "ts-node": "^8.10.1",
+        "typescript": "^3.9.3"
     }
 }
