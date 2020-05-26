@@ -1,6 +1,6 @@
 {
   "name": "@azera/ts",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "Azera TypeScript Project Config",
   "main": "index.js",
   "scripts": {},
@@ -10,13 +10,7 @@
   "author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
   "license": "ISC",
   "devDependencies": {
-    "@types/mocha": "^5.2.7",
-    "mocha": "^6.2.0",
-    "node-watch": "^0.6.3",
-    "ts-node": "^8.4.1"
-  },
-  "dependencies": {
-    "apollo-server": "^2.9.7",
-    "typescript": "^3.6.3"
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
   }
 }
