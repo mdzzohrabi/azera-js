@@ -1,7 +1,7 @@
-import { Service, Container } from '@azera/container';
-import { HttpBundle } from './HttpBundle';
-import { RoutesCollection, HttpMethods, Route } from './Route';
+import { Service } from '@azera/container';
 import { Constructor } from '@azera/util';
+import { HttpBundle } from './HttpBundle';
+import { HttpMethods, Route, RoutesCollection } from './Route';
 
 export interface ControllerOptions {
     children?: Function[]
@@ -57,8 +57,6 @@ export function Controller(routePrefix?: string, options?: ControllerOptions) {
                 Route(route.path, route.method.toLowerCase() as any)(controller.prototype, route.methodName, {});
             })
         ;
-
-        // console.log(controller, controller.prototype);
 
     }
 }

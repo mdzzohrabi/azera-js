@@ -351,7 +351,7 @@ export class Kernel {
     /**
      * Search for bundle instance
      * ```
-     * getBundle(CoreBundle); // return CoreBundle instance
+     * getBundle(CoreBundle); // return `CoreBundle` instance
      * ```
      * @param bundle Bundle
      */
@@ -370,12 +370,22 @@ export class Kernel {
         return this.getBundle(bundle) !== undefined;
     }
 
-
+    /**
+     * Enable source map in errors
+     */
     static enableSourceMap() {
         enableSourceMap();
         return this;
     }
 
+    /**
+     * Create a full-stack kernel.
+     * 
+     * Create new Kernel instance with all internal bundles (`Core`, `Cli`, `TypeORM`, `Twig`, `Http`, `etc`).
+     * 
+     * @param bundles Bundles
+     * @param env Environment
+     */
     static async createFullStack(bundles?: Bundle[], env?: string): Promise<Kernel> {
         let { HttpBundle } = await import('./bundle/http');
         let { CliBundle } = await import('./bundle/cli');

@@ -70,6 +70,7 @@ export class HttpBundle extends Bundle {
             .node('web', { description: 'Web server configuration', type: 'object' })
             .node('web.forks', { description: 'Number of application forks', type: 'number', default: 1 })
             .node('web.port', { description: 'Web server port', type: 'number' })
+            .node('web.host', { description: 'Web server hostname', type: 'string' })
             .node('web.routes', { description: 'Route collection', type: 'object' })
             .node('web.routes.*', {
                 description: 'Route item',
@@ -319,7 +320,7 @@ export class HttpBundle extends Bundle {
         if (!action || action == 'web') {
 
             let logger = await container.invokeAsync(Logger);
-            let { port: httpPort, forks } = container.getParameter('config', {}).web ?? {};
+            let { port: httpPort, forks, host } = container.getParameter('config', {}).web ?? {};
 
             httpPort = Number(httpPort) || 9090;
             forks = Number(forks) || 1;
@@ -339,9 +340,9 @@ export class HttpBundle extends Bundle {
 
 
             return container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
-                server.listen(httpPort, function serverStarted() {
+                server.listen(httpPort, host, function serverStarted() {
                     container.invoke(EventManager).emit(HttpBundle.EVENT_LISTEN, httpPort);
-                    logger.info(`Server started on port ${ httpPort }`);
+                    logger.info(`Server started on ${ host ? host + ':' : '' }${ httpPort }`);
                 })
             });
         }

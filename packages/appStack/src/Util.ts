@@ -88,9 +88,11 @@ export function getProperty(obj: any, path: string) {
 export function invariant(condition: any, format: string, ...params: any[]) {
 
     if (!condition) {
+        let lastIndex = params.length - 1;
+        let ErrorClass = typeof params[lastIndex] == 'function' ? params[lastIndex] : Error;
         let argIndex = 0;
         let message = format.replace(/%s/g, () => params[argIndex++]);
-        let error = new Error(message);
+        let error = new ErrorClass(message);
         error.name = `Invariant violation`;
         throw error;
     }

@@ -1,5 +1,6 @@
+import { Container, Inject } from '@azera/container';
+import { Invokable } from '@azera/container/build/types';
 import { Bundle } from './Bundle';
-import { Inject, Container, IInjectable } from '@azera/container';
 import { Kernel } from './Kernel';
 
 export interface MicroKernelOptions {
@@ -10,7 +11,7 @@ export interface MicroKernelOptions {
     /** Bundles */
     bundles?: Bundle[]
     /** Kernel initialize */
-    init?: Function
+    init?: Invokable<any>
 }
 
 /**
@@ -18,7 +19,7 @@ export interface MicroKernelOptions {
  * @param runHandler Kernel run
  * @param options Kernel options
  */
-export function createMicroKernel(runHandler: IInjectable, options: MicroKernelOptions = {}) {
+export function createMicroKernel(runHandler: Invokable<any>, options: MicroKernelOptions = {}) {
 
     // Default options
     options = {
@@ -44,4 +45,14 @@ export function createMicroKernel(runHandler: IInjectable, options: MicroKernelO
 
     return kernel;
 
+}
+
+/**
+ * Create a simple cli application kernel
+ * @param runHandler Run
+ * @param options Options
+ */
+export async function createCliKernel(runHandler: Invokable<any>, options: MicroKernelOptions = {}) {
+    options.bundles = [ new (await import('./bundle/cli')).CliBundle, ...(options.bundles || []) ];
+    return createMicroKernel(runHandler, options);
 }

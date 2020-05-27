@@ -2,33 +2,33 @@ import * as net from 'net';
 import * as url from 'url';
 
 export function wrapCreateConnectionWithProxy(proxy: string, func: Function) {
-    return function (this: any, ...params: any[]) {
+    return function wrappedByProxy(this: any, ...params: any[]) {
         let mainCreateConnection = net.createConnection;
         let {hostname: host, port} = url.parse(proxy);
         
         // @ts-ignore
         net.createConnection = function createConnectionThroughProxy(options: { family: number, host: string, port: number }) {
             let queue: any[] = [];
-            let event: any[] = [];
+            let onEvents: any[] = [];
             let established = false;
+            
             let connection = mainCreateConnection({ host, port: Number(port), family: 0 }, () => {
-                mainWrite.call(connection, `CONNECT ${options.host}:${options.port} HTTP/1.1\n\n`);
                 mainOn.call(connection, 'data', (buffer: Buffer) => {
                     if ( buffer.toString().includes('Connection established') ) {
                         established = true;
-                        event.forEach(e => mainOn.apply(connection, e));
+                        onEvents.forEach(e => mainOn.apply(connection, e));
                         connection.emit('connect');
                         // @ts-ignore
                         // queue.forEach(buffer => connection.write(...buffer));
                     }
-                    
                 });
+                mainWrite.call(connection, `CONNECT ${options.host}:${options.port} HTTP/1.1\n\n`);
             });
             let mainOn = connection.on;
             // @ts-ignore
             connection.on = function on (...params: any[]) {
                 if (!established) {
-                    event.push(params);
+                    onEvents.push(params);
                     return;
                 }
                 return mainOn.apply(this, params);

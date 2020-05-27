@@ -8,7 +8,7 @@ export class HtmlParser {
     /**
      * Parsed HTML Nodes in tree structure
      */
-    children: HTMLElement[] = [];
+    children: Node[] = [];
 
     /**
      * Parser cursor
@@ -70,7 +70,7 @@ export class HtmlParser {
         this.length = content.length;
         this.cursor = 0;
         this.children = [];
-        let node: HTMLElement;
+        let node: Node;
         while (!this.end()) {
             if ( (node = this.parseTag()) !== undefined) {
                 this.children.push(node);
@@ -197,12 +197,12 @@ export class HtmlParser {
      * used for debug and errors.
      * @param node HTML Node
      */
-    getNodeStack(node?: HTMLElement): string {
+    getNodeStack(node: Node | null = null): string {
         let parents = [];
-        let p: HTMLElement | undefined = node;
+        let p: Node | null = node;
         while (p) {
             let index = p.parent?.children?.indexOf(p) ?? -1;
-            parents.push(p.tagName + ( p.attrs.class ? '.' + p.attrs.class.split(' ').join('.') : '' ) + (index > 0 ? `:nth(${ index })` : '') );
+            parents.push(p.nodeName + ( p instanceof HTMLElement ? (p.attrs.class ? '.' + p.attrs.class.split(' ').join('.') : '') : '' ) + (index > 0 ? `:nth(${ index })` : '') );
             p = p.parent;
         }
         return parents.reverse().join(' > ');
@@ -441,12 +441,11 @@ function parseSelector(selector: string): CSSSelector[] {
  * @param selector CSS Selector
  * @param node Search in specific HTMLNode
  */
-export function querySelectorAll(selector: string | CSSSelector[], node?: Node, first?: boolean): (Node & HTMLElement)[]
-export function querySelectorAll(selector: string | CSSSelector[], nodes?: Node[], first?: boolean): (Node & HTMLElement)[]
+export function querySelectorAll(selector: string | CSSSelector[], nodes?: Node | Node[], first?: boolean): (Node & HTMLElement)[]
 export function querySelectorAll(this: Node, selector: string | CSSSelector[], nodes?: Node | Node[], first: boolean = false, _level = 0)
 {
     let children: (Node | HTMLElement)[];
-    let scope: Node;
+    let scope: Node | null;
     
     if (Array.isArray(nodes)) {
         scope = nodes[0]?.parentNode;
@@ -467,7 +466,7 @@ export function querySelectorAll(this: Node, selector: string | CSSSelector[], n
         selector = parseSelector(selector);
     }
 
-    if (selector[0]?.name == ':scope') children = [scope];
+    if (selector[0]?.name == ':scope') children = scope ? [scope] : [];
 
     // No Children
     if (!children || !selector || children.length == 0) return result;
@@ -618,13 +617,13 @@ export class Events {
         if (!this._events[event]) this._events[event] = [];
         this._events[event].push(handler);
     }
-
+    
     public removeEventListener(event: string, handler: Function) {
         if (!this._events[event]) return;
         let index = this._events[event].indexOf(handler);
         this._events[event].splice(index, 1);
     }
-
+    
     public dispatchEvent(event: Event) {
         if (!this._events[event.type]) return;
         for (let handler of this._events[event.type]) {
@@ -636,7 +635,7 @@ export class Events {
 
 
 export abstract class Node extends Events {
-
+    
     static ELEMENT_NODE	= 1 //	An Element node like <p> or <div>.
     static TEXT_NODE	= 3	// The actual Text inside an Element or Attr.
     static CDATA_SECTION_NODE	= 4	// A CDATASection, such as <!CDATA[[ … ]]>.
@@ -645,9 +644,10 @@ export abstract class Node extends Events {
     static DOCUMENT_NODE	= 9	 // A Document node.
     static DOCUMENT_TYPE_NODE	= 10 // 	A DocumentType node, such as <!DOCTYPE html>.
     static DOCUMENT_FRAGMENT_NODE	= 11 // 	A DocumentFragment node.
-
+    
     public children: Node[] = [];
-
+    public parent: Node | null = null;
+    
     private _ownerDocument: any;
 
     get ownerDocument() {
@@ -660,8 +660,8 @@ export abstract class Node extends Events {
     }
 
     abstract get nodeName(): string
-    abstract get parentNode(): Node
-    abstract get parentElement(): Node
+    abstract get parentNode(): Node | null
+    abstract get parentElement(): Node | null
 
     abstract nodeType: number;
     
@@ -674,6 +674,7 @@ export abstract class Node extends Events {
     }
 
     public appendChild(child: Node): Node {
+        // @ts-ignore
         child['parent'] = this;
         this.children.push(child);
         return child;
@@ -704,7 +705,9 @@ export abstract class Node extends Events {
         let [parent, index] = this.findChildIndex(oldChild) || [];
         if (!parent || index == null) return false;
         parent.children[index] = newChild;
+        // @ts-ignore
         newChild['parent'] = parent;
+        // @ts-ignore
         oldChild['parent'] = undefined;
         return newChild;
     }
@@ -720,11 +723,12 @@ export abstract class Node extends Events {
     public insertBefore(child: Node, target: Node): Node {
         let index = this.children.indexOf(target);
         this.children = [ ...this.children.slice(0, index) , child , ...this.children.slice(index) ];
+        // @ts-ignore
         child['parent'] = this;
         return child;
     }
     
-    public querySelectorAll(selector: string): HTMLElement[] {
+    public querySelectorAll(this: Node, selector: string): HTMLElement[] {
         return querySelectorAll.call(this, selector, this);
     }
     
@@ -743,15 +747,21 @@ export abstract class Node extends Events {
     get childNodes() {
         return this.children;
     }
-    
-    public get nextSibling(): Node {
-        let index = this.parentNode.children.indexOf(this);
-        return this.parentNode.children[index + 1];
+   
+    get textContent(): string {
+        return (this instanceof HTMLElement ? this.content : '') + this.children.map(child => child.textContent).join('');
     }
-
-    public get previousSibling(): Node {
-        let index = this.parentNode.children.indexOf(this);
-        return this.parentNode.children[index - 1];
+    
+    public get nextSibling(): Node | null {
+        let index = this.parentNode?.children.indexOf(this);
+        if (!index) return null;
+        return this.parentNode?.children[index + 1] ?? null;
+    }
+    
+    public get previousSibling(): Node | null {
+        let index = this.parentNode?.children.indexOf(this);
+        if (!index) return null;
+        return this.parentNode?.children[index - 1] ?? null;
     }
     
 }
@@ -765,9 +775,9 @@ export class HTMLElement extends Node {
     constructor(
         public tagName: string,
         public attrs: HTMLAttributes = {},
-        public children: HTMLElement[] = [],
+        public children: Node[] = [],
         public content: string | undefined = undefined,
-        public parent?: HTMLElement,
+        public parent: Node | null = null,
         public nodeType: number = Node.ELEMENT_NODE
     ) { super() }
 
@@ -805,7 +815,7 @@ export class HTMLElement extends Node {
     }
 
     get innerText(): string {
-        return this.content + this.children.map(child => child.tagName == 'script' || child.tagName == 'style' ? '' : child.textContent).join('');
+        return this.content + this.children.map(child => child.nodeName == 'script' || child.nodeName == 'style' ? '' : child.textContent).join('');
     }
 
     get isConnected() {
@@ -854,37 +864,56 @@ export class HTMLElement extends Node {
         }
     }
 
-    public toString() {
-
+    public toString(): string {
         if (this.nodeName == '#comment') return `<!--${this.content}-->`;
-        
         return `<${this.tagName}${ this.attrs ? ' ' + Object.keys(this.attrs).map(key => `${key}="${this.attrs[key]}"`).join(' ') : '' }>${this.content ?? ''}${this.children.map(child => child.toString())}</${this.tagName}>`;
     }
 }
 
+export class HTMLDivElement extends HTMLElement {}
+export class HTMLIFrameElement extends HTMLElement {}
+export class HTMLAnchorElement extends HTMLElement {}
+export class HTMLAreaElement extends HTMLElement {}
+export class HTMLButtonElement extends HTMLElement {}
+export class HTMLBodyElement extends HTMLElement {}
+export class HTMLFormElement extends HTMLElement {}
+export class HTMLInputElement extends HTMLElement {}
+export class HTMLImageElement extends HTMLElement {}
+export class HTMLHtmlElement extends HTMLElement {}
+export class HTMLTileElement extends HTMLElement {}
+export class HTMLStyleElement extends HTMLElement {}
+export class HTMLLinkElement extends HTMLElement {}
+export class HTMSpanElement extends HTMLElement {}
+export class HTMLParagraphElement extends HTMLElement {}
+export class HTMLTableElement extends HTMLElement {}
+export class HTMLTableRowElement extends HTMLElement {}
+export class HTMLTableCellElement extends HTMLElement {}
+export class HTMLLabelElement extends HTMLElement {}
+export class HTMLSelectElement extends HTMLElement {}
+export class HTMLTextAreaElement extends HTMLElement {}
 
 export let HtmlElements = {
-    div: class HTMLDivElement extends HTMLElement {},
-    iframe: class HTMLIFrameElement extends HTMLElement {},
-    a: class HTMLAnchorElement extends HTMLElement {},
-    area: class HTMLAreaElement extends HTMLElement {},
-    button: class HTMLButtonElement extends HTMLElement {},
-    body: class HTMLBodyElement extends HTMLElement {},
-    form: class HTMLFormElement extends HTMLElement {},
-    input: class HTMLInputElement extends HTMLElement {},
-    image: class HTMLImageElement extends HTMLElement {},
-    html: class HTMLHtmlElement extends HTMLElement {},
-    title: class HTMLTileElement extends HTMLElement {},
-    style: class HTMLStyleElement extends HTMLElement {},
-    link: class HTMLLinkElement extends HTMLElement {},
-    span: class HTMSpanElement extends HTMLElement {},
-    p: class HTMLParagraphElement extends HTMLElement {},
-    table: class HTMLTableElement extends HTMLElement {},
-    tr: class HTMLTableRowElement extends HTMLElement {},
-    td: class HTMLTableCellElement extends HTMLElement {},
-    label: class HTMLLabelElement extends HTMLElement {},
-    select: class HTMLSelectElement extends HTMLElement {},
-    textarea: class HTMLTextAreaElement extends HTMLElement {}
+    div: HTMLDivElement,
+    iframe: HTMLIFrameElement,
+    a: HTMLAnchorElement,
+    area: HTMLAreaElement,
+    button: HTMLButtonElement,
+    body: HTMLBodyElement,
+    form: HTMLFormElement,
+    input: HTMLInputElement,
+    image: HTMLImageElement,
+    html: HTMLHtmlElement,
+    title: HTMLTileElement,
+    style: HTMLStyleElement,
+    link: HTMLLinkElement,
+    span: HTMSpanElement,
+    p: HTMLParagraphElement,
+    table: HTMLTableElement,
+    tr: HTMLTableRowElement,
+    td: HTMLTableCellElement,
+    label: HTMLLabelElement,
+    select: HTMLSelectElement,
+    textarea: HTMLTextAreaElement 
 }
 
 export interface CSSSelector {
@@ -897,18 +926,18 @@ export interface CSSSelector {
 }
 
 export function Cache(): MethodDecorator {
-    return function cacheDecorator(target, prop, descr) {
+    return function cacheDecorator(target: any, prop: string, descr) {
         let cachedPropName = '_' + String(prop);
         if (descr.get) {
             let baseGetter = descr.get;
-            descr.get = function cachedGetter() {
+            descr.get = function cachedGetter(this: any) {
                 if (this[cachedPropName]) return this[cachedPropName];
                 return this[cachedPropName] = baseGetter.apply(this);
             } as any;
 
         } else {
             let baseMethod = target[prop] as Function;
-            descr.value = function cachedMethod(...props) {
+            descr.value = function cachedMethod(this: any, ...props: any[]) {
                 if (this[cachedPropName]) return this[cachedPropName];
                 return this[cachedPropName] = baseMethod.apply(this, props);
             } as any;

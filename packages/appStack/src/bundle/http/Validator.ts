@@ -12,8 +12,8 @@ export function Check(name: string, config?: (config: check.ValidationChain) => 
     }
 }
 
-export function ErrorOnInvalidate() {
-    return function errorOnInvalidate(target: any, methodName: string) {
+export function ErrorOnInvalidate(): MethodDecorator & ClassDecorator {
+    return function errorOnInvalidate(target: any, methodName?: any) {
         let decoratedHeaders = getMeta('http:header', target, methodName);
         Middleware([
             function errorOnInvalidate(req: Request, res: Response, next: Function) {

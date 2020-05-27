@@ -24,14 +24,16 @@ export interface WebClientGraphqlOptions extends WebClientRequestOptions {
 export class WebClient {
 
     defaults: WebClientRequestOptions = {};
+    proxyAddress?: string;
 
     /**
      * Set proxy for web client requests
      * @param proxyAddress Proxy server address
      */
     setProxy(proxyAddress?: string) {
+        this.proxyAddress = proxyAddress;
         if (proxyAddress)
-            this.defaults.agent = new ProxyAgent(proxyAddress);
+            this.defaults.agent = this.createProxyAgent(proxyAddress) as any;
         else
         this.defaults.agent = http.globalAgent;
     }
@@ -54,8 +56,10 @@ export class WebClient {
             options = { ...this.defaults, ...options };
             let request: http.ClientRequest;
             if (url.startsWith('https:')) {
+                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, true);
                 request = https.request(url, options || {}, resolve);
             } else {
+                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, false);
                 request = http.request(url, options || {}, resolve);
             }
             request.on('error', reject);
@@ -77,7 +81,9 @@ export class WebClient {
             this.request(url, options).then(res => {
                 let chunks: Buffer[] = [];
                 res.on('data', chunk => chunks.push(chunk));
-                res.on('end', () => resolve(Buffer.concat(chunks)));
+                res.on('end', () => {
+                    resolve(Buffer.concat(chunks));
+                });
             }).catch(reject);
         });
     }
@@ -92,6 +98,7 @@ export class WebClient {
         if (!options.headers) options.headers = {};
         options.headers['Content-Type'] = 'application/json';
         let buffer = await this.requestBuffer(url, options);
+        
         return JSON.parse(buffer.toString('utf8'));
     }
 

@@ -5,6 +5,7 @@ import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { Profiler } from '../../Profiler';
+import { wrapCreateConnectionWithProxy } from '../../net';
 
 export class TypeORMBundle extends Bundle {
 
@@ -44,6 +45,11 @@ export class TypeORMBundle extends Bundle {
     connectionManagerFactory($config: any, serviceContainer: Container) {
         let profiler = serviceContainer.invoke(Profiler);
         let proxy = $config?.typeOrm?.proxy;
+
+        if (proxy) {
+            let mongo = require('mongodb');
+            mongo.MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, mongo.MongoClient.prototype.connect);
+        }
         
         let manager = new ConnectionManager;
         let connections = $config?.typeOrm?.connections ?? {};

@@ -13,7 +13,7 @@ import { TransitionEvent } from './TransitionEvent';
 export class WorkflowManager {
 
     constructor(
-        @Inject() public eventManager: EventManager,
+        @Inject() public eventManager?: EventManager,
         @Inject() public workflows: Workflow[] = []
     ) {}
 
@@ -40,27 +40,25 @@ export class WorkflowManager {
     public apply(target: any, workflowName: string, transition: string) {
         let workflow = this.get(workflowName, target);
         let { transitions, property } = workflow!;
-        invariant(transitions[transition], 'Transition "%s" not found in workflow "%s"', transition, workflowName);
+        invariant(transitions[transition], 'Transition "%s" not found in workflow "%s"', transition, workflowName, TransitionError);
         let { from, to, metadata } = transitions[transition];
         let currentState = target[property];
-        if (typeof from == 'string' ? from == currentState : from.includes(currentState)) {
-            this.eventManager.emit(`workflow.transition`, new TransitionEvent(target, currentState, to, metadata));
-            this.eventManager.emit(`workflow.${workflowName}.${transition}`, new TransitionEvent(target, currentState, to, metadata));
+        if (workflow.can(target, transition)) {
+            this.eventManager?.emit(`workflow.transition`, new TransitionEvent(target, currentState, to, metadata));
+            this.eventManager?.emit(`workflow.${workflowName}.${transition}`, new TransitionEvent(target, currentState, to, metadata));
+            if ('applyTransition' in target) {
+                target.applyTransition(workflow, currentState, to);
+            }
             target[property] = to;
-            this.eventManager.emit(`workflow.${workflowName}.${transition}.after`, new TransitionEvent(target, currentState, to, metadata));
-            this.eventManager.emit(`workflow.transition.after`, new TransitionEvent(target, currentState, to, metadata));
+            this.eventManager?.emit(`workflow.${workflowName}.${transition}.after`, new TransitionEvent(target, currentState, to, metadata));
+            this.eventManager?.emit(`workflow.transition.after`, new TransitionEvent(target, currentState, to, metadata));
         } else {
             throw new TransitionError(`Cannot apply transition "${transition}" from "${currentState}", allowed source states: ${Array.isArray(from) ? from.join(', '): from}`);
         }
     }
 
     public can(target: any, workflowName: string, transition: string) {
-        let workflow = this.get(workflowName, target);
-        let { transitions, property } = workflow;
-        invariant(transitions[transition], 'Transition "%s" not found in workflow "%s"', transition, workflowName);
-        let { from, to } = transitions[transition];
-        let currentState = target[property];
-        return typeof from == 'string' ? from == currentState : from.includes(currentState);
+        return this.get(workflowName, target).can(target, transition);
     }
 
     public allowedTransitions(target: any, workflowName: string) {

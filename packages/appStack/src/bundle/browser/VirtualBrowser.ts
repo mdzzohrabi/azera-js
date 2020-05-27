@@ -111,7 +111,7 @@ export namespace VirtualBrowser {
         constructor(
             public matches: boolean,
             public media: string,
-            public onchange: Function
+            public onchange?: Function
         ) {}
 
         public addListener(listener: Function) {}
@@ -153,20 +153,25 @@ export namespace VirtualBrowser {
 
         public statusText?: string;
 
-        public headers = {};
+        public headers: { [name: string]: string } = {};
 
         public timeout?: number;
 
         private _request?: http.ClientRequest;
 
         public open(method: string, url: string, async: boolean = true, user?: string, password?: string) {
+            // @ts-ignore
             if (!globalThis[XMLHttpRequest.OPEN_CONNECTIONS_VAR]) {
+                // @ts-ignore
                 globalThis[XMLHttpRequest.OPEN_CONNECTIONS_VAR] = 0;
             }
+            // @ts-ignore
             globalThis[XMLHttpRequest.OPEN_CONNECTIONS_VAR]++;
             this.addEventListener('loadend', () => {
+                // @ts-ignore
                 globalThis[XMLHttpRequest.OPEN_CONNECTIONS_VAR]--;
                 setTimeout(() => {
+                    // @ts-ignore
                     if (globalThis[XMLHttpRequest.OPEN_CONNECTIONS_VAR]==0 && globalThis['dispatchEvent']) {
                         globalThis['dispatchEvent'](new Event('XHRComplete') as any);
                     }    
@@ -185,7 +190,7 @@ export namespace VirtualBrowser {
                     this.dispatchEvent(new CustomEvent('progress', buffer));
                 });
                 res.on('end', () => {
-                    this.headers = res.rawHeaders;
+                    this.headers = res.rawHeaders as any;
                     this.status = res.statusCode;
                     this.statusText = res.statusMessage;
                     this.response = Buffer.concat(content);
@@ -212,16 +217,16 @@ export namespace VirtualBrowser {
         
         public setRequestHeader(key: string, value: string) {
             assert(this._request, 'XMLHttpRequest not opened yet, please call open() first');
-            this._request.setHeader(key, value);
+            this._request?.setHeader(key, value);
         }
         
         public send(data?: any) {
             assert(this._request, 'XMLHttpRequest not opened yet, please call open() first');
             if (data) {
                 if (typeof data == 'object' && !Buffer.isBuffer(data)) data = JSON.stringify(data);
-                this._request.write(data);
+                this._request?.write(data);
             }
-            this._request.end();
+            this._request?.end();
             this._readyState = XMLHttpRequest.LOADING;
             this.onreadystatechange && this.onreadystatechange();
             this.dispatchEvent(new Event('loadstart'));
@@ -305,13 +310,14 @@ export namespace VirtualBrowser {
 
         public XMLHttpRequest = XMLHttpRequest;
 
-        constructor(nodes: HTMLElement[], options: WindowOptions = {}) {
+        constructor(nodes: Node[], options: WindowOptions = {}) {
             super();
 
             let { url, loadScripts = true } = options;
 
             // Elements
             Object.values(HtmlElements).forEach(elementType => {
+                // @ts-ignore
                 this[elementType.name] = elementType;
             });
 
@@ -366,7 +372,7 @@ export namespace VirtualBrowser {
 
         public onload() {}
 
-        public addEventListener = (event: string, listener) => {
+        public addEventListener = (event: string, listener: Function) => {
             return super.addEventListener(event, listener);
         }
 
@@ -374,17 +380,17 @@ export namespace VirtualBrowser {
 
         public matchMedia = (query: string): MediaQueryList => {
             let isOk = true;
-            let result: RegExpExecArray;
+            let result: RegExpExecArray | null;
             let lastLogic = 'and';
             this.MEDIA_QUERY_REGEX.lastIndex = 0;
             let overflow = 0;
             while (result = this.MEDIA_QUERY_REGEX.exec(query)) {
                 if (overflow++ > 30) throw Error('Media query match overflow');
-                let { space, logic, type, feature, value, comma, invalid } = result.groups;
+                let { space, logic, type, feature, value, comma, invalid } = result.groups ?? {};
                 if (space) continue;
 
                 if (invalid) {
-                    return new MediaQueryList(false, 'not all', null);
+                    return new MediaQueryList(false, 'not all', undefined);
                 }
 
                 if (logic) {
@@ -412,7 +418,7 @@ export namespace VirtualBrowser {
                 }
 
             }
-            return new MediaQueryList(isOk, query, null);
+            return new MediaQueryList(isOk, query, undefined);
         }
     }
 
@@ -421,8 +427,8 @@ export namespace VirtualBrowser {
         public readyState = "loading";
 
         get nodeName(): string { return '#document'; }
-        get parentNode(): HTMLElement { return null; }
-        get parentElement(): HTMLElement { return null; }
+        get parentNode(): Node | null { return null; }
+        get parentElement(): Node | null { return null; }
 
         public implementation = new DOMImplementation(this);
 
@@ -457,7 +463,7 @@ export namespace VirtualBrowser {
         public nodeType = Node.DOCUMENT_NODE;
 
         constructor(
-            public children: HTMLElement[] = [],
+            public children: Node[] = [],
             public window: Window) {
                 super();
                 children.forEach(child => child.ownerDocument = this);

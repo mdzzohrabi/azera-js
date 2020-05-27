@@ -98,7 +98,8 @@ export class CoreBundle extends Bundle {
             .node('workflow.workflows.*.transitions.*', { description: 'Workflow transition', type: 'object' })
             .node('workflow.workflows.*.transitions.*.from', { description: 'Source states', type: 'string|array' })
             .node('workflow.workflows.*.transitions.*.to', { description: 'Destination state', type: 'string' })
-            .node('workflow.workflows.*.transitions.*.metadata', { description: 'Supported types', type: 'string|array' })
+            .node('workflow.workflows.*.transitions.*.metadata', { description: 'Supported types', type: 'string|array|object' })
+            .node('workflow.workflows.*.transitions.*.guard', { description: 'Transition guard expression (vars: subject)', type: 'string' })
 
         config
             .node('event_manager', { description: 'Event manager' })
@@ -113,7 +114,7 @@ export class CoreBundle extends Bundle {
          */
         container.setFactory(WebClient, function webClientFactory($config) {
             let client = new WebClient();
-            if ($config && $config.web_client && $config.web_client.proxy) {
+            if ($config?.web_client?.proxy) {
                 client.setProxy($config.web_client.proxy);
             }
             return client;
@@ -168,15 +169,24 @@ export class CoreBundle extends Bundle {
                 if (typeof workflow.supports == 'string') {
                     workflow.supports = [workflow.supports];
                 }
-                
-                workflowManager.addWorkflow(new Workflow(
+
+                if (typeof workflow.transitions == 'object') {
+                    for (let transition in workflow.transitions) {
+                        workflow.transitions[transition].guard = eval(`(subject) => ${workflow.transitions[transition]}`);
+                    }
+                }
+
+
+                let workflowObj = new Workflow(
                     name,
                     workflow.places,
                     workflow.initial,
                     (workflow.supports ?? []).map(support => kernel.use(support as any)),
                     workflow.transitions,
                     workflow.property
-                ));
+                );
+                
+                workflowManager.addWorkflow(workflowObj);
             });
         });
 
