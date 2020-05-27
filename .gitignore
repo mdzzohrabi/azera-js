@@ -12,3 +12,4 @@ tmp
 doc
 db
 *.log
+packages/cms./
