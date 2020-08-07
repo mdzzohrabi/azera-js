@@ -47,6 +47,7 @@ export class CoreBundle extends Bundle {
             .node('kernel.handleError', { description: 'Handle node errors', type: 'boolean', default: true, validate: (value) => {
                 if (value) this.handleError(container);
             } })
+            .node('kernel.uncaughtExceptionHandler', { description: 'Node uncaught exception handler. e.g: /Kernel::errorHandler', type: 'string', validate(value) { return kernel.use(value) } })
             .node('kernel.rootDir', { description: 'Application root directory path', type: 'string', default: kernel.rootDir })
             .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: false })
             .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' })
@@ -205,13 +206,20 @@ export class CoreBundle extends Bundle {
     }
 
     @Inject() handleError(serviceContainer: Container) {
-        process.on('uncaughtException', error => {
-            serviceContainer.invoke(Logger).error(error as any);
-        });
+        let errorHandler = serviceContainer.getParameter('config', {}).kernel?.uncaughtExceptionHandler;
 
-        process.on('unhandledRejection', error => {
-            serviceContainer.invoke(Logger).error(error as any);
-        });
+        if (errorHandler) {
+            process.on('uncaughtException', errorHandler);
+            process.on('unhandledRejection', errorHandler);
+        } else {
+            process.on('uncaughtException', error => {
+                serviceContainer.invoke(Logger).error(error as any);
+            });
+
+            process.on('unhandledRejection', error => {
+                serviceContainer.invoke(Logger).error(error as any);
+            });
+        }
     }
 
     getServices() {

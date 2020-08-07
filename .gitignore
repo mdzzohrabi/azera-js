@@ -13,3 +13,4 @@ doc
 db
 *.log
 packages/cms./
+.vs

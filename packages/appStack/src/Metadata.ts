@@ -1,7 +1,14 @@
 import { is } from '@azera/util';
+import 'reflect-metadata';
 
 let classMetas = new Map<Function, Map<string, any>>();
 let propertiesMetas = new Map<Function, Map<string, Map<string, any>>>();
+
+export function getClassDecoratedProps(target: Function) {
+    target = getTarget(target);
+    if (!is.Function(target)) new TypeError(`Target must be a function or class`);
+    return propertiesMetas.get(target);    
+}
 
 /**
  * Get metadata map for class or function
@@ -92,10 +99,11 @@ export function createMetaDecorator<T>(key: string, multi: boolean = true, class
 export function createDecorator<D extends (...args: any[]) => any, R = ReturnType<D>>(valueGetter: D, key: string, multi: boolean = true): Decorator<D, Function, R> {
     let decorator = function metaDecorator(...args: any[]) {
         return (target: any, propName?: any, descriptor?: any) => {
+            let propType = propName ? Reflect.getMetadata('design:type', target, propName) : undefined;
 
             target = getTarget(target);
 
-            let value = valueGetter(...args);
+            let value = valueGetter.call({ propType, propName, target }, ...args);
 
             if (multi) pushMeta(key, value, target, propName);
             else setMeta(key, value, target, propName);

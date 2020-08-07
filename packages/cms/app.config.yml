@@ -132,3 +132,17 @@ event_manager:
     events:
         workflow.transition:
             - /events/WorkflowListener::beforeTransition
+
+mongoose:
+    defaultConnection: main
+    #proxy: http://172.16.8.12:39741
+    connections:
+        main:
+            #uri: mongodb://171.22.27.137:27017/expo
+            #user: expo
+            #pass: expo#mdzzohrabi#1372#
+            dbName: expo
+            useNewUrlParser: true
+            useUnifiedTopology: false
+            models:
+                - /model/MongoBook

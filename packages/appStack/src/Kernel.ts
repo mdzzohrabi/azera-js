@@ -392,7 +392,8 @@ export class Kernel {
         let { TwigBundle } = await import('./bundle/twig');
         let { TypeORMBundle } = await import('./bundle/typeORM');
         let { MessageBundle } = await import('./bundle/message');
-        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MessageBundle, ...(bundles ?? []) ]);
+        let { MongooseBundle } = await import('./bundle/mongoose');
+        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MongooseBundle, new MessageBundle, ...(bundles ?? []) ]);
     }
 
     /**
