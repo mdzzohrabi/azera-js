@@ -218,6 +218,9 @@ export class Kernel {
                     await fs.writeFile( cachePath, JSON.stringify(resolvedConfig));
                 }
             });
+            
+            // Clear logger
+            container['instances'].delete(Logger);
 
             await this.loadParameters(resolvedConfig.parameters);
             this.config = resolvedConfig;

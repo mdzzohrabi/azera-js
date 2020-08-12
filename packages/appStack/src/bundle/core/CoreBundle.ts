@@ -50,7 +50,15 @@ export class CoreBundle extends Bundle {
             .node('kernel.rootDir', { description: 'Application root directory path', type: 'string', default: kernel.rootDir })
             .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: false })
             .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' })
-            .node('kernel.classNameFormatter', { description: 'Formatter to convert name to className for Kernel.use() method', default: 'pascalCase', type: 'enum:pascalCase,snakeCase,camelCase' });
+            .node('kernel.classNameFormatter', { description: 'Formatter to convert name to className for Kernel.use() method', default: 'pascalCase', type: 'enum:pascalCase,snakeCase,camelCase' })
+            .node('kernel.logger', { description: 'Logger', type: 'object' })
+            .node('kernel.logger.metas', { description: 'Logger metas', type: 'object' })
+            .node('kernel.logger.transports', { description: 'Logger transports', type: 'array' })
+            .node('kernel.logger.transports.*', { description: 'Logger transport', type: 'object' })
+            .node('kernel.logger.transports.*.type', { description: 'Logger transport type', type: 'enum:console,file' })
+            .node('kernel.logger.transports.*.filename', { description: 'Logger transport file', type: 'string', validate: (value, info) => { return info.resolvePath(value); } })
+            .node('kernel.logger.transports.*.level', { description: 'Logger transport level (error,warn,info,verbose,debug,silly)', type: 'string' })
+        ;
 
         // Configuration parameters
         config.node('parameters', {
@@ -150,14 +158,35 @@ export class CoreBundle extends Bundle {
 
         // Logger
         container.setFactory(Logger, function loggerFactory() {
-            let defaultMeta = { ...container.getParameter('logger.metas', {}) };
+
+            let $config = container.getParameter('config', {});
+            let $logger = container.getParameter('logger.metas', {});
+
+            let defaultMeta = { ...( $logger?.metas ?? {} ) };
+            let config = { metas: {}, transports: [
+                { type: 'console', level: 'info' }
+            ] , ...($config?.kernel?.logger ?? {}) } as {
+                metas: any,
+                transports: { type: string, filename?: string, level?: string }[]
+            };
+
+            // Add worker Id in clustered process
             if (cluster.isWorker) {
                 defaultMeta['workerId'] = cluster.worker.id;
             }
+
+            // Create logger instance
             return createLogger({
-                transports: [
-                    new transports.Console
-                ],
+                transports: config.transports.map(transport => {
+                    switch (transport.type) {
+                        case 'console':
+                            return new transports.Console(transport);
+                        case 'file':
+                            return new transports.File(transport);
+                        default:
+                            throw new Error(`Logger transport "${transport.type}" not found`);
+                    }
+                }),
                 defaultMeta,
             })
         });
