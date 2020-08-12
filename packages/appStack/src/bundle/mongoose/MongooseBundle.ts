@@ -61,8 +61,6 @@ export class MongooseBundle extends Bundle {
                 let dbOptions = { ...options, ...(options.extra ?? {}) };
                 dbOptions.models && delete dbOptions.models;
                 let uri = options.uri || `mongodb://${options.user ?? ''}${options.pass ? ':' + options.pass : ''}${options.user ? '@' : ''}${options.host ?? 'localhost'}:${options.port ?? 27017}/${options.dbName}`;
-                console.log(uri);
-                
 
                 if (defaultConnection == name) mongoose.connect(uri, dbOptions);
 
