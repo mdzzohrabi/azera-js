@@ -2,6 +2,8 @@ import { Cli, Command, EntityManager, Inject, MessageManager, Container, Workflo
 import { Project } from '../entity/Project';
 import { CrawlMessage } from '../message/CrawlMessage';
 import { Post } from '../model/Post';
+import { mongoose } from '@azera/stack';
+import { MongoBook, Category, Company } from '../model/MongoBook';
 
 export class TestCommand extends Command {
     
@@ -42,6 +44,35 @@ export class TestCommand extends Command {
             case 'orm': {
                 let em = await container.invokeAsync(EntityManager);
                 cli.print(await em.find(Project, { relations: ['Configs'] }));
+                break;
+            }
+            case 'mongoose': {
+                container.invoke(mongoose.Connection);
+
+                // let c1 = new Category({ name: 'Test Category' });
+                // let c2 = new Category({ name: 'Sub Category' });
+                // let c = new Company({ name: 'Company 1' });
+
+                // let product = new MongoBook();
+                // product.name = 'Product 2';
+                // product.categories = [ c1 ];
+                // product.subCategory = c2;
+                // product.company = c;
+                // await c1.save();
+                // await c2.save();
+                // await c.save();
+                // await product.save();
+
+                console.log(await MongoBook.find().limit(3)
+                    .select('name')
+                    .populate('categories','name')
+                    .populate('subCategory', 'name')
+                    .populate('company', 'name'));
+                console.log('OK');
+                
+                
+                // console.log(await db.model('Book').create({ name: 'Jungle book 1' }));
+                // console.log(await db.model('Book').find());
                 break;
             }
         }

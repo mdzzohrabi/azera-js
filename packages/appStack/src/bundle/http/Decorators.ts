@@ -5,7 +5,7 @@ import { createDecorator, createMetaDecorator } from '../../Metadata';
  * 
  * Set template for an action
  */
-export const Template = createMetaDecorator<string>('http:template', false, false);
+export const Template = createMetaDecorator<string, false>('http:template', false, false);
 
 /**
  * Header annotation

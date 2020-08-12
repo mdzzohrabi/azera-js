@@ -1,4 +1,5 @@
 import { Kernel } from "@azera/stack";
+import { MongooseBundle } from "@azera/stack";
 import { ApiBundle } from './bundle/api/ApiBundle';
 import { AssetsBundle } from './bundle/assets/AssetsBundle';
 import { GraphBundle } from './bundle/graph/GraphBundle';
@@ -7,7 +8,7 @@ import { PortalBundle } from './bundle/portal/PortalBundle';
 
 Kernel
     .enableSourceMap()
-    .createFullStack([ new ApiBundle, new ModelBundle, new GraphBundle, new AssetsBundle, new PortalBundle  ])
+    .createFullStack([ new MongooseBundle, new ApiBundle, new ModelBundle, new GraphBundle, new AssetsBundle, new PortalBundle  ])
     .then(kernel => kernel.bootAndRun(__dirname + '/../app.config.yml', 'cli'))
     .catch(console.error);
 
