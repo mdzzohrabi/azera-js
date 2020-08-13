@@ -2,6 +2,7 @@ import { Bundle } from '../../Bundle';
 import { Inject, Container } from '@azera/container';
 import { ConfigSchema } from '../../ConfigSchema';
 import { forEach } from '@azera/util';
+import { wrapCreateConnectionWithProxy } from '../../net/Network';
 
 export class MongoBundle extends Bundle {
 
@@ -21,6 +22,7 @@ export class MongoBundle extends Bundle {
             .node('mongo.connections.*.database', { description: 'Database' })
             .node('mongo.connections.*.useNewUrlParser', { description: 'MongoDb useNewUrlParser', type: 'boolean', default: false })
             .node('mongo.connections.*.useUnifiedTopology', { description: 'MongoDb useUnifiedTopology', type: 'boolean', default: false })
+            .node('mongo.proxy', { description: 'Proxy', type: 'string' })
         ;
 
     }
@@ -29,16 +31,21 @@ export class MongoBundle extends Bundle {
 
         let config = container.getParameter('config', {})?.mongo ?? {};
         let connections: { [name: string]: any } = config?.connections ?? {};
+        let defaultConnectionName = config?.defaultConnection ?? 'main';
+        let proxy = config?.proxy;
 
         if (Object.keys(connections).length == 0) return;
-
-        let defaultConnectionName = config?.defaultConnection ?? 'main';
 
         let { MongoClient } = await import('mongodb');
 
         // Connections
         forEach(connections, (conn, name) => {
             container.setFactory(`mongo.${name}`, function mongoConnectionFactory() {
+
+                // Proxy
+                if (proxy)
+                    MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, MongoClient.prototype.connect);
+
                 let auth = "";
                 if (conn.username) {
                     auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;
