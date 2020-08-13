@@ -1,7 +1,6 @@
+import { Container, Inject } from '@azera/container';
 import { Bundle } from '../../Bundle';
-import { Inject, Container } from '@azera/container';
 import { ConfigSchema } from '../../ConfigSchema';
-import { GraphQl } from './Decorators';
 
 export class GraphQlBundle extends Bundle {
 
@@ -11,19 +10,5 @@ export class GraphQlBundle extends Bundle {
 
     }
 
-
-}
-
-class User {
-
-}
-
-@GraphQl.Type()
-class Query {
-
-    @GraphQl.Field(`users(limit: Int): [User] # List of users`)
-    async users() {
-        return [];
-    }
 
 }

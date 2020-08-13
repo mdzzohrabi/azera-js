@@ -311,13 +311,14 @@ export class Kernel {
      * @param fullName Name
      */
     use<T>(fullName: string): T | Function {
-        let [name, method] = fullName.split('::');
-        if ( name.startsWith('/') ) name = '.' + name;
+        let importName: string, method: string, path: string;
+        [path, method] = fullName.split('::');
+        [path, importName] = path.split('@');
+        if ( path.startsWith('/') ) path = '.' + path;
 
-        let filePath = this.resolvePath(name);
-        let className = this.importClassNameFormatter ? this.importClassNameFormatter(name.split('/').pop()!, name) : name.split('/').pop()!;
+        let className = this.importClassNameFormatter ? this.importClassNameFormatter(importName ?? path.split('/').pop()!, path) : importName ?? path.split('/').pop()!;
 
-        let module = require(filePath);
+        let module = require(this.resolvePath(path));
         let target = module[className] || module.default;
         
         if (method) return this.container.invokeLater(target, method);
