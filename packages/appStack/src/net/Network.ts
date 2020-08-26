@@ -12,7 +12,7 @@ export function wrapCreateConnectionWithProxy(proxy: string, func: Function) {
             let onEvents: any[] = [];
             let established = false;
             
-            let connection = mainCreateConnection({ host, port: Number(port), family: 0 }, () => {
+            let connection = mainCreateConnection({ host: host!, port: Number(port), family: 0 }, () => {
                 mainOn.call(connection, 'data', (buffer: Buffer) => {
                     if ( buffer.toString().includes('Connection established') ) {
                         established = true;

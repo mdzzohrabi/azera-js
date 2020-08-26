@@ -1,8 +1,7 @@
-import { Container, Inject } from '@azera/container';
+import { Container, Inject, IFactory } from '@azera/container';
 import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
-import { IFactory } from '@azera/container';
 
 @Middleware()
 export class HttpCoreMiddlewareFactory implements IFactory {

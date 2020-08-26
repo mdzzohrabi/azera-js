@@ -9,7 +9,7 @@ import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
 import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
 import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
-import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT, EVENT_HTTP_ERROR, HttpErrorEvent } from './Events';
+import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT, EVENT_HTTP_ERROR, HttpErrorEvent, EVENT_HTTP_EXPRESS_INIT } from './Events';
 import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { Request } from './Request';
@@ -21,6 +21,8 @@ import { Profiler } from '../../Profiler';
 import * as cluster from 'cluster';
 import { forEach } from '@azera/util';
 import { HttpStartCommand } from './Command/HttpStartCommand';
+
+export { express };
 
 /**
  * Http Bundle
@@ -34,6 +36,7 @@ export class HttpBundle extends Bundle {
     static DI_TAG_CONTROLLER = 'http.controller';
 
     static EVENT_LISTEN = EVENT_HTTP_LISTEN;
+    static EVENT_EXPRESS_INIT = EVENT_HTTP_EXPRESS_INIT;
     static EVENT_EXPRESS = EVENT_HTTP_EXPRESS;
     static EVENT_ERROR = EVENT_HTTP_ERROR;
 
@@ -124,6 +127,8 @@ export class HttpBundle extends Bundle {
             let profiler = container.invoke(Profiler);
             let events = container.invoke(EventManager);
             let config = container.getParameter('config', {});
+
+            events.emit(HttpBundle.EVENT_EXPRESS_INIT, server);
 
             // Setup middlewares
             middlewares.forEach((middle: any) => {

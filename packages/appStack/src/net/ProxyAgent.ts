@@ -23,7 +23,7 @@ export class ProxyAgent extends EventEmitter {
 
     addRequest(request: http.ClientRequest, options: http.RequestOptions) {
         let { proxy } = this;
-        let proxySocket = net.connect({ host: proxy.hostname || proxy.host, port: Number(proxy.port) || 80 });
+        let proxySocket = net.connect({ host: String(proxy.hostname || proxy.host), port: Number(proxy.port) || 80 });
 
         let isSecure = options.protocol == 'https:';
 

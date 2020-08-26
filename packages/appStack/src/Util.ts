@@ -9,8 +9,8 @@ import { is } from '@azera/util';
 export function getPackageDir(pkgName?: string) {
     let dir: string | undefined;
 
-    if (!pkgName) dir = process.mainModule?.filename;
-    else dir = require.resolve(pkgName, { paths: process.mainModule?.paths });
+    if (!pkgName) dir = require.main?.filename;
+    else dir = require.resolve(pkgName, { paths: require.main?.paths });
 
     while ( dir && !existsSync(dir + '/package.json') ) {
         dir = dirname(dir);

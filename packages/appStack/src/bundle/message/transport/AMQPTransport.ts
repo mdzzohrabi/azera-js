@@ -21,7 +21,7 @@ export class AMQPTransport extends MessageTransport<Message> {
         if (this._connection) return this._connection;
         let amqp = await import('amqplib');
         return this._connection = await amqp.connect({
-            hostname: this.options.hostname,
+            hostname: this.options.hostname!,
             port: Number(this.options.port) ?? undefined,
         });
     }

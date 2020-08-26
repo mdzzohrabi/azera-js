@@ -6,6 +6,7 @@ import { Event } from '../../EventManager';
 export const EVENT_HTTP_RESULT = 'http.result';
 export const EVENT_HTTP_LISTEN = 'http.listen';
 export const EVENT_HTTP_EXPRESS = 'http.expresss';
+export const EVENT_HTTP_EXPRESS_INIT = 'http.expresss_init';
 export const EVENT_HTTP_ERROR = 'http.error';
 export const EVENT_HTTP_ACTION = 'http.action';
 

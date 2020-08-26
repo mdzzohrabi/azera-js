@@ -9,14 +9,14 @@ export namespace VirtualBrowser {
 
     export class Location {
 
-        public href?: string = '';
-        public host?: string = '';
-        public protocol?: string = '';
-        public hostname?: string = '';
-        public pathname?: string = '';
-        public path?: string = '';
-        public search?: string = '';
-        public hash?: string = '';
+        public href?: string | null = '';
+        public host?: string | null = '';
+        public protocol?: string | null = '';
+        public hostname?: string | null = '';
+        public pathname?: string | null = '';
+        public path?: string | null = '';
+        public search?: string | null = '';
+        public hash?: string | null = '';
         public query?: string | null = '';
 
         static from(url: string) {
