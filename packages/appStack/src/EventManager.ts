@@ -5,7 +5,7 @@ import { Logger } from './Logger';
 import { debugName } from './Util';
 import { Profiler } from './Profiler';
 
-export const EVENT_SUBSCRIBER_TAG = 'event.subsriber';
+export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
 
 /**
  * Event manager

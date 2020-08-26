@@ -1,2 +1,2 @@
-export * from './HtmlParser';
+export { HtmlParser } from './HtmlParser';
 export * from './VirtualBrowser';

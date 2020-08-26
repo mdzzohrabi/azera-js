@@ -23,3 +23,4 @@ export { Decorator, Constructor, ErrorHandler, is, forEach, wait } from '@azera/
 
 export { Reflect };
 export * from './builder';
+export * as JWT from 'jsonwebtoken';

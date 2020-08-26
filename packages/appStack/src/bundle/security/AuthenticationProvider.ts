@@ -1,9 +1,12 @@
-export interface AuthenticationProvider<T> {
+import { Request } from '../http';
+
+export abstract class AuthenticationProvider<T> {
 
     /** Provider name */
-    readonly authenticationName: string;
+    abstract readonly authenticationName: string;
 
-    /** Get user by credentials */
-    getUser(credentials: T): boolean
+    abstract verify(context: T): Promise<boolean>
+    
+    abstract authenticate(request: Request): Promise<T | null>
 
 }

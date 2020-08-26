@@ -56,10 +56,10 @@ export class WebClient {
             options = { ...this.defaults, ...options };
             let request: http.ClientRequest;
             if (url.startsWith('https:')) {
-                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, true);
+                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, true) as any;
                 request = https.request(url, options || {}, resolve);
             } else {
-                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, false);
+                if (this.proxyAddress) options['agent'] = ProxyAgent.from(this.proxyAddress, false) as any;
                 request = http.request(url, options || {}, resolve);
             }
             request.on('error', reject);

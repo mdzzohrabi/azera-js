@@ -5,3 +5,6 @@ export * from './bundle/typeORM';
 export * from './bundle/message';
 export * from './bundle/mongoose';
 export * from './bundle/mongo';
+export * from './bundle/security';
+export * from './bundle/browser';
+export * from './bundle/graph';

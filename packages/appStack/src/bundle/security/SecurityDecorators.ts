@@ -1,27 +1,26 @@
-import { Middleware, Request, Response, NextFn } from '../http';
-import { Container } from '@azera/container';
+import { Middleware, NextFn, Request, Response } from '../http';
+import { AuthenticationManager } from './AuthenticationManager';
 
-export function Secure(role?: string)
+export function Secure(options?: { role?: string, redirectPath?: string })
 {
     return function secureDecorator(...params: any[]) {
         Middleware([
-            [ Container, function secureMiddleware(container: Container ,req: Request, res: Response, next: NextFn) {
-                let token = req.headers.authorization?.substr('Bearer '.length);
+            [ AuthenticationManager, function secureMiddleware(authManager: AuthenticationManager ,req: Request, res: Response, next: NextFn) {
+                let { role, redirectPath } = options || {};
 
-                if (!token) {
-                    return next(Error(`You must be logged in to access this path`));
-                }
-                
-                auth.getByToken(token).then(user => {
-                    if (!user) {
-                        return next(Error(`Invalid authentication token`));
+                authManager.authenticate(req, res).then(isOk => {
+                    if (isOk) {
+                        next();
                     }
-    
-                    container.setAlias(User, user);
-                    next();
-                    container.setAlias(User, new User);
-                }).catch(err => next(err));
-                
+                    else {
+                        if (redirectPath) res.redirect(redirectPath);
+                        else next(Error(`Authentication failed`));
+                    }
+                })
+                .catch(err => {
+                    if (redirectPath) res.redirect(redirectPath);
+                    else next(Error(`Authentication failed`));
+                });
             }]
         ])(...params);
     }

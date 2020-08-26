@@ -925,7 +925,7 @@ export interface CSSSelector {
     id?: string
 }
 
-export function Cache(): MethodDecorator {
+function Cache(): MethodDecorator {
     return function cacheDecorator(target: any, prop: string, descr) {
         let cachedPropName = '_' + String(prop);
         if (descr.get) {
