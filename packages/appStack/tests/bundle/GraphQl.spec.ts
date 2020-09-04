@@ -2,6 +2,8 @@ import { GraphQl } from "../../src/bundle/graph/Decorators";
 import { equal, ok } from 'assert';
 import { GraphQlSDLGenerator } from '../../src/bundle/graph/GraphQlSDLGenerator';
 
+let { Type, Field } = GraphQl;
+
 describe('GraphQl Bundle', () => {
 
     describe(`GraphQl SDL Generator`, () => {
@@ -42,21 +44,24 @@ describe('GraphQl Bundle', () => {
             });
 
             it('Inheritance', () => {
-                @GraphQl.Type()
+                @Type()
                 class Animal {
-                    @GraphQl.Field() name!: string;
+                    @Field() name!: string;
                 }
 
-                @GraphQl.Type()
+                
+                @Type()
                 class Elephant extends Animal {
-                    @GraphQl.Field() age!: number;
+                    @Field() base!: Animal;
 
-                    @GraphQl.Field() location(limit: number = 10): string {
+                    @Field() age!: number;
+
+                    @Field() location(_parent: Animal, limit: number = 10): string {
                         return 'USA';
                     }
                 }
 
-                equal(generator.toSDL(Elephant), `type Elephant {\n\tname: String\n\tage: Int\n\tlocation(limit: Int = 10): String\n}`);
+                equal(generator.toSDL(Elephant), `type Elephant {\n\tname: String\n\tbase: Animal\n\tage: Int\n\tlocation(limit: Int = 10): String\n}`);
             });
         });
 

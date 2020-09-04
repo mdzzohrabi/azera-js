@@ -1,60 +1,70 @@
 import { is } from '@azera/util';
 import 'reflect-metadata';
-import { invariant } from './Util';
+import { invariant, deepClone } from './Util';
 
-let classMetas = new Map<Function, Map<string, any>>();
-let propertiesMetas = new Map<Function, Map<string, Map<string, any>>>();
+let classMetas = new Map<Function, ClassMetaMap>();
+let propertiesMetas = new Map<Function, PropertyMetaMap>();
 
-const META_CLASS = Symbol('meta:class');
-const META_PROPS = Symbol('meta:props');
 type ClassMetaMap = Map<string, any>;
 type PropertyMetaMap = Map<string, Map<string, any>>;
 
-export function getClassDecoratedProps(target: Function) {
-    target = getTarget(target);
-    invariant(is.Function(target), `Target must be a function or class`);
-    return ((target as any)[META_PROPS] ?? new Map()) as PropertyMetaMap;
+export function getClassDecoratedProps(target: Function): PropertyMetaMap {
+    getMetaMap(target, '');
+    return propertiesMetas.get(getTarget(target)) ?? new Map();
 }
 
 /**
  * Get metadata map for class or function
  * @param target Target Class or Function
  */
-export function getMetaMap(target: Function, property?: string): Map<string, any> {
-    target = getTarget(target);
+export function getMetaMap(target: Function, property?: string): Map<string, any>
+export function getMetaMap(target: Function, property: string | undefined, init: false): Map<string, any> | undefined
+export function getMetaMap(target: Function, property?: string, init: boolean = true): any
+{
+    let baseTarget = getTarget(target);
 
-    if (!is.Function(target)) throw TypeError(`Target must be a function or class`);
+    invariant(is.Function(baseTarget), `Target must be a function or class`, TypeError);
 
     if (property) {
-        // Properties metas
-        if (is.Undefined((target as any)[META_PROPS])) {
-            let parent = Object.getPrototypeOf(target);
+
+        if (!propertiesMetas.has(baseTarget)) {
+            if (!init) return;
+
             let map = new Map();
+            let parent = Object.getPrototypeOf(baseTarget);
             while (parent) {
-                if (parent[META_PROPS]) map = new Map(parent[META_PROPS]);
+                if (propertiesMetas.has(parent)) map = deepClone(propertiesMetas.get(parent)!);
                 parent = Object.getPrototypeOf(parent);
             }
-            (target as any)[META_PROPS] = map;
+            propertiesMetas.set(baseTarget, map);
         }
 
-        let propsMeta = (target as any)[META_PROPS] as PropertyMetaMap;
-
-        if (!propsMeta.has(property)) {
+        let propsMeta = propertiesMetas.get(baseTarget)!;
+        // Properties metas
+        if (!propsMeta.has(property) && init) {
             propsMeta.set(property, new Map());
         }
 
-        return propsMeta.get(property) as Map<string, any>;
+        return propsMeta.get(property);
     }
 
-    let classMeta = (target as any)[META_CLASS] as ClassMetaMap;
-    if (is.Undefined(classMeta)) {
-        let parent = Object.getPrototypeOf(target);
+    let classMeta = classMetas.get(baseTarget);
+
+    if (is.Undefined(classMeta) && init) {
         let map = new Map();
+        
+        // Inherit parent metas
+        let parent = Object.getPrototypeOf(baseTarget);
         while (parent) {
-            if (parent[META_CLASS]) map = new Map(parent[META_CLASS]);
+            if (classMetas.has(parent)) {
+                map = deepClone(classMetas.get(parent)!);
+            }
             parent = Object.getPrototypeOf(parent);
         }
-        classMeta = (target as any)[META_CLASS] = map;
+
+        classMetas.set(baseTarget, map);
+
+        return map;
     }
 
     return classMeta;
@@ -77,15 +87,9 @@ export function getMeta<T>(key: string | Function, target: Function, property?: 
     return getMetaMap(target, property).get(key);
 }
 
-export function hasMeta(key: string | Function, target: Function, property?: string) {
+export function hasMeta(key: string | Function, target: Function, property?: string): boolean {
     key = typeof key == 'function' ? key.prototype.key as string : key;
-    target = getTarget(target);
-    if (property) {
-        // @ts-ignore
-        return target[META_PROPS] && target[META_PROPS].has(property) && target[META_PROPS].get(property).has(key);
-    }
-    // @ts-ignore
-    return target[META_CLASS] && target[META_CLASS].has(key);
+    return !!getMetaMap(target, property)?.has(key);
 }
 
 

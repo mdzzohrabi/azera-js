@@ -9,7 +9,17 @@ export class GraphQlSDLGenerator {
             case Number: return 'Int';
             case String: return 'String';
             case Boolean: return 'Bool';
-            default: return type;
+            default: {
+                if (typeof type == 'function') {                   
+                    let meta = getMeta(GraphQl.Type, type);
+                    if (meta) {
+                        return meta.name;
+                    } else {
+                        return type.name;
+                    }
+                }
+                return type;
+            }
         }
     }
 
