@@ -201,3 +201,30 @@ export function flatObject(object: any, options?: { join?: string, flatArray?: b
     flat(object);
     return result;
 }
+
+/**
+ * Deep clone
+ * @param value Value to clone
+ */
+export function deepClone<T>(value: T): T {
+    if (value instanceof Map) {
+        let result = new Map();
+        value.forEach((v, k) => {
+            result.set(k, deepClone(v));
+        });
+        return result as any;
+    }
+    else if (Array.isArray(value)) {
+        let result: any[] = [];
+        value.forEach(item => result.push(deepClone(item)));
+        return result as any;
+    }
+    if (typeof value == 'object') {
+        let result: any = {};
+        for (let key in value) {
+            result[key] = deepClone(value[key]);
+        }
+        return result;
+    }
+    return value;
+}
