@@ -19,7 +19,7 @@ export * from './workflow';
 export * from '@azera/container';
 import * as Reflect from '@azera/reflect';
 export { HashMap } from '@azera/util/is';
-export { Decorator, Constructor, ErrorHandler, is, forEach, wait } from '@azera/util';
+export { Decorator as UtilDecorator, Constructor, ErrorHandler, is, forEach, wait } from '@azera/util';
 
 export { Reflect };
 export * from './builder';

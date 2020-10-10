@@ -13,11 +13,13 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 @Service({
-    factory: ($env: string, serviceContainer: Container) => {
-        let manager = $env == 'development' ? new DebugEventManager(serviceContainer.invoke(Logger), serviceContainer.invoke(Profiler)) : new EventManager();
+    factory: async ($env: string, serviceContainer: Container) => {
+        let manager = $env == 'development' ? new DebugEventManager(
+            await serviceContainer.invokeAsync(Logger),
+            await serviceContainer.invokeAsync(Profiler)) : new EventManager();
         
-        let subscribers = serviceContainer.getByTag(EVENT_SUBSCRIBER_TAG);
-        subscribers.forEach(subscriber => manager.subscribe(subscriber as any));
+        let subscribers = serviceContainer.getByTag<IEventSubscriber>(EVENT_SUBSCRIBER_TAG);
+        subscribers.forEach(subscriber => manager.subscribe(subscriber));
 
         return manager;
     },

@@ -18,7 +18,7 @@
 		"test-all": "mocha -r ts-node/register tests/*.spec.ts"
 	},
 	"dependencies": {
-		"@azera/container": "^2.0.18",
+		"@azera/container": "^2.0.19",
 		"@azera/reflect": "^1.0.6",
 		"@azera/util": "^1.0.17",
 		"@types/amqplib": "^0.5.13",

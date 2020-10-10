@@ -9,7 +9,7 @@ const PARAM_OFFSET_REGEX = /\(/;
 const CLASS_PARAM_OFFSET_REGEX = /constructor\s*\(/;
 const PARAM_SEPARATOR = /\s*\,\s*/;
 const ASYNC_FUNC_REGEX = /^(async\s+)?function/;
-const METHOD_FUNC_REGEX = /^[a-zA-Z_][0-9a-zA-Z_]*\(/;
+const METHOD_FUNC_REGEX = /^(async\s+)?[a-zA-Z_][0-9a-zA-Z_]*\(/;
 const OBJECT_DESTRUCTOR_REGEX = /\{.*?\}/;
 const COMMENT_REGEX = /\/\*([\W\w]*?)\*\/|[\/]{2}.*\r?\n/g;
 

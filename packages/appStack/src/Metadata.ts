@@ -142,12 +142,12 @@ export function createDecorator<D extends DecoratorValueExtractor, M extends boo
     return decorator as any;
 }
 
-export type ArgumentTypes<T> = T extends (... args: infer U ) => infer R ? U: never;
-export type ReplaceReturnType<T, TNewReturn> = { (...a: ArgumentTypes<T>): TNewReturn };
-export type Decorator<T, TNewReturn, R, M extends boolean = true> = { (...a: ArgumentTypes<T>): TNewReturn, valueType: R, multi: M };
-export type ValueType<T> = T extends { valueType: infer R } ? R : any; 
-export type IsMulti<T> = T extends { multi: infer R } ? R : false; 
-export type DecoratorValueExtractor = (this: { returnType?: any, paramTypes?: any[], propType?: any, propName?: string, target: any }, ...args: any[]) => any
+type ArgumentTypes<T> = T extends (... args: infer U ) => infer R ? U: never;
+type ReplaceReturnType<T, TNewReturn> = { (...a: ArgumentTypes<T>): TNewReturn };
+type Decorator<T, TNewReturn, R, M extends boolean = true> = { (...a: ArgumentTypes<T>): TNewReturn, valueType: R, multi: M };
+type ValueType<T> = T extends { valueType: infer R } ? R : any; 
+type IsMulti<T> = T extends { multi: infer R } ? R : false; 
+type DecoratorValueExtractor = (this: { returnType?: any, paramTypes?: any[], propType?: any, propName?: string, target: any }, ...args: any[]) => any
 
 export interface Func<T, R> {
     (value: T):  R

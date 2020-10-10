@@ -2,7 +2,7 @@
 //@ts-ignore
 
 import { deepEqual, equal, notEqual, ok, throws, deepStrictEqual } from "assert";
-import { Container, getDependencies, isDefinition, isFactory, isService } from "../container";
+import { Container, getDependencies, isDefinition, isFactory, isService, ContainerInvokeOptions } from "../container";
 import { ContainerAware } from "../containerAware";
 import { Inject, Service } from "../decorators";
 import { IDefinition, IFactory, IServices } from "../types";
@@ -13,6 +13,7 @@ import { BundleB } from './fixture/BundleB';
 import { HomeController, Request } from './fixture/Controller';
 import { Decorator } from '../util';
 import forEach from "../../../util/src/forEach";
+import { getParameters } from '@azera/reflect';
 
 describe('Util.Decorator', () => {
 
@@ -491,7 +492,7 @@ describe('Container', () => {
             equal(container.invoke(C).container, container);
 
             
-            @Service({ private: false }) class Test { caseName = "Shared Object" }
+            @Service({ private: false }) class Test { caseName = "Shared Object"; }
 
             equal( container.getDefinition(Test).private, false );
             equal( container.getDefinition(Test).name, 'Test');
@@ -716,7 +717,7 @@ describe('Container', () => {
 
                 let container = new Container();
                 class Connection {
-                    name = "default"
+                    name = "default";
                 }
 
                 @Service()
@@ -738,7 +739,7 @@ describe('Container', () => {
             it('should invoke create one time for non-private services', () => {
                 let container = new Container();
                 let count = 0;
-                class A {};
+                class A {}
                 class B {
                     create() {
                         count++;
@@ -757,7 +758,7 @@ describe('Container', () => {
                 let container = new Container();
                 let count = 0;
                 @Service({ private: true })
-                class A {};
+                class A {}
                 class B {
                     create() {
                         count++;
@@ -778,7 +779,7 @@ describe('Container', () => {
             let container1: Container;
             let container2: Container;
             before(() => {
-                container1 = new Container()
+                container1 = new Container();
                 container2 = new Container();
             });
 
@@ -811,7 +812,7 @@ describe('Container', () => {
 
             });
 
-        })
+        });
 
         describe('Factory decorated service', () => {
             it('should use factory for decorated services', () => {
@@ -828,7 +829,7 @@ describe('Container', () => {
                 equal( container.invoke(Connection).name, "dev" );
 
             });
-        })
+        });
 
         describe('Conflict', () => {
             it('should works with type-based factory', () => {
@@ -836,7 +837,7 @@ describe('Container', () => {
                 let c1 = new Container();
                 let c2 = new Container();
 
-                class Count extends Number {};
+                class Count extends Number {}
                 class CounterFactory {
                     i = 1;
                     create() {
@@ -896,7 +897,7 @@ describe('Container', () => {
     });
 
     describe(`Async`, () => {
-        it(`should invoke() async`, (done) => {
+        it(`async arguments injection`, (done) => {
 
             let container = new Container();
             class Connection { constructor(public name = '') {} }
@@ -927,6 +928,37 @@ describe('Container', () => {
 
         });
 
+        it(`async properties injection`, (done) => {
+
+            let container = new Container();
+
+            class Connection { constructor(public name = '') {} }
+            class Model { @Inject() public connection: Connection; }
+
+            container.set('connectionString', function connectionStringFactory() {
+                return new Promise((resolve, reject) => {
+                    setTimeout(() => resolve('yes'), 220);
+                });
+            });
+
+            container.setFactory(Connection, async function connectionFactory(connectionString: string) {
+                return new Connection(connectionString);
+            });
+
+            Promise.all([
+                container.invokeAsync(Model).then(model => {
+                    ok(model.connection instanceof Connection);
+                }),
+
+                container.invokeAsync(Model).then(model => {
+                    ok(model instanceof Model);
+                    ok(model.connection instanceof Connection);
+                    equal(model.connection.name, 'yes');
+                })
+            ])
+            .then(done => undefined).then(done).catch(done);
+        });
+
         it(`async function factory should works`, (done) => {
             let container = new Container();
             function delay(time: number) {
@@ -941,7 +973,27 @@ describe('Container', () => {
                 equal(conn, 'hello');
                 done();
             }).catch(done);
-        })
+        });
+
+        it(`async function private factory should works`, (done) => {
+            let container = new Container();
+            let i = 0;
+            function delay(time: number) {
+                return new Promise((resolve, reject) => setTimeout(resolve, time));
+            }
+            container.setFactory('connectionString', async function connectionFactory() {
+                await delay(200);
+                return 'hello ' + ++i;
+            }, true);
+
+            Promise.all([
+                container.invokeAsync('connectionString'),
+                container.invokeAsync('connectionString')
+            ]).then(results => {
+                deepStrictEqual(results, ['hello 1', 'hello 2']);
+                done();
+            }).catch(done);
+        });
     });
 
     describe('Expression injection', () => {
@@ -957,12 +1009,12 @@ describe('Container', () => {
         it(`should not conflict two class with same name`, () => {
 
             let A = {
-                Hello: class Hello { user = 'A' }
-            }
+                Hello: class Hello { user = 'A'; }
+            };
 
             let B = {
-                Hello: class Hello { user = 'B' }
-            }
+                Hello: class Hello { user = 'B'; }
+            };
 
             let container = new Container();
             equal( container.invoke(A.Hello).user , 'A' );
@@ -1007,6 +1059,48 @@ describe('Container', () => {
 
         });
 
+    });
+
+    describe('ContainerInvokeOptions', () => {
+        it('should works', (done) => {
+
+            let container = new Container();
+
+            
+            class Request { id: number = 10; }
+            
+            class Numbers {
+                num = 20
+            }
+
+            container.ignoreInvokeLaterDep(Request);
+
+            class Controller {
+                @Inject() index(numbers: Numbers, @Query('id') reqId: number, @Query() id: number, req: Request) {
+                    return [numbers.num, reqId, id, req.id];
+                }
+            }
+            
+            function Query(name?: string): PropertyDecorator {
+                return (...params: any[]) => {
+
+                    if (!name) {
+                        name = getParameters(params[0][params[1]])[params[2]];
+                    }
+
+                    Inject((invokeOptions: ContainerInvokeOptions) => {
+                        return invokeOptions.invokeArguments[0][name];
+                    })(...params);
+                };
+            }
+
+
+            container.invokeLaterAsync(Controller, 'index')({ id: 12 }).then(result => {
+                deepEqual(result, [20, 12,12,12]);
+                done();
+            });
+
+        });
     });
 
 });

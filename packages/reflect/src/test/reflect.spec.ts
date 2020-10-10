@@ -142,7 +142,24 @@ describe('getParameters()', () => {
             ]
         );
 
-    })
+    });
+
+    
+    it('should resolve async class method parameters with three parameter and default value', () => {
+
+        class Controller {
+            async categoryExposAction(categories: any, expos: any, limit = 10, start = 10, categoryId: number) {
+                {} {}
+            }            
+        }
+
+        let controller = new Controller;
+
+        deepEqual(
+            getParameters(controller['categoryExposAction']),
+            [ 'categories', 'expos', 'limit', 'start', 'categoryId' ]
+        );
+    });
 });
 
 describe('Type checking', async () => {
@@ -201,8 +218,7 @@ describe('Reflect', () => {
         ok(ref.isClass);
     })
 
-    it('should reflect async function correctly', () => {
-
+    it('should reflect async function correctly (one parameter)', () => {
         let result = reflect(async function HelloWorld(param1: string) {});
 
         equal(result.name, 'HelloWorld');
@@ -210,6 +226,17 @@ describe('Reflect', () => {
         deepEqual(result.parameters, ['param1']);
         ok(result.isAsync);
 
+    });
+
+    it('should reflect async function correctly (three parameter with default)', () => {
+        let result = reflect(async function HelloWorld(param1: string, param2: number = 10, param3: boolean) {
+
+        });
+
+        equal(result.name, 'HelloWorld');
+        equal(result.parameters.length, 3);
+        deepEqual(result.parameters, ['param1', 'param2', 'param3']);
+        ok(result.isAsync);
     });
 
 });

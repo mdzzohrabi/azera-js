@@ -72,7 +72,7 @@ export class CliBundle extends Bundle {
             command.configure(
                 commander
                     .command(command.name)
-                    .action(container.invokeLaterAsync(command, 'run'))
+                    .action(container.invokeLaterAsync(command, 'run') as any)
             )
         });
 

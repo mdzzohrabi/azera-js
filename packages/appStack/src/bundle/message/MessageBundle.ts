@@ -30,19 +30,27 @@ export class MessageBundle extends Bundle {
 
         container
             .autoTag(MessageTransport, ['message.transport'])
-            .addPipe(MessageManager, messageManager => {
+            .addPipe(MessageManager, async messageManager => {
                 let providers = container.findByTag<typeof MessageTransport>('message.transport');
                 let transports: { [name: string]: { transport: string, types: string[] } } = container.getParameter('config', {})?.message?.transports || {};
-                let kernel = container.invoke(Kernel);
+                let kernel = await container.invokeAsync(Kernel);
+
                 forEach(transports, (transport, name) => {
+                    // Message types
                     let types: Function[] = (transport.types ?? []).map(type => kernel.use(type));
+
+                    // Transport options
                     let options: MessageTransportOptions = url.parse(transport.transport);
                         options.sendTypes = types;
                         options.receiveTypes = types;
+
+                    // Transport provider
                     let transportProvider = providers.find(provider => provider.service?.protocol == options.protocol)?.service;
+
                     if (!transportProvider) {
                         throw Error(`Transport provider for protocol "${options.protocol}" not provided`);
                     }
+
                     let object = new (transportProvider as any)({ ...options, name });
 
                     if ('container' in object) {

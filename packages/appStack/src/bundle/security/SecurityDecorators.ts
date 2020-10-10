@@ -1,14 +1,22 @@
 import { Middleware, NextFn, Request, Response } from '../http';
 import { AuthenticationManager } from './AuthenticationManager';
 
-export function Secure(options?: { role?: string, redirectPath?: string })
+/**
+ * Secure an http route (authentication middleware)
+ * 
+ * @param options Options
+ */
+export function Secure(options?: { role?: string, redirectPath?: string, anonymous?: boolean })
 {
     return function secureDecorator(...params: any[]) {
         Middleware([
             [ AuthenticationManager, function secureMiddleware(authManager: AuthenticationManager ,req: Request, res: Response, next: NextFn) {
-                let { role, redirectPath } = options || {};
+                let { role, redirectPath, anonymous } = options || {};
 
                 authManager.authenticate(req, res).then(isOk => {
+
+                    if (anonymous) return next();
+
                     if (isOk) {
                         next();
                     }
@@ -25,3 +33,9 @@ export function Secure(options?: { role?: string, redirectPath?: string })
         ])(...params);
     }
 }
+
+
+/**
+ * Security context provider
+ */
+export class SecurityContext<T> { context?: T }
