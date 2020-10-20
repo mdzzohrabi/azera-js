@@ -3,7 +3,7 @@
     "description": "Reflection util",
     "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
     "license": "MIT",
-    "version": "1.0.8",
+    "version": "1.0.9",
     "main": "index.js",
     "scripts": {
         "clean": "rm -f *.d.ts *.js *.map && rm -rf test",
