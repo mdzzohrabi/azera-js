@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.0.11",
+	"version": "1.0.12",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
@@ -19,8 +19,8 @@
 	},
 	"dependencies": {
 		"@azera/container": "^2.0.20",
-		"@azera/reflect": "^1.0.6",
-		"@azera/util": "^1.0.17",
+		"@azera/reflect": "^1.0.9",
+		"@azera/util": "^1.0.18",
 		"@types/amqplib": "^0.5.13",
 		"@types/body-parser": "^1.19.0",
 		"@types/commander": "^2.12.2",
