@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.0.12",
+	"version": "1.1.0",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
@@ -31,6 +31,7 @@
 		"@types/js-yaml": "^3.12.4",
 		"@types/jsonwebtoken": "^8.5.0",
 		"@types/microtime": "^2.1.0",
+		"@types/twig": "^1.12.4",
 		"@types/winston": "^2.4.4",
 		"body-parser": "^1.19.0",
 		"commander": "^6.0.0",
@@ -47,29 +48,28 @@
 		"source-map-support": "^0.5.19",
 		"spdy": "^4.0.2",
 		"tslib": "^2.0.0",
-		"winston": "^3.2.1",
-		"@types/twig": "^1.12.4",
-		"twig": "^1.15.3"
+		"twig": "^1.15.3",
+		"winston": "^3.2.1"
 	},
 	"devDependencies": {
+		"@types/amqplib": "^0.5.16",
 		"@types/chai": "^4.2.11",
 		"@types/mocha": "^8.0.2",
+		"@types/mongoose": "^5.10.0",
 		"@types/node": "^14.6.0",
+		"amqplib": "^0.6.0",
+		"apollo-server": "^2.19.0",
 		"chai": "^4.2.0",
+		"graphql": "^15.4.0",
 		"mocha": "^8.1.1",
+		"mongodb": "^3.6.3",
+		"mongoose": "^5.10.13",
 		"node-watch": "^0.7.0",
 		"parcel-bundler": "^1.12.4",
 		"rimraf": "^3.0.2",
 		"ts-node": "^9.0.0",
-		"typescript": "^4.0.5",
-		"@types/amqplib": "^0.5.16",
-		"@types/mongoose": "^5.10.0",
-		"amqplib": "^0.6.0",
-		"apollo-server": "^2.19.0",
-		"graphql": "^15.4.0",
-		"mongodb": "^3.6.3",
-		"mongoose": "^5.10.13",
-		"typeorm": "^0.2.29"
+		"typeorm": "^0.2.29",
+		"typescript": "^4.0.5"
 	},
 	"resolutions": {
 		"node-forge": "0.10.0"
