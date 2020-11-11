@@ -4,7 +4,9 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { forEach } from '@azera/util';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
 import { Kernel } from '../../Kernel';
+import { Logger } from '../../Logger';
 import type { MongoClient } from 'mongodb';
+import { Cli } from '../cli';
 
 export class MongoBundle extends Bundle {
 
@@ -31,7 +33,7 @@ export class MongoBundle extends Bundle {
 
     }
 
-    @Inject() async run(container: Container) {
+    @Inject() async boot(container: Container, cli: Cli) {
 
         let config = container.getParameter('config', {})?.mongo ?? {};
         let connections: { [name: string]: any } = config?.connections ?? {};
@@ -40,86 +42,86 @@ export class MongoBundle extends Bundle {
         let proxy = config?.proxy;
         let names = Object.keys(connections);
 
+        // Ignore if no connection exists
         if (names.length == 0) return;
 
+        // set first connection as default if only one connection exists
         if (names.length == 1) {
             defaultConnectionName = names[0];
             defaultDatabase = connections[names[0]].database;
         }
 
-        let { MongoClient, Db } = await import('mongodb');
-        let { Logger } = await import('../../Logger');
+        await import('mongodb').then(({ MongoClient, Db }) => {
+            // Connections
+            forEach(connections, (conn, name) => {
+                let serviceName = `mongo.${name}`;
+                container.setFactory(serviceName, function mongoConnectionFactory() {
+                    // Proxy
+                    if (proxy)
+                        MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, MongoClient.prototype.connect);
 
-        // Connections
-        forEach(connections, (conn, name) => {
-            let serviceName = `mongo.${name}`;
-            container.setFactory(serviceName, function mongoConnectionFactory() {
-                // Proxy
-                if (proxy)
-                    MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, MongoClient.prototype.connect);
-
-                let auth = "";
-                if (conn.username) {
-                    auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;
-                }
-                let client = new MongoClient(`mongodb://${auth}${conn.host}:${conn.port ?? 27017}?authSource=${conn.database}&ssl=${conn.host.startsWith('https')}`, {
-                    useNewUrlParser: conn.useNewUrlParser,
-                    useUnifiedTopology: conn.useUnifiedTopology,
-                    auth: conn.username ? { user: conn.username, password: conn.password } : undefined
-                });
-
-                console.log("Create mongo connection instance");
-
-                client.on('error', async (err) => {
-                    let logger = await container.invokeAsync(Logger);
-                    console.log("Database error", err);
-                    logger.error(`Mongo database '${name}'`);
-                    container['instances'].delete(serviceName);
-                    if (name == defaultConnectionName) {
-                        container['instances'].delete(MongoClient);
+                    let auth = "";
+                    if (conn.username) {
+                        auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;
                     }
+                    let client = new MongoClient(`mongodb://${auth}${conn.host}:${conn.port ?? 27017}?authSource=${conn.database}&ssl=${conn.host.startsWith('https')}`, {
+                        useNewUrlParser: conn.useNewUrlParser,
+                        useUnifiedTopology: conn.useUnifiedTopology,
+                        auth: conn.username ? { user: conn.username, password: conn.password } : undefined
+                    });
+
+                    client.on('error', async (err) => {
+                        let logger = await container.invokeAsync(Logger);
+                        console.log("Database error", err);
+                        logger.error(`Mongo database '${name}'`);
+                        container['instances'].delete(serviceName);
+                        if (name == defaultConnectionName) {
+                            container['instances'].delete(MongoClient);
+                        }
+                    });
+                    
+                    return client.connect();
                 });
-                
-                return client.connect();
-            });
 
-            let repositories: { [repo: string]: any } = conn.repositories ?? {};
+                let repositories: { [repo: string]: any } = conn.repositories ?? {};
 
-            if (Object.keys(repositories).length > 0 && !conn.database) throw Error(`You must defined database name for connection "${name}" to initialize repositories`);
+                if (Object.keys(repositories).length > 0 && !conn.database) throw Error(`You must defined database name for connection "${name}" to initialize repositories`);
 
-            // Repositories
-            forEach(repositories, (repo, collectionName) => {
+                // Repositories
+                forEach(repositories, (repo, collectionName) => {
 
-                if (!repo) throw Error(`Mongo repository ${collectionName} not found`);
+                    if (!repo) throw Error(`Mongo repository ${collectionName} not found`);
 
-                if (typeof collectionName != 'string') {
-                    collectionName = repo['collectionName'];
-                }
-                container.setFactory(repo, function MongoCollectionFactory() {
-                    return container.invokeAsync<MongoClient>(serviceName).then(client => client.db(conn.database).collection(collectionName)).then(collection => {
-                        let repoInstance = new repo;
-                        repoInstance.__proto__.__proto__ = collection;
-                        return repoInstance;
+                    if (typeof collectionName != 'string') {
+                        collectionName = repo['collectionName'];
+                    }
+                    container.setFactory(repo, function MongoCollectionFactory() {
+                        return container.invokeAsync<MongoClient>(serviceName).then(client => client.db(conn.database).collection(collectionName)).then(collection => {
+                            let repoInstance = new repo;
+                            repoInstance.__proto__.__proto__ = collection;
+                            return repoInstance;
+                        });
                     });
                 });
             });
-        });
 
-        
+            // Default connection factory
+            if (defaultConnectionName && connections[defaultConnectionName]) {
+                container.setFactory(MongoClient, function mongoDefaultFactory() {
+                    return container.invokeAsync(`mongo.${defaultConnectionName}`);
+                })
 
-        // Default connection factory
-        if (defaultConnectionName && connections[defaultConnectionName]) {
-            container.setFactory(MongoClient, function mongoDefaultFactory() {
-                return container.invokeAsync(`mongo.${defaultConnectionName}`);
-            })
-
-            if (defaultDatabase) {
-                container.setFactory(Db, function mongoDefaultDatabaseFactory() {
-                    return container.invokeAsync<MongoClient>(`mongo.${defaultConnectionName}`).then(client => client.db(defaultDatabase));
-                });
+                if (defaultDatabase) {
+                    container.setFactory(Db, function mongoDefaultDatabaseFactory() {
+                        return container.invokeAsync<MongoClient>(`mongo.${defaultConnectionName}`).then(client => client.db(defaultDatabase));
+                    });
+                }
             }
-        }
 
+        })
+        .catch(err => {
+            cli.error(`mongodb module not installed, install it by 'yarn add mongodb @types/mongodb'`);
+        });
     }
 
 }

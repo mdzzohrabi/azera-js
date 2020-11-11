@@ -1,14 +1,14 @@
-import { Bundle } from '../../Bundle';
-import { Inject, Container, ContainerAware } from '@azera/container';
-import { MessageTransport } from './transport/MessageTransport';
-import { MessageManager } from './MessageManager';
-import { ConfigSchema } from '../../ConfigSchema';
-import * as url from 'url';
+import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
+import * as url from 'url';
+import { Bundle } from '../../Bundle';
+import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
-import { MessageTransportOptions } from './transport/MessageTransportOptions';
+import { MessageManager } from './MessageManager';
 import { AMQPTransport } from './transport/AMQPTransport';
 import { MemoryTransport } from './transport/MemoryTransport';
+import { MessageTransport } from './transport/MessageTransport';
+import { MessageTransportOptions } from './transport/MessageTransportOptions';
 
 /**
  * Message bundle

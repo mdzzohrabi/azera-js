@@ -1,10 +1,11 @@
 import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
+import { Connection, Document, Model } from 'mongoose';
 import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
-import type { Model, Connection, Document } from 'mongoose';
+import { Cli } from '../cli';
 
 /**
  * Mongoose bundle
@@ -37,47 +38,53 @@ export class MongooseBundle extends Bundle {
         .node('mongoose.proxy', { description: 'Proxy', type: 'string' })
     }
 
-    async boot(@Inject('$config') config: any, @Inject() container: Container) {
+    async boot(@Inject('$config') config: any, @Inject() cli: Cli, @Inject() container: Container) {
         
         // Skip configuration if not config exists
         if (!config?.mongoose?.connections) return;
 
-        let mongoose = await import('mongoose');
-        
         let { defaultConnection, connections, proxy } = { defaultConnection: 'main', connections: {}, proxy: null,  ...config.mongoose } as any;
 
-        // Prepare connections
-        forEach(connections, (options: string|any, name: string) => {
-            let serviceName = `mongoose.${name}`;
-            // Generate connection factory
-            container.setFactory(serviceName, function mongooseConnectionFactory() {
-                if (proxy) {
-                    mongoose.mongo.MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, mongoose.mongo.MongoClient.prototype.connect);
-                }      
+        if (Object.keys(connections).length > 0) {
+            await import('mongoose').then(mongoose => {
 
-                if (typeof options == 'string')
-                    return mongoose.createConnection(options);
-                
-                let dbOptions = { ...options, ...(options.extra ?? {}) };
-                dbOptions.models && delete dbOptions.models;
-                let uri = options.uri || `mongodb://${options.user ?? ''}${options.pass ? ':' + options.pass : ''}${options.user ? '@' : ''}${options.host ?? 'localhost'}:${options.port ?? 27017}/${options.dbName}`;
+                // Prepare connections
+                forEach(connections, (options: string|any, name: string) => {
+                    let serviceName = `mongoose.${name}`;
+                    // Generate connection factory
+                    container.setFactory(serviceName, function mongooseConnectionFactory() {
+                        if (proxy) {
+                            mongoose.mongo.MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, mongoose.mongo.MongoClient.prototype.connect);
+                        }      
 
-                if (defaultConnection == name) mongoose.connect(uri, dbOptions);
+                        if (typeof options == 'string')
+                            return mongoose.createConnection(options);
+                        
+                        let dbOptions = { ...options, ...(options.extra ?? {}) };
+                        dbOptions.models && delete dbOptions.models;
+                        let uri = options.uri || `mongodb://${options.user ?? ''}${options.pass ? ':' + options.pass : ''}${options.user ? '@' : ''}${options.host ?? 'localhost'}:${options.port ?? 27017}/${options.dbName}`;
 
-                return mongoose.createConnection(uri, dbOptions);
-            });
+                        if (defaultConnection == name) mongoose.connect(uri, dbOptions);
 
-            // Prepare models
-            if (Array.isArray(options.models)) {
-                forEach(options.models as Model<Document>[], model => {
-                    container.invoke<Connection>(serviceName).model(model.modelName, model.schema);
+                        return mongoose.createConnection(uri, dbOptions);
+                    });
+
+                    // Prepare models
+                    if (Array.isArray(options.models)) {
+                        forEach(options.models as Model<Document>[], model => {
+                            container.invoke<Connection>(serviceName).model(model.modelName, model.schema);
+                        });
+                    }
                 });
-            }
-        });
 
-        if (defaultConnection) {
-            container.setFactory(mongoose.Connection, () => container.invoke(`mongoose.${defaultConnection}`));
+                if (defaultConnection) {
+                    container.setFactory(mongoose.Connection, () => container.invoke(`mongoose.${defaultConnection}`));
+                }
+
+            })
+            .catch(err => {
+                cli.error(`Mongoose module not installed, install by 'yarn add mongoose @types/mongoose'`);
+            })
         }
-
     }
 }

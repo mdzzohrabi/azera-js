@@ -5,6 +5,7 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { Profiler } from '../../Profiler';
 import { wrapCreateConnectionWithProxy } from '../../net';
+import { Cli } from '../cli';
 
 export class TypeORMBundle extends Bundle {
 
@@ -69,7 +70,7 @@ export class TypeORMBundle extends Bundle {
         return manager;
     }
 
-    async boot(@Inject('$config') config: any, @Inject() container: Container) {
+    async boot(@Inject('$config') config: any, @Inject() cli: Cli, @Inject() container: Container) {
         let defaultConnection = config?.typeOrm?.defaultConnection ?? 'main';
         let connections = config?.typeOrm?.connections ?? {};
         let hasDefaultConnection = false;
@@ -77,36 +78,41 @@ export class TypeORMBundle extends Bundle {
 
         // Default connection
         if (connectionCount > 0 ) {
-            let { Connection, ConnectionManager, EntityManager, MongoEntityManager } = await import('typeorm');
+            await import('typeorm').then(({ Connection, ConnectionManager, EntityManager, MongoEntityManager }) => {
 
-            // Connection manager factory
-            container.setFactory(ConnectionManager, this.connectionManagerFactory);
+                // Connection manager factory
+                container.setFactory(ConnectionManager, this.connectionManagerFactory);
 
-            // Register connections as services
-            forEach(connections, (options, name) => {
-                if (name == defaultConnection) hasDefaultConnection = true;
-                container.setFactory('connection.' + name, async function connectionFactory() {
-                    let connection = (await container.invokeAsync(ConnectionManager)).get(name);
+                // Register connections as services
+                forEach(connections, (options, name) => {
+                    if (name == defaultConnection) hasDefaultConnection = true;
+                    container.setFactory('connection.' + name, async function connectionFactory() {
+                        let connection = (await container.invokeAsync(ConnectionManager)).get(name);
+                        if (!connection.isConnected) await connection.connect();
+                        return connection;
+                    });
+                });
+
+                if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesnt exists`);
+
+                container.setFactory(Connection, async function defaultConnectionFactory() {
+                    let connection = (await container.invokeAsync(ConnectionManager)).get(defaultConnection);
                     if (!connection.isConnected) await connection.connect();
                     return connection;
                 });
-            });
 
-            if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesnt exists`);
+                container.setFactory(EntityManager, async function defaultEntityManagerFactory() {
+                    return (await container.invokeAsync(Connection)).manager;
+                });
 
-            container.setFactory(Connection, async function defaultConnectionFactory() {
-                let connection = (await container.invokeAsync(ConnectionManager)).get(defaultConnection);
-                if (!connection.isConnected) await connection.connect();
-                return connection;
-            });
+                container.setFactory(MongoEntityManager, async function defaultMongoEntityManagerFactory() {
+                    return (await container.invokeAsync(Connection)).mongoManager;
+                });
 
-            container.setFactory(EntityManager, async function defaultEntityManagerFactory() {
-                return (await container.invokeAsync(Connection)).manager;
-            });
-
-            container.setFactory(MongoEntityManager, async function defaultMongoEntityManagerFactory() {
-                return (await container.invokeAsync(Connection)).mongoManager;
-            });
+            })
+            .catch(err => {
+                cli.error(`TypeORM modules not installed, install it by 'yarn add typeorm'`);
+            })
         }
 
     }
