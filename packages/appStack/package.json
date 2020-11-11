@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.1.0-stack",
+	"version": "1.1.1-stack",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
@@ -24,7 +24,6 @@
 		"@azera/reflect": "^1.0.9",
 		"@azera/util": "^1.0.18",
 		"@types/body-parser": "^1.19.0",
-		"@types/commander": "^2.12.2",
 		"@types/deep-extend": "^0.4.31",
 		"@types/express": "^4.17.6",
 		"@types/express-fileupload": "^1.1.3",
@@ -32,7 +31,6 @@
 		"@types/jsonwebtoken": "^8.5.0",
 		"@types/microtime": "^2.1.0",
 		"@types/twig": "^1.12.4",
-		"@types/winston": "^2.4.4",
 		"body-parser": "^1.19.0",
 		"commander": "^6.0.0",
 		"deep-extend": "^0.6.0",
