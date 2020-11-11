@@ -1,5 +1,4 @@
 import { Service } from '@azera/container';
-import { Decorator } from '@azera/util';
 
 /**
  * Controller middlewares property name

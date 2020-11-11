@@ -28,7 +28,7 @@ export function Controller(routePrefix?: string, options?: ControllerOptions) {
         // Optimzie child controllers
         options.children!.forEach(child => {
 
-            child.prototype.routePrefix = routePrefix;
+            child.prototype.routePrefix = (routePrefix ?? '') + (child.prototype.routePrefix ?? '');
             child.prototype.parentController = controller;
 
         });

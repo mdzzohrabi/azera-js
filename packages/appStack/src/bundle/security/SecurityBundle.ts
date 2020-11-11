@@ -4,6 +4,8 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { AuthenticationProvider } from './AuthenticationProvider';
 import { AuthenticationManager } from './AuthenticationManager';
 import { SecurityEventSubscriber } from './SecurityEventSubscriber';
+import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { SecurityContext } from './SecurityDecorators';
 
 export class SecurityBundle extends Bundle {
 
@@ -21,6 +23,14 @@ export class SecurityBundle extends Bundle {
 
         container.autoTag(AuthenticationProvider, ['security.authentication_provider']);
         container.getDefinition(AuthenticationManager).parameters[0] = '$$security.authentication_provider';
+
+        /**
+         * Security context provider
+         */
+        container.setFactory(SecurityContext, (invokeOptions: ContainerInvokeOptions) => {
+            if (!invokeOptions.invokeArguments || !invokeOptions.invokeArguments[1]) return { context: null };
+            return { context: invokeOptions.invokeArguments[1].locals.securityContext };
+        });
     }
 
     getServices() {

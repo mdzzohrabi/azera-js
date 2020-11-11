@@ -17,6 +17,7 @@ import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
 import { WorkflowManager, Workflow } from '../../workflow';
 import { CacheCleanCommand } from './Command/CacheCleanCommand';
 import { DiParametersCommand } from './Command/DIParametersCommand';
+import { ContainerInvokeOptions } from '@azera/container/build/container';
 
 /**
  * Core bundle
@@ -158,7 +159,7 @@ export class CoreBundle extends Bundle {
         });
 
         // Logger
-        container.setFactory(Logger, function loggerFactory() {
+        container.setFactory(Logger, function loggerFactory(invokeOptions: ContainerInvokeOptions) {
 
             let $config = container.getParameter('config', {});
             let $logger = container.getParameter('logger.metas', {});
@@ -190,7 +191,7 @@ export class CoreBundle extends Bundle {
                 }),
                 defaultMeta,
             })
-        });
+        }, false);
 
         // Workflow
         container.addPipe(WorkflowManager, workflowManager => {

@@ -81,7 +81,7 @@ export class TypeORMBundle extends Bundle {
         forEach(connections, (options, name) => {
             if (name == defaultConnection) hasDefaultConnection = true;
             container.setFactory('connection.' + name, async function connectionFactory() {
-                let connection = container.invoke(ConnectionManager).get(name);
+                let connection = (await container.invokeAsync(ConnectionManager)).get(name);
                 if (!connection.isConnected) await connection.connect();
                 return connection;
             });
@@ -92,7 +92,7 @@ export class TypeORMBundle extends Bundle {
             if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesnt exists`);
 
             container.setFactory(Connection, async function defaultConnectionFactory() {
-                let connection = container.invoke(ConnectionManager).get(defaultConnection);
+                let connection = (await container.invokeAsync(ConnectionManager)).get(defaultConnection);
                 if (!connection.isConnected) await connection.connect();
                 return connection;
             });

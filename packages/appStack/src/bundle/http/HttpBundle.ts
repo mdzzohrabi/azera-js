@@ -15,12 +15,12 @@ import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { Request } from './Request';
 import { Response, NextFn } from './Response';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
-import { isFunction } from 'util';
 import { debugName, invariant } from '../../Util';
 import { Profiler } from '../../Profiler';
 import * as cluster from 'cluster';
-import { forEach } from '@azera/util';
+import { forEach, is } from '@azera/util';
 import { HttpStartCommand } from './Command/HttpStartCommand';
+import { ContainerInvokeOptions } from '@azera/container/build/container';
 
 export { express };
 
@@ -106,26 +106,37 @@ export class HttpBundle extends Bundle {
 
         
         container
-            .ignoreInvokeLaterDep(Request, Response)
             // Request
-            .setFactory(Request, function requestFactory(serviceContainer: Container) {
-                return serviceContainer.getParameter('http.req');
+            .setFactory(Request, function requestFactory(invokeOptions: ContainerInvokeOptions) {
+                let args = invokeOptions.invokeArguments ?? [];
+                if (!args[0] || !('query' in args[0])) {
+                    throw Error(`Invalid Request injection`);
+                }
+                return args[0];
             }, true)
             // Response
-            .setFactory(Response, function responseFactory(serviceContainer: Container) {
-                return serviceContainer.getParameter('http.res');
+            .setFactory(Response, function responseFactory(invokeOptions: ContainerInvokeOptions) {
+                let args = invokeOptions.invokeArguments ?? [];
+                if (!('send' in args[1])) {
+                    throw Error(`Invalid Response injection`);
+                }
+                return args[1];
             }, true)
             // Next
-            .setFactory(NextFn, function nextFnFactory(serviceContainer: Container) {
-                return serviceContainer.getParameter('http.next');
+            .setFactory(NextFn, function nextFnFactory(invokeOptions: ContainerInvokeOptions) {
+                let args = invokeOptions.invokeArguments ?? [];
+                if (args[2] instanceof Function) {
+                    return args[2];
+                }
+                throw Error(`Invalid NextFn injection`);
             }, true)
             
         container.setFactory(HttpBundle.DI_SERVER, async function expressFactory() {
             let server = bundle.server = express();
             let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
             let controllers = await container.getByTagAsync(HttpBundle.DI_TAG_CONTROLLER) as any[];
-            let profiler = container.invoke(Profiler);
-            let events = container.invoke(EventManager);
+            let profiler = await container.invokeAsync(Profiler);
+            let events = await container.invokeAsync(EventManager);
             let config = container.getParameter('config', {});
 
             events.emit(HttpBundle.EVENT_EXPRESS_INIT, server);
@@ -133,7 +144,7 @@ export class HttpBundle extends Bundle {
             // Setup middlewares
             middlewares.forEach((middle: any) => {
 
-                if (!isFunction(middle)) throw Error(`Http Middleware must be a function, but ${ debugName(middle) } given`);
+                if (!is.Function(middle)) throw Error(`Http Middleware must be a function, but ${ debugName(middle) } given`);
 
                 if ('middlewarePath' in middle) {
                     server.use(middle.middlewarePath, middle);
@@ -345,8 +356,9 @@ export class HttpBundle extends Bundle {
 
 
             return container.invokeAsync<express.Express>(HttpBundle.DI_SERVER).then(server => {
-                server.listen(httpPort, host, function serverStarted() {
-                    container.invoke(EventManager).emit(HttpBundle.EVENT_LISTEN, httpPort);
+                server.listen(httpPort, host, async function serverStarted() {
+                    var events = await container.invokeAsync(EventManager);
+                    events.emit(HttpBundle.EVENT_LISTEN, httpPort);
                     logger.info(`Server started on ${ host ? host + ':' : '' }${ httpPort }`);
                 })
             });

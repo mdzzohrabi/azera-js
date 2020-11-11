@@ -4,7 +4,8 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { forEach } from '@azera/util';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
 import { Kernel } from '../../Kernel';
-import { MongoClient } from 'mongodb';
+import { MongoClient, Db } from 'mongodb';
+import { Logger } from '../../Logger';
 
 export class MongoBundle extends Bundle {
 
@@ -36,9 +37,16 @@ export class MongoBundle extends Bundle {
         let config = container.getParameter('config', {})?.mongo ?? {};
         let connections: { [name: string]: any } = config?.connections ?? {};
         let defaultConnectionName = config?.defaultConnection ?? 'main';
+        let defaultDatabase: string | undefined = undefined;
         let proxy = config?.proxy;
+        let names = Object.keys(connections);
 
-        if (Object.keys(connections).length == 0) return;
+        if (names.length == 0) return;
+
+        if (names.length == 1) {
+            defaultConnectionName = names[0];
+            defaultDatabase = connections[names[0]].database;
+        }
 
         // Connections
         forEach(connections, (conn, name) => {
@@ -52,11 +60,25 @@ export class MongoBundle extends Bundle {
                 if (conn.username) {
                     auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;
                 }
-                return new MongoClient(`mongodb://${auth}${conn.host}:${conn.port ?? 27017}?authSource=${conn.database}&ssl=${conn.host.startsWith('https')}`, {
+                let client = new MongoClient(`mongodb://${auth}${conn.host}:${conn.port ?? 27017}?authSource=${conn.database}&ssl=${conn.host.startsWith('https')}`, {
                     useNewUrlParser: conn.useNewUrlParser,
                     useUnifiedTopology: conn.useUnifiedTopology,
                     auth: conn.username ? { user: conn.username, password: conn.password } : undefined
-                }).connect();
+                });
+
+                console.log("Create mongo connection instance");
+
+                client.on('error', async (err) => {
+                    let logger = await container.invokeAsync(Logger);
+                    console.log("Database error", err);
+                    logger.error(`Mongo database '${name}'`);
+                    container['instances'].delete(serviceName);
+                    if (name == defaultConnectionName) {
+                        container['instances'].delete(MongoClient);
+                    }
+                });
+                
+                return client.connect();
             });
 
             let repositories: { [repo: string]: any } = conn.repositories ?? {};
@@ -81,11 +103,19 @@ export class MongoBundle extends Bundle {
             });
         });
 
+        
+
         // Default connection factory
         if (defaultConnectionName && connections[defaultConnectionName]) {
             container.setFactory(MongoClient, function mongoDefaultFactory() {
                 return container.invokeAsync(`mongo.${defaultConnectionName}`);
             })
+
+            if (defaultDatabase) {
+                container.setFactory(Db, function mongoDefaultDatabaseFactory() {
+                    return container.invokeAsync<MongoClient>(`mongo.${defaultConnectionName}`).then(client => client.db(defaultDatabase));
+                });
+            }
         }
 
     }

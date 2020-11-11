@@ -145,12 +145,14 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
                 def.methods[key][index] = service;
                 break;
             case Type.Method:
-                // throw new DecoratorError(`Decorate ${ type } not allowed`, target, key, index);
-
                 if ( Reflect.hasMetadata("design:paramtypes", target, key) ) {
+                    let def = getDefinition(target);
+                    let curDeps = def.methods[key] ?? [];
+
                     let types: Function[] = Reflect.getMetadata("design:paramtypes", target, key);
                     let endOfDep = false;
                     let deps = types.map((type, i) => {
+                        if (curDeps[i]) return curDeps[i];
                         if ( isInternalClass(type) ) {
                             endOfDep = true;
                             return null;
@@ -158,11 +160,10 @@ export function Inject(service?: any, options?: any): any//ClassDecorator | Meth
                         if ( endOfDep ) throw Error(`Dependencies must come first in method ${target.constructor.name}.${key} method, param types : ${ types.map(t => t && t.name).join(', ') }`);
                         return type;
                     }).filter( dep => !!dep );
-
+                                
                     //@ts-ignore
-                    getDefinition(target).methods[key] = deps;
+                    def.methods[key] = deps;
                 }
-
                 break;
             case Type.ConstructorParameter:
                 Reflect.defineMetadata(META_PARAMETERS_INJECT, true, target);

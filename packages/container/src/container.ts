@@ -3,9 +3,9 @@ import { forEach, is } from "@azera/util";
 import { HashMap } from "@azera/util/is";
 import { ok } from "assert";
 import * as glob from "glob";
-import { META_INJECT, getDefinition, hasDefinition, setDefinition, getTarget } from "./decorators";
+import { getDefinition, getTarget, hasDefinition, META_INJECT, setDefinition } from "./decorators";
 import { ServiceNotFoundError } from "./errors";
-import { ContainerValue, Factory, IAutoTagger, IContainer, IDefinition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, Service, IPropertyInjection, Constructor } from "./types";
+import { Constructor, ContainerValue, Factory, IAutoTagger, IContainer, IDefinition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, Service, MockMethodAsync } from "./types";
 
 export const FACTORY_REGEX = /.*Factory$/;
 export const SERVICE_REGEX = /.*Service$/;
@@ -14,7 +14,12 @@ interface IInvokeOptions<Async=boolean> {
     context?: any;
     override?: Partial<IDefinition>;
     async?: Async;
+    invokeArguments?: any[];
+    private?: boolean;
 }
+
+class IInvokeOptions<Async=boolean> {}
+export class ContainerInvokeOptions extends IInvokeOptions {}
 
 /**
  * Dependency Injection Container
@@ -121,15 +126,15 @@ export class Container implements IContainer {
      */
     private buildFromFactory <T>(factory: Factory<T>, _stack: string[] = [], options?: IInvokeOptions): T {
         let result: any, override = { isFactory: false, invoke: true };
-        let { async = false } = options || {};
+        let { async = false, invokeArguments } = options || {};
         
         if ( is.Class(factory) ) {
             let context = this._invoke(factory, _stack, { override: { isFactory: false } });
-            result = this._invoke(Method(context, 'create') , _stack, { context, override, async });
+            result = this._invoke(Method(context, 'create') , _stack, { context, override, async, invokeArguments, private: true });
         } else if ( is.Function(factory) ) {
-            result = this._invoke(factory, _stack, { context: this, override, async });
+            result = this._invoke(factory, _stack, { context: this, override, async, invokeArguments, private: true });
         } else if ( is.Object(factory) && 'create' in factory ) {
-            result = this._invoke(Method(factory, 'create') , _stack, { context: this, override, async });
+            result = this._invoke(Method(factory, 'create') , _stack, { context: this, override, async, invokeArguments, private: true });
         } else {
             throw Error(`Factory must be Function or instanceOf IFactory`);
         }
@@ -177,16 +182,17 @@ export class Container implements IContainer {
      * @param options       Options
      * @internal
      */
-    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[], options: IInvokeOptions<false>): T
-    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[], options: IInvokeOptions<true>): Promise<T>
-    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[]): T
+    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[], options: IInvokeOptions<false>): T;
+    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[], options: IInvokeOptions<true>): Promise<T>;
+    private resolveDefinition<T>(definition: IDefinition<T>, _stack: string[]): T;
     private resolveDefinition(definition: IDefinition, _stack: string[], options?: IInvokeOptions): any
     {
-        let { context, override, async }: IInvokeOptions = options || {};
+        let { context, override, async, private: isPrivate }: IInvokeOptions = options || {};
         let service = override ? Object.assign({}, definition, override) : definition;
         let name = service.name;
         let result: any;
         let cacheKey = service.namedService ? name : service.service;
+            isPrivate = service.private || isPrivate || false;
 
         if (!service.invoke && (name == undefined || is.Empty(name))) throw Error(`Service has no name`);
 
@@ -212,14 +218,22 @@ export class Container implements IContainer {
             ok( is.Array(service.parameters || []), `Service ${service.name} parameters must be array, ${ service.parameters } given` );
             ok( service.service || service.factory, `No service defined for ${service.name}` );
 
-            let resolvedParameters: any[] = ( service.parameters || [] ).map( dep => this._invoke(dep, _stack, options as any) as any );
+            // Service arguments
+            let parameters: any[] = ( service.parameters || [] ).map( dep => this._invoke(dep, _stack, options as any) as any );
+
+            // Service properties
+            let properties =  Object.keys(service.properties ?? {}).map(key => {
+                let prop = service.properties[key];
+                return is.String(prop) || is.Function(prop) ? { key, name: prop } : { key, ...prop };
+            });
+
             let target = service.service;
 
-            if (this.strictAsync && !async && resolvedParameters.find(d => d instanceof Promise) !== undefined) {
+            if (this.strictAsync && !async && parameters.find(d => d instanceof Promise) !== undefined) {
                 throw Error(`Async dependencies are not allowed in synchronous invoke`);
             }
 
-            let createService = (parameters: any[]) => {
+            let createService = (parameters: any[], props: typeof properties) => {
                 // Function service (Factory)
                 if ( service.invoke || !is.Newable(target) ) {
                     return { result: target!.apply( context || target, parameters), return: true };
@@ -228,27 +242,20 @@ export class Container implements IContainer {
                 let object = new ( target as any )( ...parameters );
 
                 // Properties
-                if ( service.properties ) {
-                    forEach(service.properties, ( dep, key ) => {
-    
-                        let prop: IPropertyInjection;
-    
-                        if ( is.String(dep) || is.Function(dep) ) {
-                            prop = { name: dep };
-                        } else {
-                            prop = dep;
-                        }
-    
-                        if ( prop.lateBinding ) {
-                            let resolved: any;
-                            Object.defineProperty(object, key, {
-                                get: () => resolved || ( resolved = this._invoke(prop.name, _stack, options as any) )
-                            });
-                        } else {
-                            object[key] = this._invoke(prop.name, _stack, options as any);
-                        }
-                    });
-                }
+                props.forEach(prop => {
+                    if (async) {
+                        object[prop.key] = prop.name;
+                    }
+                    else if (prop.lateBinding) {
+                        let resolved: any;
+                        Object.defineProperty(object, prop.key, {
+                            get: () => resolved || ( resolved = this._invoke(prop.name, _stack, options as any) )
+                        });
+                    }
+                    else {
+                        object[prop.key] = this._invoke(prop.name, _stack, options as any);
+                    }
+                });
     
                 // Methods
                 if (service.calls) {
@@ -259,22 +266,51 @@ export class Container implements IContainer {
 
                 return { result: object, return: false };
 
-            }
+            };           
 
-            if (async && resolvedParameters.filter(param => param instanceof Promise).length > 0) {
+            // Asynchronous service invokation
+            if (async) {
 
                 let resolver = new Promise(async (resolve, reject) => {
-                    resolvedParameters = await Promise.all(resolvedParameters);
-                    let { result: object } = createService(resolvedParameters);
+                    parameters = await Promise.all(parameters);
+
+                    for (let key in parameters) {
+                        if (Array.isArray(parameters[key])) {
+                            parameters[key] = await Promise.all(parameters[key]);
+                        }
+                    }
+
+                    for (let prop of properties) {
+                        prop.name = await Promise.resolve(this._invoke(prop.name, _stack, options as any));
+                    }
+
+                    let { result: object } = createService(parameters, properties);
+
+                    // Pipelines                    
+                    if (service.service && this.pipes.has(service.service)) {
+                        for (let pipe of (this.pipes.get(service.service) ?? [])) {
+                            await Promise.resolve(pipe(object, this));
+                        }
+                    }
+
                     resolve(object);
                 });
 
-                if (!service.private) this.instances.set(cacheKey, resolver);
+                if (!isPrivate) this.instances.set(cacheKey, resolver);
 
                 return resolver;
             }
 
-            let { result: object, return: doReturn } = createService(resolvedParameters);
+
+            // Synchronous
+            let { result: object, return: doReturn } = createService(parameters, properties);
+            
+            // Pipelines
+            if (service.service && this.pipes.has(service.service)) {
+                this.pipes.get(service.service)?.forEach(pipe => {
+                    pipe(result, this);
+                });
+            }
 
             if (doReturn) return object;
 
@@ -282,15 +318,8 @@ export class Container implements IContainer {
 
         }
 
-        // Pipelines
-        if (service.service && this.pipes.has(service.service)) {
-            this.pipes.get(service.service)?.forEach(pipe => {
-                pipe(result, this);
-            });
-        }
-
         // Shared services
-        if ( !service.private ) {
+        if ( !isPrivate ) {
             this.instances.set( cacheKey, result );
         }
 
@@ -333,8 +362,8 @@ export class Container implements IContainer {
      * @param stack Injection stack
      * @internal
      */
-    private _get <T extends Function>(name?: T, stack?: string[], options?: IInvokeOptions): T
-    private _get <T>(name?: string, stack?: string[], options?: IInvokeOptions): T
+    private _get <T extends Function>(name?: T, stack?: string[], options?: IInvokeOptions): T;
+    private _get <T>(name?: string, stack?: string[], options?: IInvokeOptions): T;
     private _get (name?: string, stack: string[] = [], options?: IInvokeOptions)
     {
 
@@ -365,8 +394,8 @@ export class Container implements IContainer {
         return this.getService(name, stack, options);
     }
 
-    get<T extends Function>(service: T): T | undefined
-    get<T>(name: string): T | undefined
+    get<T extends Function>(service: T): T | undefined;
+    get<T>(name: string): T | undefined;
     get(value: any)
     {
         return this._get(value);
@@ -436,7 +465,7 @@ export class Container implements IContainer {
                     // This
                     _context,
                     // Parameters
-                    (_deps || []).map(dep => container._invoke(dep)).concat(params)
+                    (_deps || []).map(dep => container._invoke(dep, [], { invokeArguments: params })).concat(params)
                 );
             }
 
@@ -448,8 +477,8 @@ export class Container implements IContainer {
      * @param context Method context (Class instance)
      * @param method Method name
      */
-    invokeLaterAsync <T extends object, M extends keyof T>(context: Constructor<T>, method: M): MockMethod<T, M>;
-    invokeLaterAsync <T extends object, M extends keyof T>(context: T, method: M): MockMethod<T, M>;
+    invokeLaterAsync <T extends object, M extends keyof T>(context: Constructor<T>, method: M): MockMethodAsync<T, M>;
+    invokeLaterAsync <T extends object, M extends keyof T>(context: T, method: M): MockMethodAsync<T, M>;
     invokeLaterAsync <R>(callable: Injectable<R>): (...params: any[]) => Promise<R>;
     invokeLaterAsync(context: any, method?: string): Function
     {
@@ -482,7 +511,7 @@ export class Container implements IContainer {
                     // This
                     _context,
                     // Parameters
-                    (await Promise.all(_deps.map(dep => container._invoke(dep, [], { async: true })))).concat(params)
+                    (await Promise.all(_deps.map(dep => container._invoke(dep, [], { async: true, invokeArguments: params })))).concat(params)
                 );
             }
 
@@ -494,13 +523,13 @@ export class Container implements IContainer {
      * @param target Class instance or object
      * @param method Method name
      */
-    invoke<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): ReturnType<T[M]>
+    invoke<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): ReturnType<T[M]>;
 
     /**
      * Invoke a function and resolve its dependencies
      * @param value Invokable value
      */
-    invoke<T>(value: Invokable<T>): T
+    invoke<T>(value: Invokable<T>): T;
     invoke(value: any, method?: any, ...params: any[])
     {
         if (method) return this.invokeLater(value, method)(...params);
@@ -512,13 +541,13 @@ export class Container implements IContainer {
      * @param target Class instance or object
      * @param method Method name
      */
-    invokeAsync<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): Promise<ReturnType<T[M]>>
+    invokeAsync<T extends { [method: string]: any }, M extends keyof T>(target: T, method: M, ...params: any[]): Promise<ReturnType<T[M]>>;
 
     /**
      * Invoke a function and resolve its dependencies async
      * @param value Invokable value
      */
-    invokeAsync<T>(value: Invokable<T>): Promise<T>
+    invokeAsync<T>(value: Invokable<T>): Promise<T>;
     invokeAsync(value: any, method?: any, ...params: any[])
     {
         if (method) return this.invokeLaterAsync(value, method)(...params);
@@ -533,16 +562,20 @@ export class Container implements IContainer {
      * @param stack Injection stack
      * @param options 
      */
-    private _invoke <T>(value: Invokable<T> ): T
-    private _invoke <T>(value: Invokable<T>, stack: string[], options: IInvokeOptions<false> ): T
-    private _invoke <T>(value: Invokable<T>, stack: string[], options: IInvokeOptions<true> ): Promise<T>
-    private _invoke <T>(value: Invokable<T>, stack: string[], options?: IInvokeOptions ): T
+    private _invoke <T>(value: Invokable<T> ): T;
+    private _invoke <T>(value: Invokable<T>, stack: string[], options: IInvokeOptions<false> ): T;
+    private _invoke <T>(value: Invokable<T>, stack: string[], options: IInvokeOptions<true> ): Promise<T>;
+    private _invoke <T>(value: Invokable<T>, stack: string[], options?: IInvokeOptions ): T;
     private _invoke <T>(value: Invokable<T>, stack?: string[], options?: IInvokeOptions ): T
     {
         options = {
             async: false,
             ...options
         };
+
+        if (value == 'invokeOptions' || value == ContainerInvokeOptions) {
+            return options.async ? Promise.resolve(options) : options as any;
+        }
 
         stack = stack || [];
 
@@ -555,8 +588,11 @@ export class Container implements IContainer {
         if ( (_isClass = is.Class(value)) || (_isFunction = is.Function(value)) || (_isMethod = isMethod(value)) || is.Array(value) ) {
             let def = this.getDefinition(value);
             stack.push(`${def.name} (${ _isClass ? 'Class' : _isFunction ? 'Function' : _isMethod ? 'Method' : 'Array' })`);
-            if ( !_isMethod && !is.Empty(def.name) && this.instances.has(def.namedService ? def.name : def.service!) ) return this.instances.get(def.namedService ? def.name : def.service!);
-            return this.resolveDefinition(def, stack, options as any) as any;
+            if ( !_isMethod && !is.Empty(def.name) && this.instances.has(def.namedService ? def.name : def.service!) ) {
+                value = this.instances.get(def.namedService ? def.name : def.service!);
+            } else {
+                value = this.resolveDefinition(def, stack, options as any) as any;
+            }
         }
 
         // Any other things
@@ -859,7 +895,7 @@ export class Container implements IContainer {
                 return {
                     done: keys.length > 0,
                     value: keys.pop()
-                }
+                };
             }
         };
     }

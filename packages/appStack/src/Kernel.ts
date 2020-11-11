@@ -77,24 +77,23 @@ export class Kernel {
         });
 
         // Prepend CoreBundle
-        this.bundles = ([ new CoreBundle ] as Bundle[]).concat( this.bundles );
+        this.bundles = [ new CoreBundle, ...this.bundles ];
 
         // Set alias for bundles in container
         this.bundles.forEach(bundle => {
-            this.container.add(bundle.constructor); 
-            this.container.setAlias(bundle.constructor, bundle);
+            container
+                .add(bundle.constructor)
+                .setAlias(bundle.constructor, bundle); 
         });
 
         // Set bundles names as container parameter
-        container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => 
-            (bundle.constructor as any).bundleName || bundle.constructor.name ));
+        container.setParameter( 'kernel.bundles' , this.bundles.map(bundle => (bundle.constructor as any).bundleName || bundle.constructor.name ));
 
         // Initialize bundles
-        container.invoke(this.bundles[0], 'init');
-        this.bundles.slice(1).forEach(bundle => {
-            container.invoke(Logger).debug(`Initialize ${bundle.bundleName}`);
-            container.invoke(bundle, 'init')
-        });
+        for (let bundle of this.bundles) {
+            container.invoke(bundle, 'init');
+            container.invoke(Logger).debug(`${bundle.bundleName} initialized`);
+        }
                     
         // Configure container defaults
         configureContainer(container);
@@ -336,7 +335,7 @@ export class Kernel {
     resolvePath(pathName: string) {
 
         // Import from another package
-        if ( !pathName.startsWith('./') && !path.isAbsolute(pathName) ) {
+        if ( !/^\.+\//.test(pathName) && !path.isAbsolute(pathName) ) {
             let moduleName = pathName.split('/').slice(0, pathName.startsWith('@') ? 2 : 1).join('/');
             let modulePath = getPackageDir(moduleName);
             pathName = modulePath + pathName.substr( moduleName.length );
