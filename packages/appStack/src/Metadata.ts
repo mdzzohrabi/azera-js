@@ -128,20 +128,23 @@ export function createMetaDecorator<T, M extends boolean>(key: string, multi = t
 
 export function createDecorator<D extends DecoratorValueExtractor, M extends boolean, R = ReturnType<D>>(valueGetter: D, key: string, multi: M | true = true): Decorator<D, Function, R, M>
 {
-    let decorator = function metaDecorator(...args: any[]) {
-        return (target: any, propName?: any, descriptor?: any) => {
-            let propType = propName ? Reflect.getMetadata('design:type', target, propName) : undefined;
-            let returnType = propName ? Reflect.getMetadata('design:returntype', target, propName) : undefined;
-            let paramTypes = propName ? Reflect.getMetadata('design:paramtypes', target, propName) : undefined;
+    let decorator = function metaDeorator (...args: any[]) {
+        return {
+        [valueGetter.name]: function (target: any, propName?: any, descriptor?: any) {
+                let propType = propName ? Reflect.getMetadata('design:type', target, propName) : undefined;
+                let returnType = propName ? Reflect.getMetadata('design:returntype', target, propName) : undefined;
+                let paramTypes = propName ? Reflect.getMetadata('design:paramtypes', target, propName) : undefined;
 
-            target = getTarget(target);
+                target = getTarget(target);
 
-            let value = valueGetter.call({ returnType, propType, propName, paramTypes, target }, ...args);
+                let value = valueGetter.call({ returnType, propType, propName, paramTypes, target }, ...args);
 
-            if (multi) pushMeta(key, value, target, propName);
-            else setMeta(key, value, target, propName);
-        }
-    }
+                if (multi) pushMeta(key, value, target, propName);
+                else setMeta(key, value, target, propName);
+            }
+        }[valueGetter.name]
+    };
+
     decorator.prototype.key = key;
     return decorator as any;
 }
