@@ -23,13 +23,13 @@ export abstract class Command {
      * Configure command
      * @param command Command info
      */
-    configure(command: CommandInfo) {
-
+    configure(...params: unknown[]): void
+    configure(command: CommandInfo): void
+    {
         command
             .version(this.version)
             .description(this.description)
         ;
-
     }
 
 }
