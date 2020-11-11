@@ -1,6 +1,5 @@
 import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
-import { Connection, ConnectionManager, EntityManager, InsertQueryBuilder, MongoEntityManager, SelectQueryBuilder, UpdateQueryBuilder } from 'typeorm';
 import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
@@ -11,7 +10,7 @@ export class TypeORMBundle extends Bundle {
 
     static bundleName = "TypeORM";
     
-    @Inject() init(config: ConfigSchema, container: Container) {
+    @Inject() async init(config: ConfigSchema, container: Container) {
         config
         .node('typeOrm', { description: 'TypeORM Connection Manager confugration' })
         .node('typeOrm.defaultConnection', { description: 'Default connection name (default: main)', default: 'main' })
@@ -34,20 +33,19 @@ export class TypeORMBundle extends Bundle {
         .node('typeOrm.connections.*.useNewUrlParser', { description: 'MongoDb useNewUrlParser', type: 'boolean', default: false })
         .node('typeOrm.connections.*.useUnifiedTopology', { description: 'MongoDb useUnifiedTopology', type: 'boolean', default: false })
         .node('typeOrm.proxy', { description: 'Proxy', type: 'string' })
-
-        container.setFactory(ConnectionManager, this.connectionManagerFactory);
     }
 
     /**
      * Generate `ConnectionManager` 
      * @param $config Application configuration
      */
-    connectionManagerFactory($config: any, serviceContainer: Container) {
+    async connectionManagerFactory($config: any, serviceContainer: Container) {
         let profiler = serviceContainer.invoke(Profiler);
         let proxy = $config?.typeOrm?.proxy;
+        let { ConnectionManager, Connection, SelectQueryBuilder, InsertQueryBuilder, UpdateQueryBuilder } = await import('typeorm');
 
         if (proxy) {
-            let mongo = require('mongodb');
+            let mongo = await import('mongodb');
             mongo.MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, mongo.MongoClient.prototype.connect);
         }
         
@@ -71,24 +69,29 @@ export class TypeORMBundle extends Bundle {
         return manager;
     }
 
-    boot(@Inject('$config') config: any, @Inject() container: Container) {
+    async boot(@Inject('$config') config: any, @Inject() container: Container) {
         let defaultConnection = config?.typeOrm?.defaultConnection ?? 'main';
         let connections = config?.typeOrm?.connections ?? {};
         let hasDefaultConnection = false;
         let connectionCount = Object.keys(connections).length;
 
-        // Register connections as services
-        forEach(connections, (options, name) => {
-            if (name == defaultConnection) hasDefaultConnection = true;
-            container.setFactory('connection.' + name, async function connectionFactory() {
-                let connection = (await container.invokeAsync(ConnectionManager)).get(name);
-                if (!connection.isConnected) await connection.connect();
-                return connection;
-            });
-        });
-
         // Default connection
         if (connectionCount > 0 ) {
+            let { Connection, ConnectionManager, EntityManager, MongoEntityManager } = await import('typeorm');
+
+            // Connection manager factory
+            container.setFactory(ConnectionManager, this.connectionManagerFactory);
+
+            // Register connections as services
+            forEach(connections, (options, name) => {
+                if (name == defaultConnection) hasDefaultConnection = true;
+                container.setFactory('connection.' + name, async function connectionFactory() {
+                    let connection = (await container.invokeAsync(ConnectionManager)).get(name);
+                    if (!connection.isConnected) await connection.connect();
+                    return connection;
+                });
+            });
+
             if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesnt exists`);
 
             container.setFactory(Connection, async function defaultConnectionFactory() {
@@ -107,9 +110,5 @@ export class TypeORMBundle extends Bundle {
         }
 
     }
-
-    getServices = () => [
-        ConnectionManager
-    ];
 
 }

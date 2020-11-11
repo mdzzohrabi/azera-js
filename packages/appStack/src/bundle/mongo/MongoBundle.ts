@@ -4,8 +4,7 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { forEach } from '@azera/util';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
 import { Kernel } from '../../Kernel';
-import { MongoClient, Db } from 'mongodb';
-import { Logger } from '../../Logger';
+import type { MongoClient } from 'mongodb';
 
 export class MongoBundle extends Bundle {
 
@@ -47,6 +46,9 @@ export class MongoBundle extends Bundle {
             defaultConnectionName = names[0];
             defaultDatabase = connections[names[0]].database;
         }
+
+        let { MongoClient, Db } = await import('mongodb');
+        let { Logger } = await import('../../Logger');
 
         // Connections
         forEach(connections, (conn, name) => {

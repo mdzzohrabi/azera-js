@@ -1,12 +1,10 @@
 import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
-import * as mongoose from 'mongoose';
 import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
-
-export { mongoose };
+import type { Model, Connection, Document } from 'mongoose';
 
 /**
  * Mongoose bundle
@@ -39,10 +37,12 @@ export class MongooseBundle extends Bundle {
         .node('mongoose.proxy', { description: 'Proxy', type: 'string' })
     }
 
-    boot(@Inject('$config') config: any, @Inject() container: Container) {
+    async boot(@Inject('$config') config: any, @Inject() container: Container) {
         
         // Skip configuration if not config exists
         if (!config?.mongoose?.connections) return;
+
+        let mongoose = await import('mongoose');
         
         let { defaultConnection, connections, proxy } = { defaultConnection: 'main', connections: {}, proxy: null,  ...config.mongoose } as any;
 
@@ -69,8 +69,8 @@ export class MongooseBundle extends Bundle {
 
             // Prepare models
             if (Array.isArray(options.models)) {
-                forEach(options.models as mongoose.Model<mongoose.Document>[], model => {
-                    container.invoke<mongoose.Connection>(serviceName).model(model.modelName, model.schema);
+                forEach(options.models as Model<Document>[], model => {
+                    container.invoke<Connection>(serviceName).model(model.modelName, model.schema);
                 });
             }
         });

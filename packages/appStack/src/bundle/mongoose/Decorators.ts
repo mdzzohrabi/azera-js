@@ -1,6 +1,5 @@
 import { createDecorator } from '../../Metadata';
 import { MongooseUtil } from './MongooseUtil';
-import * as mongoose from 'mongoose';
 
 export let MongooseSchema = {
 
@@ -14,7 +13,7 @@ export let MongooseSchema = {
     Ref: createDecorator(function (this: any, model) {
         let isArray = this.propType == Array;
 
-        return isArray ? [{ type: mongoose.Schema.Types.ObjectId, ref: model }] : { type: mongoose.Schema.Types.ObjectId, ref: model };
+        return isArray ? [{ type: require('mongoose').Schema.Types.ObjectId, ref: model }] : { type: require('mongoose').Schema.Types.ObjectId, ref: model };
     }, 'schema:ref', false),
     Schema: createDecorator(function (this: any, modelName?: string, collection?: string) {
         return {

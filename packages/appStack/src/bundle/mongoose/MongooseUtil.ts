@@ -1,13 +1,13 @@
 import { Constructor } from '@azera/util';
-import * as mongoose from 'mongoose';
 import { getClassDecoratedProps, getMeta } from '../../Metadata';
 import { MongooseSchema } from './Decorators';
+import type { Model, Document } from 'mongoose';
 
 let { Schema } = MongooseSchema;
 
 export type Methods<R> = { [K in keyof R]: R[K] extends Function ? K : never }[keyof R];
 export type OnlyMethods<R> = Pick<R, Methods<R>>;
-export type IModel<M, R> = mongoose.Model<mongoose.Document & M & OnlyMethods<R>> & R;
+export type IModel<M, R> = Model<Document & M & OnlyMethods<R>> & R;
 
 export class MongooseUtil {
 
@@ -38,11 +38,11 @@ export class MongooseUtil {
         if (Array.isArray(schemaMeta)) throw Error(`Schema decorator cannot be duplicated`);
         if (!schemaMeta?.modelName) throw Error(`Schema modelName not defined`);
 
-        let schema = new mongoose.Schema(MongooseUtil.toSchemaDefinition(object), schemaMeta);
+        let schema = new (require('mongoose').Schema)(MongooseUtil.toSchemaDefinition(object), schemaMeta);
         schema.loadClass(object);
         repository && schema.loadClass(repository);
 
-        return mongoose.model(schemaMeta.modelName, schema) as any;
+        return require('mongoose').model(schemaMeta.modelName, schema) as any;
     }
 
 }
