@@ -4,7 +4,7 @@ import { ConfigSchema } from '../../ConfigSchema';
 
 export class GraphQlBundle extends Bundle {
 
-    readonly bundleName = "GraphQl";
+    static bundleName = "GraphQl";
 
     @Inject() init(config: ConfigSchema, container: Container) {
 
