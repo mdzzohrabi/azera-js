@@ -69,10 +69,10 @@ export class CliBundle extends Bundle {
 
         // Register commands
         commands.sort((a, b) => a.name > b.name ? -1 : 1).forEach(command => {
-            command.configure(
+            container.invoke(command, 'configure',
                 commander
                     .command(command.name)
-                    .action(container.invokeLaterAsync(command, 'run'))
+                    .action(container.invokeLaterAsync(command, 'run') as any)
             )
         });
 
