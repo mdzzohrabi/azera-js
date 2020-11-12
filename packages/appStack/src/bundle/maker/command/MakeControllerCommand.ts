@@ -37,7 +37,7 @@ export class MakeControllerCommand extends Command {
             file,
 `import {Controller, Get, Request, Response, Inject} from '@azera/stack';
 
-@Controller(${path ? "'" + path.replace('%name%', dasherize(name)) + "'" : ''})
+@Controller(${path && path != '/' ? "'" + path.replace('%name%', dasherize(name)) + "'" : ''})
 export class ${fullName} {
     @Get('/') @Inject() indexAction(req: Request, res: Response) {
         return 'Index action';
