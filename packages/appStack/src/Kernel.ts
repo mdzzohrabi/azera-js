@@ -278,6 +278,7 @@ export class Kernel {
     async bootAndRun( configFile?: string, ...params: any[]) {
 
         if ( configFile ) {
+            this.container.setParameter(Kernel.DI_PARAM_CONFIG_FILE, configFile);
             await this.loadConfig({ $imports: configFile });
         }
 
