@@ -20,7 +20,7 @@ export class MongoBundle extends Bundle {
             .node('mongo.connections', { description: 'Connections', type: 'object' })
             .node('mongo.connections.*', { description: 'Connection', type: 'object' })
             .node('mongo.connections.*.host', { description: 'Hostname' })
-            .node('mongo.connections.*.port', { description: 'Port (default: 27017)', default: 27017, type: 'string|number' })
+            .node('mongo.connections.*.port', { description: 'Port (default: 27017)', type: 'string|number' })
             .node('mongo.connections.*.username', { description: 'Username' })
             .node('mongo.connections.*.password', { description: 'Password' })
             .node('mongo.connections.*.database', { description: 'Database' })
@@ -120,7 +120,11 @@ export class MongoBundle extends Bundle {
 
         })
         .catch(err => {
-            cli.error(`mongodb module not installed, install it by 'yarn add mongodb @types/mongodb'`);
+            if (/Cannot find module 'mongodb'/.test(err.message ?? err)) {
+                cli.error(`mongodb module not installed, install it by 'yarn add mongodb @types/mongodb'`);
+            } else {
+                cli.error(err.message ?? err);
+            }
         });
     }
 

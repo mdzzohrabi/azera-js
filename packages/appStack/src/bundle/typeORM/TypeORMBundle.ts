@@ -93,7 +93,12 @@ export class TypeORMBundle extends Bundle {
                     });
                 });
 
-                if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesnt exists`);
+                if (Object.keys(connections).length == 1) {
+                    defaultConnection = Object.keys(connections).pop();
+                    hasDefaultConnection = true;
+                }
+
+                if (!hasDefaultConnection) throw Error(`Default connection "${defaultConnection}" doesn't exists`);
 
                 container.setFactory(Connection, async function defaultConnectionFactory() {
                     let connection = (await container.invokeAsync(ConnectionManager)).get(defaultConnection);
@@ -111,7 +116,11 @@ export class TypeORMBundle extends Bundle {
 
             })
             .catch(err => {
-                cli.error(`TypeORM modules not installed, install it by 'yarn add typeorm'`);
+                if (/Cannot find module 'typeorm'/.test(err.message ?? err)) {
+                    cli.error(`TypeORM module not installed, install it by 'yarn add typeorm'`);
+                } else {
+                    cli.error(err.message ?? err);
+                }
             })
         }
 

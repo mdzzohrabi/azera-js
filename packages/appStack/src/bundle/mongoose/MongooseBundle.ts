@@ -83,7 +83,11 @@ export class MongooseBundle extends Bundle {
 
             })
             .catch(err => {
-                cli.error(`Mongoose module not installed, install by 'yarn add mongoose @types/mongoose'`);
+                if (/Cannot find module 'mongoose'/.test(err.message ?? err)) {
+                    cli.error(`Mongoose module not installed, install by 'yarn add mongoose @types/mongoose'`);
+                } else {
+                    cli.error(err.message ?? err);
+                }
             })
         }
     }
