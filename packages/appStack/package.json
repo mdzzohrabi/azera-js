@@ -1,15 +1,19 @@
 {
 	"name": "@azera/stack",
-	"version": "1.1.1-stack",
+	"version": "1.1.2-stack",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
 	"license": "MIT",
+	"bin": {
+		"stack": "./bin/stack.js"
+	},
 	"files": [
 		"dist/**/*",
 		"*.MD",
 		"tsconfig.json",
-		"default.config.yml"
+		"default.config.yml",
+		"bin/**/*.js"
 	],
 	"scripts": {
 		"bundle": "parcel src/index.ts --out-dir=./bundle --target=node --bundle-node-modules",
@@ -17,10 +21,11 @@
 		"build": "rimraf ./dist && tsc",
 		"test": "sh ./scripts/test.sh",
 		"test:watch": "sh ./scripts/test-watch.sh",
-		"test-all": "mocha -r ts-node/register tests/*.spec.ts"
+		"test-all": "mocha -r ts-node/register tests/*.spec.ts",
+		"postinstall": "yarn stack init"
 	},
 	"dependencies": {
-		"@azera/container": "^2.0.21",
+		"@azera/container": "^2.0.22",
 		"@azera/reflect": "^1.0.9",
 		"@azera/util": "^1.0.18",
 		"@types/body-parser": "^1.19.0",
