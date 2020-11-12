@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.1.5-stack",
+	"version": "1.1.6-stack",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
@@ -22,7 +22,8 @@
 		"test": "sh ./scripts/test.sh",
 		"test:watch": "sh ./scripts/test-watch.sh",
 		"test-all": "mocha -r ts-node/register tests/*.spec.ts",
-		"postinstall": "node bin/stack init"
+		"stack": "node bin/stack",
+		"postinstall": "yarn stack init"
 	},
 	"dependencies": {
 		"@azera/container": "^2.0.22",
