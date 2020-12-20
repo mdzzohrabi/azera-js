@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.1.10-stack",
+	"version": "1.1.12-stack",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
@@ -63,6 +63,7 @@
 		"@types/node": "^14.6.0",
 		"amqplib": "^0.6.0",
 		"apollo-server": "^2.19.0",
+		"apollo-server-express": "^2.19.0",
 		"chai": "^4.2.0",
 		"graphql": "^15.4.0",
 		"mocha": "^8.1.1",
