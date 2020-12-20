@@ -1,7 +1,9 @@
+import { Container, getDefinition, Inject } from '@azera/container';
 import { deepStrictEqual, ok, strictEqual } from 'assert';
-import { hasMeta, Inject } from '../../src';
+import { ConfigResolver, ConfigSchema, EventManager, GraphQlBundle, HttpBundle, is, Kernel } from '../../src';
 import { GraphQl } from "../../src/bundle/graph/Decorators";
 import { GraphQlBuilder } from '../../src/bundle/graph/GraphQlBuilder';
+import { hasMeta } from '../../src/Metadata';
 
 let { Type, Field, Input, Directive } = GraphQl;
 
@@ -124,7 +126,8 @@ type Animal {\n\tname: String\n}
 
                 @Type() class Query {
 
-                    @Inject()
+                    @Field() version: string = '1.0.0';
+
                     @Field({ description: 'List of all users', type: [User] })
                     users( counter: Counter, $limit: number = 10) {
                         return [counter.count, $limit];
@@ -135,7 +138,7 @@ type Animal {\n\tname: String\n}
                 @Type() class Mutation {
                     
                     @Field({type: '[String]'}) 
-                    addUser(@Inject() counter: Counter, $user: UserInput): string[] {
+                    addUser(counter: Counter, $user: UserInput): string[] {
                         return ['ok', counter.count.toString(), $user.username];
                     }
 
@@ -145,16 +148,16 @@ type Animal {\n\tname: String\n}
 
                 strictEqual(
                     result.sdl,
-`type Query {\n\tusers(limit: Int = 10): [User] # List of all users\n}
+`type Query {\n\tversion: String\n\tusers(limit: Int = 10): [User] # List of all users\n}
 type Mutation {\n\taddUser(user: UserInput!): [String]\n}
 # User type
 type User {\n\tusername: String\n}
 input UserInput {\n\tusername: String\n}`
                 )
 
-                ok('Query' in result.resolvers, `Resolvers must container Query`);
-                ok('User' in result.resolvers, `Resolvers must container User`);
-                ok('Mutation' in result.resolvers, `Resolvers must container Mutation`);
+                ok('Query' in result.resolvers, `Resolvers must contain Query`);
+                ok('User' in result.resolvers, `Resolvers must contain User`);
+                ok('Mutation' in result.resolvers, `Resolvers must contain Mutation`);
                 ok(result.resolvers.Query instanceof Query, `resolvers.Query must be instance of Query class`);              
 
                 deepStrictEqual(
@@ -179,6 +182,49 @@ input UserInput {\n\tusername: String\n}`
 
             });
         });
+
+        describe('Bundle', () => {
+            it('should works ok', async () => {
+
+                @Type()
+                class Query {
+                    @Field() version(): string {
+                        return '1.0.0'
+                    }
+                }
+
+                let configSchema = new ConfigSchema();                
+                let bundle = new GraphQlBundle();
+
+                bundle.init(configSchema);
+
+                let configResolver = new ConfigResolver().resolver(configSchema.resolver);
+                let config = await configResolver.resolve({
+                    graphql: {
+                        nodes: {
+                            app: {
+                                path: '/graphql',
+                                types: [ () => Query ]
+                            }
+                        }
+                    }
+                });
+
+                let container = new Container();
+                container.setParameter('config', config);
+                container.setFactory(Kernel, () => null as any);
+
+                await bundle.boot(container);
+
+                strictEqual(container.findByTag(HttpBundle.DI_TAG_MIDDLEWARE).length , 1);
+                strictEqual(container.findByTag(HttpBundle.DI_TAG_MIDDLEWARE)[0].name, 'graphql_node_app');
+
+                let middle = (await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE)).pop();
+
+                ok(is.Function(middle), `GraphQl node must be Function`);
+
+            });
+        })
     });
 
 });

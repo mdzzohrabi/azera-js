@@ -1,4 +1,4 @@
-import { Decorator } from '@azera/container';
+import { Decorator, Inject } from '@azera/container';
 import { getParameters } from '@azera/reflect';
 import { is } from '@azera/util';
 import { createDecorator } from '../../Metadata';
@@ -78,6 +78,7 @@ export const GraphQl = {
      * Graphql Field resolver decorator
      */
     Field: createDecorator(function (field?: string | FieldDecoratorOptions) {
+
         if (!field) field = {};
 
         if (typeof field == 'string') {
@@ -96,7 +97,12 @@ export const GraphQl = {
 
                 let i = 0;
                 for (let param of params) {
-                    if (!param.name.startsWith('$')) { i++; continue; }
+                    if (!param.name.startsWith('$')) {            
+                        Inject()(this.target.prototype, this.propName, i);
+                        i++;
+                        continue;
+                    }
+
                     let name = param.name.substr(1);
 
                     field.inputsIndex[name] = i;

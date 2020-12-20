@@ -400,7 +400,8 @@ export class Kernel {
         let { MongoBundle } = await import('./bundle/mongo');
         let { SecurityBundle } = await import('./bundle/security');
         let { MakerBundle } = await import('./bundle/maker/MakerBundle');
-        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MongooseBundle, new MessageBundle, new MongoBundle, new SecurityBundle, new MakerBundle, ...(bundles ?? []) ]);
+        let { GraphQlBundle } = await import('./bundle/graph/GraphQlBundle');
+        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MongooseBundle, new MessageBundle, new MongoBundle, new SecurityBundle, new MakerBundle, new GraphQlBundle, ...(bundles ?? []) ]);
     }
 
     /**

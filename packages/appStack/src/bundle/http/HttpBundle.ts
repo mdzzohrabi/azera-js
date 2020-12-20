@@ -189,7 +189,7 @@ export class HttpBundle extends Bundle {
                     let routePath = routePrefix + route.path;
                     let routeObj = router.route(routePath);
                     let handler: Function;
-                    let middles = (controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || []).map(middle => {
+                    let middles = (controller.methodMiddlewares && (<MiddlewaresCollection>controller).methodMiddlewares[route.action] || []).map((middle: any) => {
                          if (Array.isArray(middle)) return container.invokeLaterAsync(middle);
                         return middle;
                     });
