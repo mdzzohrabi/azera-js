@@ -20,7 +20,7 @@ describe('GraphQl Bundle', () => {
         it('toGraphQlType', () => {
             strictEqual(generator.toGraphQlType(Number), 'Int');
             strictEqual(generator.toGraphQlType(String), 'String');
-            strictEqual(generator.toGraphQlType(Boolean), 'Bool');
+            strictEqual(generator.toGraphQlType(Boolean), 'Boolean');
         });
 
         it('isValidType()', () => {
@@ -118,6 +118,10 @@ type Animal {\n\tname: String\n}
                 @Type({ description: 'User type' }) class User {
                     @Directives.fetch(`/user/username`)
                     @Field() username!: string;
+
+                    @Field() hasUsername($$parent: User): boolean {
+                        return !!$$parent.username;
+                    }
                 }
 
                 @Input() class UserInput {
@@ -151,14 +155,20 @@ type Animal {\n\tname: String\n}
 `type Query {\n\tversion: String\n\tusers(limit: Int = 10): [User] # List of all users\n}
 type Mutation {\n\taddUser(user: UserInput!): [String]\n}
 # User type
-type User {\n\tusername: String\n}
+type User {\n\tusername: String\n\thasUsername: Boolean\n}
 input UserInput {\n\tusername: String\n}`
                 )
 
                 ok('Query' in result.resolvers, `Resolvers must contain Query`);
                 ok('User' in result.resolvers, `Resolvers must contain User`);
                 ok('Mutation' in result.resolvers, `Resolvers must contain Mutation`);
-                ok(result.resolvers.Query instanceof Query, `resolvers.Query must be instance of Query class`);              
+                ok(result.resolvers.Query instanceof Query, `resolvers.Query must be instance of Query class`);
+                ok(result.resolvers.User instanceof User, `resolvers.User must be instance of User class`);
+
+                deepStrictEqual(
+                    await result.resolvers.User.hasUsername({ username: 'MyName' }),
+                    true
+                );
 
                 deepStrictEqual(
                     await result.resolvers.Query.users(null, { limit: 20, first: 0 }),

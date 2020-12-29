@@ -13,7 +13,7 @@ export class GraphQlBuilder {
         switch (type) {
             case Number: return 'Int';
             case String: return 'String';
-            case Boolean: return 'Bool';
+            case Boolean: return 'Boolean';
             case Array: throw Error(`Array is not a valid GraphQl Type`);
             default: {
                 if (typeof type == 'function') {
@@ -180,7 +180,7 @@ export class GraphQlBuilder {
                         if (is.Function(originalResolver)) {
                             // Prepare field resolver
                             instance[name] = function GraphQlResolver(parent: any, args: any, context: any) {
-                                let data = { $parent: parent, ...(args ?? {}), $context: context };
+                                let data = { $parent: parent, $: parent, ...(args ?? {}), $context: context };
                                 let params = [];
                                 for (let key in field!.inputsIndex) {
                                     params.push(data[key]);

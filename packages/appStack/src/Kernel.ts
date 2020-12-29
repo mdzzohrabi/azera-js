@@ -73,7 +73,7 @@ export class Kernel {
 
         // Configuration resolver
         container.setFactory(ConfigResolver, function objectResolverFactory() {
-            return new ConfigResolver().context({ kernel }).resolver( container.invoke(ConfigSchema)!.resolver );
+            return new ConfigResolver().context({ kernel, envExt: kernel.env == 'development' ? 'dev' : 'prod' }).resolver( container.invoke(ConfigSchema)!.resolver );
         });
 
         // Prepend CoreBundle

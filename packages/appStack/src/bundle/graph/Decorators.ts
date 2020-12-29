@@ -107,7 +107,7 @@ export const GraphQl = {
 
                     field.inputsIndex[name] = i;
 
-                    if (generateInputs) {
+                    if (generateInputs && !name.startsWith('$')) {
                         field.inputs![name] = { index: i, type: this.paramTypes ? this.paramTypes[i++] : String, default: param.value, required: !param.hasDefault };
                     }
                 }
