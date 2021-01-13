@@ -11,7 +11,7 @@
     "@types/parcel-bundler": "^1.12.1",
     "@types/twig": "^1.12.2",
     "apollo-server": "^2.9.7",
-    "axios": "^0.19.0",
+    "axios": "^0.21.1",
     "commander": "^2.20.0",
     "express-validator": "^6.2.0",
     "microtime": "^3.0.0",
