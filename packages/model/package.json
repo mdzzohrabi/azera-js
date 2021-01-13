@@ -28,7 +28,7 @@
         "@types/string": "^0.0.29",
         "@types/twig": "^1.12.2",
         "apollo-server": "^2.9.7",
-        "axios": "^0.18.0",
+        "axios": "^0.21.1",
         "mongoose": "^5.0.15",
         "mssql": "^5.1.0",
         "reflect-metadata": "^0.1.12",
