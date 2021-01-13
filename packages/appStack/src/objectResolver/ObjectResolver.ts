@@ -1,8 +1,9 @@
+import { is } from '@azera/util';
 import * as deepExtend from 'deep-extend';
 import { promises as fs } from 'fs';
 import * as yaml from 'js-yaml';
 import * as path from 'path';
-import { runInNewContext, createContext } from 'vm';
+import { runInNewContext } from 'vm';
 import { asyncEach, getPackageDir } from '../Util';
 import { ResolverSchema, SchemaValidator } from './SchemaValidator';
 
@@ -64,38 +65,61 @@ export interface ValueResolver {
  * Object resolver error
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
-class ObjectResolverError extends Error {}
+export class ObjectResolverError extends Error {}
 
+export interface ObjectResolverConfig {
+    useEval: boolean
+    useEnv: boolean
+    invokeFunction: boolean
+    useImports: boolean
+}
 
 /**
- * Object resolve ( data validator )
+ * Object resolve ( Data-validator )
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class ObjectResolver {
 
     // Node value resolvers
-    public valueResolvers: { [type: string]: ValueResolver[] } = {};
+    public valueResolvers: { [type: string]: ValueResolver[] } = {
+        // Any value
+        '*': [],
+
+        // After all resolvers for each node
+        '*:after': [],
+
+        // Objects
+        'object': [
+            this.resolveObject.bind(this)
+        ],
+
+        // Functions
+        'function': [],
+
+        // Strings
+        'string': [],
+
+        // At the end of Resolve
+        'afterResolve': []
+    };
 
     /** Evaluation context */
     public _context: any = {};
 
-    constructor() {
-        // Default resolvers
-        this.valueResolvers = {
-            '*': [],
-            '*:after': [],
-            'object': [
-                this.resolveObject.bind(this)
-            ],
-            'function': [
-                this.resolveFunction.bind(this)
-            ],
-            'string': [
-                this.resolveEval.bind(this),
-                this.resolveEnv.bind(this)
-            ],
-            'afterResolve': []
-        };
+    constructor(public validator?: SchemaValidator, public config: ObjectResolverConfig = { useEval: false, useEnv: false, invokeFunction: false, useImports: false }) {
+        if (validator) this.resolver(validator.resolver);
+
+        if (config.useEnv) {
+            this.valueResolvers['string'].push(this.resolveEnv.bind(this));
+        }
+
+        if (config.useEval) {
+            this.valueResolvers['string'].push(this.resolveEval.bind(this));
+        }
+
+        if (config.invokeFunction) {
+            this.valueResolvers['function'].push(this.resolveFunction.bind(this));
+        }
     }
 
     context(context: any) {
@@ -108,7 +132,7 @@ export class ObjectResolver {
      * @param message Error message
      * @param param1 Resolver info
      */
-    $$throwError(message: string, { nodePath , configFileStack }: ResolverInfo) {
+    protected $$throwError(message: string, { nodePath , configFileStack }: ResolverInfo) {
         throw new ObjectResolverError(`${ message }, nodePath: ${ nodePath.join('.') || '<root>' }${ (configFileStack || []).reverse().length > 0 ? "\nConfiguration file stack : \n-> " + configFileStack!.join("\n-> ") + "\n" : '' }`);
     }
 
@@ -117,8 +141,8 @@ export class ObjectResolver {
      * @param value Node value
      * @param info Resolver info
      */
-    async resolveEval(value: string, info: ResolverInfo) {
-        if (typeof value != 'string') return value;
+    protected async resolveEval(value: string, info: ResolverInfo) {
+        if (typeof value !== 'string') return value;
 
         this._context.$ = info.result;
         this._context.env = process.env;
@@ -138,12 +162,9 @@ export class ObjectResolver {
      * Environment resolver
      * @param value Node value
      */
-    async resolveEnv(value: string) {
-        if (typeof value != 'string') return value;
-        if ( value.startsWith('env://') ) {
-            return process.env[ value.substr('env://'.length ) ];
-        }
-        return value;
+    protected async resolveEnv(value: string) {
+        if (typeof value !== 'string' || !value.startsWith('env://')) return value;
+        return process.env[ value.substr('env://'.length ) ];
     }
 
     /**
@@ -152,9 +173,9 @@ export class ObjectResolver {
      * @param imports Imports
      * @param info Resolver info
      */
-    async resolveImport(baseObject: any, imports: string | string[], info: ResolverInfo) {
+    protected async resolveImport(baseObject: any, imports: string | string[], info: ResolverInfo) {
 
-        if ( imports == null ) return;
+        if ( imports === null ) return;
 
         let result: any = {};
 
@@ -200,7 +221,7 @@ export class ObjectResolver {
             if (isJson)
                 content = JSON.parse( await readFilePromise(imports).then(r => r.toString()) );
             else if (isYaml)
-                content = yaml.safeLoad( await readFilePromise(imports).then(r => r.toString()) );
+                content = yaml.load( await readFilePromise(imports).then(r => r.toString()) );
             else if (isModule)
                 content = require(imports);
 
@@ -220,12 +241,12 @@ export class ObjectResolver {
      * @param value Node value (object)
      * @param info Resolve info
      */
-    async resolveObject(value: any, info: ResolverInfo) {
-        if ( value == null || info.skipChildren ) return value;
+    protected async resolveObject(value: any, info: ResolverInfo) {
+        if ( value === null || info.skipChildren ) return value;
         await asyncEach( Object.keys(value), async key => {
             info.skipChildren = false;
             let nodeValue = value[key];
-            if ( key == '$imports' ) {
+            if ( key === '$imports' && this.config.useImports ) {
                 await this.resolveImport( value, nodeValue, info );
                 delete value[key];
             } else {
@@ -241,7 +262,8 @@ export class ObjectResolver {
      * Resolve Function
      * @param value Node value (will be a function)
      */
-    async resolveFunction(value: Function) {
+    protected async resolveFunction(value: Function) {
+        if (is.Class(value)) return value;
         return value();
     }
 
@@ -331,9 +353,9 @@ export class ObjectResolver {
     resolver(resolvers: { [dataType: string]: ValueResolver } ): ObjectResolver
     resolver(resolver: any, dataType?: any)
     {
-        if ( typeof resolver == 'function' )
+        if ( typeof resolver === 'function' )
             this.resolvers(dataType || '*').push(resolver);
-        else if ( typeof resolver == 'object' )
+        else if ( typeof resolver === 'object' )
             Object.keys(resolver).forEach(dataType => this.resolvers(dataType).push(resolver[dataType]));
         
         return this;
@@ -342,8 +364,8 @@ export class ObjectResolver {
     /**
      * Schema validator resolver
      */
-    static schemaValidator(schema: ResolverSchema = {}) {
-        return new SchemaValidator(schema);
+    static schema(schema: ResolverSchema = {}, config?: ObjectResolverConfig) {
+        return new ObjectResolver(new SchemaValidator(schema), config);
     }
 
 }

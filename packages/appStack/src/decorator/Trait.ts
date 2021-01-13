@@ -57,5 +57,4 @@ let Masoud = trait(class Masoud {
 
 let s = new Masoud('Reza');
 
-
 // console.log(s.getName());

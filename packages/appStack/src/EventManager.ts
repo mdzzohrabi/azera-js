@@ -1,9 +1,9 @@
 import { Container, Inject, Service } from '@azera/container';
-import { forEach } from '@azera/util';
+import { forEach, is } from '@azera/util';
 import { EventEmitter } from 'events';
 import { Logger } from './Logger';
-import { debugName } from './Util';
 import { Profiler } from './Profiler';
+import { debugName } from './Util';
 
 export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
 
@@ -25,7 +25,7 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
     },
 
     autoTags: [function eventSubscriberTagger(service) {
-        if (service.name.endsWith('EventSubscriber')) return [ EVENT_SUBSCRIBER_TAG ];
+        if (service.name.endsWith('EventSubscriber') || (is.Object(service.service) && 'getSubscribedEvents' in service.service)) return [ EVENT_SUBSCRIBER_TAG ];
         return [];
     }]
 })

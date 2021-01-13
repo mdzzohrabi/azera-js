@@ -50,10 +50,6 @@ export class ProxyAgent extends EventEmitter {
                 hostname: options.host || options.hostname
             });
 
-            console.log(payload, request, options);
-            
-
-
             proxySocket.write(`${payload}\r\n`);
             proxySocket.once('data', buffer => {
                 if (buffer.toString('utf8').includes('Connection established')) {

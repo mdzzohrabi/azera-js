@@ -48,6 +48,13 @@ export class Profiler {
         profile.lastEnd = profile.times[ profile.times.length - 1 ].end = microtime.now();
     }
 
+    withProfile<T>(name: string, action: () => T, detail?: any) {
+        let profile = this.start(name, detail);
+        let result = action();
+        profile?.end();
+        return result;
+    }
+
     profileMethod<T extends { [name: string]: any }>(context: T, method: keyof T, profileName: string, detail?: (target: T, ...params: any[]) => any): void {
         let self = this;
         let base = context[method];

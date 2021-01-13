@@ -1,6 +1,6 @@
-import { Container, getDefinition, Inject } from '@azera/container';
+import { Container } from '@azera/container';
 import { deepStrictEqual, ok, strictEqual } from 'assert';
-import { ConfigResolver, ConfigSchema, EventManager, GraphQlBundle, HttpBundle, is, Kernel } from '../../src';
+import { ConfigResolver, ConfigSchema, GraphQlBundle, HttpBundle, is, Kernel } from '../../src';
 import { GraphQl } from "../../src/bundle/graph/Decorators";
 import { GraphQlBuilder } from '../../src/bundle/graph/GraphQlBuilder';
 import { hasMeta } from '../../src/Metadata';
@@ -73,6 +73,7 @@ type Animal {\n\tname: String\n}
         describe('Directive', () => {
             it('should resolve directive', async () => {
 
+                
                 class Directives {
                     @Directive() static fetch($url: string ): any {
                         console.trace('ok');
@@ -208,13 +209,13 @@ input UserInput {\n\tusername: String\n}`
 
                 bundle.init(configSchema);
 
-                let configResolver = new ConfigResolver().resolver(configSchema.resolver);
+                let configResolver = new ConfigResolver(configSchema);
                 let config = await configResolver.resolve({
                     graphql: {
                         nodes: {
                             app: {
                                 path: '/graphql',
-                                types: [ () => Query ]
+                                types: [ Query ]
                             }
                         }
                     }

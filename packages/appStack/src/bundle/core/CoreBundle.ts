@@ -81,7 +81,6 @@ export class CoreBundle extends Bundle {
             })
             .node('services.*.methods', { description: 'Service method calls', type: 'object' })
             .node('services.*.methods.*', { description: 'Service method call', type: 'object' })
-            .node('services.*.methods.*', { description: 'Service method call', type: 'object' })
             .node('services.*.tags', { description: 'Service tags', type: 'array', skipChildren: true })
             .node('services.*.service', { description: 'Service name', type: 'string' })
             .node('services.*.imports', { description: 'Service imports', type: 'array' })

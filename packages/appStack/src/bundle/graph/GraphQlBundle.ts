@@ -52,6 +52,7 @@ export class GraphQlBundle extends Bundle {
                 if (node.enabled === false) continue;
                 invariant((node.types ?? []).length > 0, `GraphQl Node "${name}" has no types`);               
 
+                // Create a middleware for express service
                 container.set(`graphql_node_${name}`,{
                     tags: [ HttpBundle.DI_TAG_MIDDLEWARE ],
                     factory: async function graphqlNodeMiddleware() {

@@ -19,7 +19,7 @@ export class MemoryTransport extends MessageTransport<Message, Message> {
         let self = this;
         while (true) {
             if (this.messages.length > 0) yield this.messages.pop()!;
-            else await new Promise(resolve => {
+            else await new Promise<void>(resolve => {
                 self.onMessage = () => {
                     self.onMessage = undefined;
                     resolve();

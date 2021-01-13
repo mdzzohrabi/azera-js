@@ -1,3 +1,5 @@
+import { is } from "@azera/util";
+
 export const REGEX_WORD = /([A-Za-z]+?)(?=[A-Z_\-\\\/0-9]|\b|\s)/g;
 
 
@@ -89,4 +91,25 @@ export function dasherize(value: string) {
         return '';
     });
     return result.join('-');
+}
+
+/**
+ * Format string
+ * ```
+ * format("Your name is %s", "Masoud"); // Your name is Masoud
+ * ```
+ * @param args String arguments
+ */
+export function format(text: string, placeHolders: { [name: string]: any }): string
+export function format(text: string, ...args: any[]): string
+export function format(...args: any[]): string
+{
+    if (args.length == 2 && is.HashMap(args[1])) {
+        let text = String(args[0]);
+        for (let [name, value] of Object.entries(args[1])) {
+            text = text.replace(`{${name}}`, String(value));
+        }
+        return text;
+    }
+    return args.reduce((p, c) => String(p).replace(/%s/, c));
 }
