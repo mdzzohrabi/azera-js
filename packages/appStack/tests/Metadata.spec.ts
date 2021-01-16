@@ -1,5 +1,5 @@
-import { createMetaDecorator, createDecorator, hasMeta, getMeta, getClassDecoratedProps, getTarget } from "../src";
-import { ok, equal, notEqual } from 'assert';
+import { notStrictEqual, ok, strictEqual } from 'assert';
+import { createDecorator, createMetaDecorator, getClassDecoratedProps, getMeta, getMetaMap, getTarget, hasMeta } from "../src";
 
 describe('Metadata', () => {
 
@@ -7,11 +7,11 @@ describe('Metadata', () => {
         class Animal {}
         class Elephant extends Animal {}
 
-        equal( getTarget(Animal), Animal );
-        equal( getTarget(Elephant), Elephant );
+        strictEqual( getTarget(Animal), Animal );
+        strictEqual( getTarget(Elephant), Elephant );
 
-        equal( getTarget(new Animal), Animal );
-        equal( getTarget(new Elephant), Elephant );
+        strictEqual( getTarget(new Animal), Animal );
+        strictEqual( getTarget(new Elephant), Elephant );
 
     })
 
@@ -36,14 +36,31 @@ describe('Metadata', () => {
         let isRequired = getMeta(Required, Animal, 'name');
         let befores = getMeta(Before, Animal, 'name');
 
-        equal(isRequired, true);
-        equal(befores?.length, 1);
+        strictEqual(isRequired, true);
+        strictEqual(befores?.length, 1);
         ok(befores![0] instanceof Function, `Before decorator must be instance of Functions`);
 
         class Elephant extends Animal {};
 
         ok(hasMeta(Required, Elephant, 'name'), `Elephant should inherit decorators from parent`);
         ok(getClassDecoratedProps(Elephant).has('name'), `Elephant.name property must be in decorated properties list grabbed from getClassDecoratedProps()`);
+
+    });
+
+    it('parameter meta-data', () => {
+
+        let Required = createMetaDecorator<undefined, false>('required');
+
+        class User {
+            saved(@Required() collectionName: string) {}
+        }
+
+        class Author extends User {}
+
+        ok(hasMeta(Required, User, 'saved', 0), `User.saved parameter 0 must have Required meta-data`);
+        ok(hasMeta(Required, Author, 'saved', 0), `Author.saved parameter 0 must have Required meta-data inherited from User`);
+        ok(getMeta(Required, Author, 'saved', 0) != getMeta(Required, User, 'saved', 0), `Inherited Metadata for parameters must not equals to each others`);
+        
 
     });
 
@@ -62,10 +79,10 @@ describe('Metadata', () => {
         ok(hasMeta(Model, User), `User should has Model decorator`);
         ok(hasMeta(Model, Admin), `Admin should has Model decorator`);
 
-        notEqual(getMeta(Model, User), getMeta(Model, Admin));
+        notStrictEqual(getMeta(Model, User), getMeta(Model, Admin));
 
-        equal(getMeta(Model, User)?.name, 'User');
-        equal(getMeta(Model, Admin)?.name, 'Admin');
+        strictEqual(getMeta(Model, User)?.name, 'User');
+        strictEqual(getMeta(Model, Admin)?.name, 'Admin');
 
     });
 

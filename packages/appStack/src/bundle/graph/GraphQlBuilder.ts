@@ -21,7 +21,7 @@ export class GraphQlBuilder {
                     if (meta) {
                         return meta.name;
                     } else {
-                        return type.name;
+                        throw Error(`Invalid GraphQl Type ${type.name}`);
                     }
                 } else if (Array.isArray(type)) {
                     if (type[0]) return '[' + this.toGraphQlType(type[0]) + ']';
@@ -178,15 +178,21 @@ export class GraphQlBuilder {
                         let originalResolver: Function = this.container.getDefinition(object).methods[name] ? this.container.invokeLaterAsync(object, name) : instance[name];
 
                         if (is.Function(originalResolver)) {
-                            // Prepare field resolver
-                            instance[name] = function GraphQlResolver(parent: any, args: any, context: any) {
-                                let data = { $parent: parent, $: parent, ...(args ?? {}), $context: context };
-                                let params = [];
-                                for (let key in field!.inputsIndex) {
-                                    params.push(data[key]);
+                            if (!field.inputsIndex || Object.keys(field!.inputsIndex).length == 0) {
+                                instance[name] = originalResolver;
+                            } else {
+                                // Prepare field resolver
+                                instance[name] = function GraphQlResolver(parent: any, args: any, context: any) {
+                                    let data = { $parent: parent, $: parent, ...(args ?? {}), $context: context };
+                                    let params = [];
+                                    for (let key in field!.inputsIndex) {
+                                        params.push(data[key]);
+                                    }
+                                    return originalResolver.apply(instance, params);
                                 }
-                                return originalResolver.apply(instance, params);
                             }
+                        } else {
+                            instance[name] = () => originalResolver;
                         }
                     }
 

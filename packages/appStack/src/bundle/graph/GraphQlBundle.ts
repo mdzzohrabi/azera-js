@@ -6,6 +6,8 @@ import { Kernel } from '../../Kernel';
 import { invariant } from '../../Util';
 import { HttpBundle } from '../http';
 import { GraphQlBuilder } from './GraphQlBuilder';
+import { GraphQlManager } from './GraphqlManager';
+import type { ApolloServer } from 'apollo-server-express';
 
 interface IGraphQlBundleConfig {
     nodes: {
@@ -42,7 +44,7 @@ export class GraphQlBundle extends Bundle {
 
     }
 
-    @Inject() async boot(container: Container) {
+    @Inject() async boot(container: Container, manager: GraphQlManager) {
 
         let config: IGraphQlBundleConfig = container.getParameter('config', {})?.graphql;
 
@@ -50,15 +52,13 @@ export class GraphQlBundle extends Bundle {
             for (let name in config.nodes) {
                 let node = config.nodes[name];
                 if (node.enabled === false) continue;
-                invariant((node.types ?? []).length > 0, `GraphQl Node "${name}" has no types`);               
+                invariant((node.types ?? []).length > 0, `GraphQl Node "${name}" has no types`);
 
-                // Create a middleware for express service
-                container.set(`graphql_node_${name}`,{
-                    tags: [ HttpBundle.DI_TAG_MIDDLEWARE ],
-                    factory: async function graphqlNodeMiddleware() {
+                container.set(`graphql_node_${name}`, {
+                    factory: async function graphqlNode() {
                         let builder = await container.invokeAsync(GraphQlBuilder);
+                        let manager = await container.invokeAsync(GraphQlManager);
                         let kernel = await container.invokeAsync(Kernel);
-                        let { ApolloServer } = await import('apollo-server-express');
 
                         // Build GraphQl Schema
                         let schema = await builder.buildSchema(
@@ -68,19 +68,30 @@ export class GraphQlBundle extends Bundle {
                         // GraphQl Context
                         let context = is.String(node.context) ? kernel.use(node.context) as Function : (node.context ?? {});
 
-                        let nodeApp = new ApolloServer({
+                        return await manager.createServer({
                             schema,
                             playground: node.playground ?? false,
                             debug: node.debug,
                             uploads: { maxFileSize: node.maxFileSize },
                             context
-                        })
+                        });
+                    }
+                });
 
+                /** Add node to Graphql Manager nodes */
+                manager.addNode(name, () => container.invokeAsync<ApolloServer>(`graphql_node_${name}`));
+
+                // Create a middleware for express service
+                container.set(`graphql_node_${name}_middleware`, {
+                    tags: [ HttpBundle.DI_TAG_MIDDLEWARE ],
+                    factory: async function graphqlNodeMiddleware() {
+                        let nodeApp = await container.invokeAsync<ApolloServer>(`graphql_node_${name}`);
                         return nodeApp.getMiddleware({
                             path: node.path
                         });
                     }
-                })
+                });
+
             }
         }
 
