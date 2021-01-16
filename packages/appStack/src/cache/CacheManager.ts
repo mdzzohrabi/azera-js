@@ -1,26 +1,34 @@
-import { ICacheProvider } from './ICacheProvider';
-import { MemoryCacheProvider } from './MemoryCacheProvider';
+import { CacheProvider } from './CacheProvider';
 
 /**
  * Cache manager
- * 
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class CacheManager {
 
+    /**
+     * Default cache provider name
+     */
     defaultProvider?: string;
 
-    providers: { [name: string]: ICacheProvider } = {};
+    /**
+     * Cache providers
+     */
+    providers: { [name: string]: CacheProvider } = {};
 
-    constructor() {
-        this.addProvider(new MemoryCacheProvider);
-    }
-
-    addProvider(provider: ICacheProvider) {
+    /**
+     * Define a cache provider
+     * @param provider Provider
+     */
+    addProvider(provider: CacheProvider) {
         this.providers[provider.name] = provider;
     }
 
-    get(providerName?: string) {
+    /**
+     * Get a cache provider
+     * @param providerName Provider name
+     */
+    get(providerName?: string): CacheProvider {
         if (!providerName) {
             providerName = this.defaultProvider;
             if (!providerName) throw Error(`Cache manager has no default provider, please set defaultProvider for CacheManager`);

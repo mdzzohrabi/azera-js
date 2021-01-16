@@ -3,8 +3,8 @@ import { forEach } from '@azera/util';
 import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
 import { Bundle } from '../../Bundle';
-import { CacheManager, MemoryCacheProvider } from '../../cache';
-import { FileCacheProvider } from '../../cache/FileCacheProvider';
+import { CacheManager, CacheProvider, MemoryCacheProvider } from '../../cache';
+import { FileCacheProvider } from '../../cache/provider/FileCacheProvider';
 import { ConfigSchema } from '../../ConfigSchema';
 import { EventManager } from '../../EventManager';
 import { camelCase, pascalCase, snakeCase } from '../../helper';
@@ -18,6 +18,8 @@ import { WorkflowManager, Workflow } from '../../workflow';
 import { CacheCleanCommand } from './Command/CacheCleanCommand';
 import { DiParametersCommand } from './Command/DIParametersCommand';
 import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { parse as pasrseUrl } from 'url';
+import { RedisCacheProvider } from '../../cache/provider/RedisCacheProvider';
 
 /**
  * Core bundle
@@ -45,10 +47,8 @@ export class CoreBundle extends Bundle {
 
         config
             .node('kernel', { description: 'Kernel' })
-            .node('kernel.handleError', { description: 'Handle node errors', type: 'boolean', default: true, validate: (value) => {
-                if (value) this.handleError(container);
-            } })
-            .node('kernel.uncaughtExceptionHandler', { description: 'Node uncaught exception handler. e.g: /Kernel::errorHandler', type: 'string', validate(value) { return kernel.use(value) } })
+            .node('kernel.handleError', { description: 'Handle node errors', type: 'boolean', default: true, validate: value => value && this.handleError(container) })
+            .node('kernel.uncaughtExceptionHandler', { description: 'Node uncaught exception handler. e.g: /Kernel::errorHandler', type: 'string', validate: value => kernel.use(value) })
             .node('kernel.rootDir', { description: 'Application root directory path', type: 'string', default: kernel.rootDir })
             .node('kernel.cacheConfig', { description: 'Cache resolved configuration', type: 'boolean', default: false })
             .node('kernel.cacheDir', { description: 'Cache directory', default: '/cache', type: 'string' })
@@ -58,7 +58,7 @@ export class CoreBundle extends Bundle {
             .node('kernel.logger.transports', { description: 'Logger transports', type: 'array' })
             .node('kernel.logger.transports.*', { description: 'Logger transport', type: 'object' })
             .node('kernel.logger.transports.*.type', { description: 'Logger transport type', type: 'enum:console,file' })
-            .node('kernel.logger.transports.*.filename', { description: 'Logger transport file', type: 'string', validate: (value, info) => { return info.resolvePath(value); } })
+            .node('kernel.logger.transports.*.filename', { description: 'Logger transport file', type: 'string', validate: (value, info) => info.resolvePath(value) })
             .node('kernel.logger.transports.*.level', { description: 'Logger transport level (error,warn,info,verbose,debug,silly)', type: 'string' })
         ;
 
@@ -92,8 +92,8 @@ export class CoreBundle extends Bundle {
             .node('cache.defaultProvider', { description: 'Default cache provider', type: 'string' })
             .node('cache.providers', { description: 'Cache providers', type: 'object' })
             .node('cache.providers.*', { description: 'Cache provider' })
-            .node('cache.providers.*.type', { description: 'Cache provider type', type: 'enum:memory,file' })
-            .node('cache.providers.*.path', { description: 'Cache provider path', type: 'string' })
+            .node('cache.providers.*.type', { description: 'Cache provider type (e.g: memory,file,redis)', type: 'string' })
+            .node('cache.providers.*.path', { description: 'Cache provider path/url', type: 'string' })
 
         config
             .node('workflow', { description: 'Workflow manager' })
@@ -117,6 +117,7 @@ export class CoreBundle extends Bundle {
             .node('event_manager.events.*.*', { description: 'Event listener', type: 'array' })
 
         container.add(EventManager);
+        container.autoTag(CacheProvider, [`cache_provider`]);
 
         /**
          * WebClient
@@ -132,28 +133,21 @@ export class CoreBundle extends Bundle {
         // CacheManager
         container.setFactory(CacheManager, function cacheManagerFactory($config) {
             let manager = new CacheManager();
-            let defaultProvider = $config?.cache?.defaultProvider;
-            let providers = $config?.cache?.providers || {};
-            manager.defaultProvider = defaultProvider;
-            forEach(providers, (config: any, name) => {
-                let type = config?.type || 'memory';
-                switch (type) {
-                    case 'memory': {
-                        let provider = new MemoryCacheProvider();
-                        provider.name = name;
-                        manager.addProvider(provider);
-                        break;
-                    }
-                    case 'file': {
-                        let provider = new FileCacheProvider(name, config?.path);
-                        manager.addProvider(provider);
-                        break;
-                    }
-                    default: {
-                        throw Error(`Provider type "${ type }" for provider "${ name }" not found`)
-                    }
-                }
-            });
+            manager.defaultProvider = $config?.cache?.defaultProvider;
+
+            let providers = container.findByTag<typeof CacheProvider>(`cache_provider`);
+            
+            for (let [name, config] of Object.entries($config?.cache?.provider || {})) {
+                let { type = 'memory', path } = config as any || {};
+                let url = path ? pasrseUrl(path) : undefined;
+                let provider = providers.find(p => p.service?.alias == type);
+                if (!provider) throw Error(`Cache provider "${type}" not found`);
+                let instance = container.invoke<CacheProvider>(provider.service!);
+                instance.name = name;
+                instance.url = url;
+                manager.addProvider(instance);
+            }
+
             return manager;
         });
 
@@ -257,7 +251,11 @@ export class CoreBundle extends Bundle {
             ConfigSchemaCommand,
             DiTagCommand,
             DiParametersCommand,
-            CacheCleanCommand ];
+            CacheCleanCommand,
+            FileCacheProvider,
+            RedisCacheProvider,
+            MemoryCacheProvider
+        ];
     }
 
     @Inject() boot(container: Container) {
