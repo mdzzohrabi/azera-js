@@ -1,7 +1,11 @@
-import { Decorator } from '@azera/container';
+import { Decorator, Inject } from '@azera/container';
 import { getParameters } from '@azera/reflect';
 import { is } from '@azera/util';
-import { createDecorator } from '../../Metadata';
+import { HashMap } from '@azera/util/is';
+import { createDecorator, createMetaDecorator, getDecoratedParameters, getMeta, hasMeta } from '../../Metadata';
+import { invariant } from '../../Util';
+import { NextFn, Request, Response } from '../http';
+import { GraphQlManager } from './GraphqlManager';
 
 export type FieldInputsType = {
     [name: string]: any | { index: number, type: any, required?: boolean, default?: string }
@@ -63,6 +67,39 @@ const $$Directive = createDecorator(function Directive(options: DirectiveDecorat
 
 export const GraphQl = {
 
+    RequestConfig: createMetaDecorator<{ nodeName: string }, false>('graphql:request-config', false, true, true),
+
+    Request: function GraphQlRequest(options: string | { nodeName?: string, query: string, operationName?: string, variables?: HashMap<any> }): MethodDecorator {
+        return function graphQlRequestDecorator(target: any, method: string, descr: PropertyDescriptor) {
+            
+            if (is.String(options)) {
+                options = { query: options };
+            }
+
+            let { nodeName, query, variables, operationName } = options;
+            invariant(query, `GraphQl Request Node Query not defined`);
+            Inject(GraphQlManager)(target, method, 0);
+
+            descr.value = async function (manager: GraphQlManager, req: Request, res: Response, next: NextFn) {
+
+                if (!nodeName && hasMeta(GraphQl.RequestConfig, target)) {
+                    let reqConfig = getMeta(GraphQl.RequestConfig, target);
+                    nodeName = reqConfig?.nodeName;
+                }
+    
+                invariant(nodeName, `GraphQl Request Node name not defined`);  
+
+                let result = await manager.execute(nodeName!, {
+                    query,
+                    variables,
+                    operationName
+                });
+
+                return result.data;
+            }
+        }
+    },
+
     /**
      * Graphql Type resolver decorator
      */
@@ -74,16 +111,27 @@ export const GraphQl = {
         return { type: 'input', name: this.target.name, ...input };
     }, `graphql:input`, false),
     
+
+    Param: createDecorator(function (name?: string) { return { name, index: this.index } }, `graphql:parameter`, false),
+    Context: createDecorator(function () { return { index: this.index } },`graphql:contextParameter`, false),
+    Parent: createDecorator(function () { return { index: this.index } },`graphql:parentParameter`, false),
+
     /**
      * Graphql Field resolver decorator
      */
     Field: createDecorator(function (field?: string | FieldDecoratorOptions) {
+
         if (!field) field = {};
 
         if (typeof field == 'string') {
             field = { typeDef: field, inputs: {} };
         }
-        else if (this.propName && is.Function(this.target.prototype[this.propName])) {
+        else if (this.propName && is.Function(this.target.prototype[this.propName])) {           
+            // Decorated parameters
+            let decoratedParameters = getDecoratedParameters(this.target, this.propName);
+            let isDecoratedParams = decoratedParameters.size > 0;
+         
+            // Get paramters from reflection
             let params = getParameters(this.target.prototype[this.propName], false);
 
             if (params) {
@@ -96,16 +144,46 @@ export const GraphQl = {
 
                 let i = 0;
                 for (let param of params) {
-                    if (!param.name.startsWith('$')) { i++; continue; }
-                    let name = param.name.substr(1);
+                    if (isDecoratedParams) {
+                        if (decoratedParameters.has(String(i))) {
+                            if (hasMeta(GraphQl.Context, this.target, this.propName, i)) {
+                                field.inputsIndex['$context'] = i;
+                            }
+                            else if (hasMeta(GraphQl.Parent, this.target, this.propName, i)) {
+                                field.inputsIndex['$'] = i;
+                            }
+                            else if (hasMeta(GraphQl.Param, this.target, this.propName, i)) {
+                                let paramMeta = getMeta(GraphQl.Param, this.target, this.propName, i)!;
+                                field.inputsIndex[paramMeta.name || param.name] = i;
+                                if (generateInputs) {
+                                    field.inputs![paramMeta.name || param.name] = { index: i, type: this.paramTypes ? this.paramTypes[i] : String, default: param.value, required: !param.hasDefault };
+                                }
+                            }
+                        } else {
+                            Inject()(this.target.prototype, this.propName, i);
+                        }
+                        i++;
+                    }
+                    else {
+                        if (!param.name.startsWith('$')) {            
+                            Inject()(this.target.prototype, this.propName, i);
+                            i++;
+                            continue;
+                        }
 
-                    field.inputsIndex[name] = i;
-
-                    if (generateInputs) {
-                        field.inputs![name] = { index: i, type: this.paramTypes ? this.paramTypes[i++] : String, default: param.value, required: !param.hasDefault };
+                        let name = param.name.substr(1);
+                        field.inputsIndex[name] = i;
+                        
+                        if (generateInputs && !name.startsWith('$')) {
+                            field.inputs![name] = { index: i, type: this.paramTypes ? this.paramTypes[i++] : String, default: param.value, required: !param.hasDefault };
+                        }
                     }
                 }
             }
+        }
+
+        if (this.returnType === undefined && this.propType === Function) {
+            throw Error(`Return type of Graphql Field must be declared explicity`);
         }
 
         return { type: this.returnType || this.propType, name: this.propName, ...field };

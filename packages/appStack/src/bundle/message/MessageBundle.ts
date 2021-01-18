@@ -6,6 +6,7 @@ import { ConfigSchema } from '../../ConfigSchema';
 import { Kernel } from '../../Kernel';
 import { MessageManager } from './MessageManager';
 import { AMQPTransport } from './transport/AMQPTransport';
+import { MailTransport } from './transport/MailTransport';
 import { MemoryTransport } from './transport/MemoryTransport';
 import { MessageTransport } from './transport/MessageTransport';
 import { MessageTransportOptions } from './transport/MessageTransportOptions';
@@ -16,7 +17,7 @@ import { MessageTransportOptions } from './transport/MessageTransportOptions';
  */
 export class MessageBundle extends Bundle {
 
-    getServices = () => [ AMQPTransport, MemoryTransport ];
+    getServices = () => [ AMQPTransport, MemoryTransport, MailTransport ];
 
     @Inject() init(container: Container, config: ConfigSchema) {
 

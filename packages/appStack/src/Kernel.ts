@@ -73,7 +73,9 @@ export class Kernel {
 
         // Configuration resolver
         container.setFactory(ConfigResolver, function objectResolverFactory() {
-            return new ConfigResolver().context({ kernel }).resolver( container.invoke(ConfigSchema)!.resolver );
+            return new ConfigResolver(container.invoke(ConfigSchema), {
+                useEnv: true, useEval: true, invokeFunction: true, useImports: true
+            }).context({ kernel, envExt: kernel.env == 'development' ? 'dev' : 'prod' });
         });
 
         // Prepend CoreBundle
@@ -400,7 +402,8 @@ export class Kernel {
         let { MongoBundle } = await import('./bundle/mongo');
         let { SecurityBundle } = await import('./bundle/security');
         let { MakerBundle } = await import('./bundle/maker/MakerBundle');
-        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MongooseBundle, new MessageBundle, new MongoBundle, new SecurityBundle, new MakerBundle, ...(bundles ?? []) ]);
+        let { GraphQlBundle } = await import('./bundle/graph/GraphQlBundle');
+        return new Kernel(env, [ new HttpBundle, new CliBundle, new TwigBundle, new TypeORMBundle, new MongooseBundle, new MessageBundle, new MongoBundle, new SecurityBundle, new MakerBundle, new GraphQlBundle, ...(bundles ?? []) ]);
     }
 
     /**

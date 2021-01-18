@@ -102,10 +102,6 @@ export class DataManager {
                 schema.fields[prop] = field as any;
             }
         }
-
-        console.log(schema);
-        
-        
     }
 
 }

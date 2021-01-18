@@ -3,7 +3,7 @@ import { DataManager } from '../../src/bundle/data/DataManager';
 
 describe('DataBundle', () => {
 
-    describe('DataManager', () => {
+    it('DataManager', () => {
     
         @DataModel()
         class User {

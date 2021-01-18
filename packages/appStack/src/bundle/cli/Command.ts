@@ -17,7 +17,7 @@ export abstract class Command {
     abstract name: string;
 
     /** Execute command */
-    abstract async run(...params: any[]): Promise<void>;
+    abstract run(...params: any[]): Promise<void>;
 
     /**
      * Configure command

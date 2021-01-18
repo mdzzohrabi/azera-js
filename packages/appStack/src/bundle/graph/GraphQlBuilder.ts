@@ -1,9 +1,9 @@
+import type { GraphQLField } from 'graphql';
 import { Container, Inject } from '@azera/container';
-import { makeExecutableSchema, SchemaDirectiveVisitor } from 'apollo-server';
-import { GraphQLField } from 'graphql';
 import { getClassDecoratedProps, getMeta, hasMeta } from '../../Metadata';
 import { invariant } from '../../Util';
 import { FieldInputsType, GraphQl } from './Decorators';
+import { is } from '@azera/util';
 
 export class GraphQlBuilder {
 
@@ -13,7 +13,7 @@ export class GraphQlBuilder {
         switch (type) {
             case Number: return 'Int';
             case String: return 'String';
-            case Boolean: return 'Bool';
+            case Boolean: return 'Boolean';
             case Array: throw Error(`Array is not a valid GraphQl Type`);
             default: {
                 if (typeof type == 'function') {
@@ -21,7 +21,7 @@ export class GraphQlBuilder {
                     if (meta) {
                         return meta.name;
                     } else {
-                        return type.name;
+                        throw Error(`Invalid GraphQl Type ${type.name}`);
                     }
                 } else if (Array.isArray(type)) {
                     if (type[0]) return '[' + this.toGraphQlType(type[0]) + ']';
@@ -96,6 +96,7 @@ export class GraphQlBuilder {
     }
    
     async buildDirectives(...objects: any) {
+        let { SchemaDirectiveVisitor } = await import('apollo-server-express');
         let directives: Function[] = [];
         let typeDefs: string[] = [];
         let types: any[] = [];
@@ -173,17 +174,25 @@ export class GraphQlBuilder {
                 if (field && !Array.isArray(field)) {
 
                     // Make instance field injectable
-                    if (instance && this.container.getDefinition(object).methods[name]) {
+                    if (instance) {
                         let originalResolver: Function = this.container.getDefinition(object).methods[name] ? this.container.invokeLaterAsync(object, name) : instance[name];
 
-                        // Prepare field resolver
-                        instance[name] = function GraphQlResolver(parent: any, args: any, context: any) {
-                            let data = { $parent: parent, ...(args ?? {}), $context: context };
-                            let params = [];
-                            for (let key in field!.inputsIndex) {
-                                params.push(data[key]);
+                        if (is.Function(originalResolver)) {
+                            if (!field.inputsIndex || Object.keys(field!.inputsIndex).length == 0) {
+                                instance[name] = originalResolver;
+                            } else {
+                                // Prepare field resolver
+                                instance[name] = function GraphQlResolver(parent: any, args: any, context: any) {
+                                    let data = { $parent: parent, $: parent, ...(args ?? {}), $context: context };
+                                    let params = [];
+                                    for (let key in field!.inputsIndex) {
+                                        params.push(data[key]);
+                                    }
+                                    return originalResolver.apply(instance, params);
+                                }
                             }
-                            return originalResolver.apply(instance, params);
+                        } else {
+                            instance[name] = () => originalResolver;
                         }
                     }
 
@@ -220,6 +229,8 @@ export class GraphQlBuilder {
 
     async buildSchema(...objects: any[]) {
         let { resolvers, sdl } = await this.build(...objects);
+        let { makeExecutableSchema } = await import('apollo-server-express');
+
         return makeExecutableSchema({
             typeDefs: sdl,
             resolvers

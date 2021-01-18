@@ -211,7 +211,7 @@ export class Container implements IContainer {
 
         // Factory
         if ( service.isFactory || service.factory || this.factories.has(service.service) ) {
-            let factory = service.factory ? service.factory as Factory : service.isFactory ? service.service as Factory : this.factories.get(service.service) as Factory;
+            let factory = this.factories.get(service.service) as Factory || service.factory ? service.factory as Factory : service.isFactory ? service.service as Factory;
             result = this.buildFromFactory( factory, _stack, options as any );
         } else {
 

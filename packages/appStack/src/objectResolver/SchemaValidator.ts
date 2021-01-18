@@ -1,5 +1,9 @@
+import { forEach, is } from '@azera/util';
+import { HashMap } from '@azera/util/is';
+import { param } from 'express-validator';
+import { validate } from 'graphql';
+import { asyncEach, invariant, setProperty } from '../Util';
 import { ResolverInfo } from './ObjectResolver';
-import { setProperty, invariant } from '../Util';
 
 /**
  * Schema validator
@@ -12,84 +16,143 @@ export class SchemaValidator {
      */
     public allowExtra: boolean = false;
 
-    constructor(
-
-        /**
-         * Validator schema
-         */
-        public schema: ResolverSchema = {},
-
-        /**
-         * Default type validators
-         */
-        public typeValidator: { [type: string]: (value: any, ...params: any[]) => boolean; } = {
-            /** String */
-            string: value => typeof value == 'string',
-            /** Object */
-            object: value => typeof value == 'object',
-            /** Array */
-            array: value => Array.isArray(value),
-            /** Number */
-            number: value => !!Number(value),
-            /** Boolean */
-            boolean: value => value == true || value == false,
-            /** IN (Array.includes) */
-            in: (value, ...items) => items.includes(value),
-            /** Enum (Array.includes) */
-            enum: (value, ...items) => items.includes(value)
-        }) { }
+    /**
+     * Validator schema
+     */
+    public schema: { [nodePath: string]: ResolverSchemaField } = {};
 
     /**
-     * Define node in schema
-     * @param nodePath Node path (eg. validator.allowExtra)
-     * @param scope    A Function that modify node schema
+     * Default type validators
      */
-    node(nodePath: string, scope?: (node: ResolverSchemaField) => void): SchemaValidator;
+    public typeValidators: { [type: string]: ResolverSchemaTypeValidator } = {
+        /** String */
+        string: value => typeof value == 'string',
+        /** Object */
+        object: value => typeof value == 'object',
+        /** Array */
+        array: value => Array.isArray(value),
+        /** Number */
+        number: value => !!Number(value),
+        /** Boolean */
+        boolean: value => value == true || value == false,
+        /** IN (Array.includes) */
+        in: (value, ...items) => items.includes(value),
+        /** Enum (Array.includes) */
+        enum: (value, ...items) => items.includes(value),
+        /** is Valid Email address */
+        email: value => /[a-zA-Z_-.0-9]\@[a-zA-Z_-.0-9]/.test(value),
+        /** Phone number */
+        phone: value => /[0-9]{4,20}/.test(value),
+        /** Mobile number */
+        mobile: value => /[0-9]{11}/.test(value),
+        /** IP */
+        ip: value => /([0-9]){1,3}\.([0-9]{1,3}\.){3}/.test(value),
+        /** Mongo ObjectId */
+        objectId: value => /^[0-9a-fA-F]{24}$/.test(value),
+        /** Range */
+        between: (value, from, to) => Number(value) >= Number(from) && Number(value) <= Number(to),
+        /** Date */
+        date: value => value instanceof Date,
+        /** Regex */
+        match: (value, pattern) => new RegExp(pattern).test(value)
+    }
+
+    /**
+     * 
+     * @param schema Validator schema
+     * @param typeValidators Type validators
+     */
+    constructor(
+        schema: ResolverSchema = {},
+        typeValidators: { [type: string]: ResolverSchemaTypeValidator } = {}
+    )
+    {
+        if (schema) {
+            // Prepare validator
+            for (let nodePath in schema) {
+                this.node(nodePath, schema[nodePath] as any);
+            }
+        }
+
+        if (typeValidators) this.typeValidators = { ...this.typeValidators, ...typeValidators };
+    }
+
 
     /**
      * Define node in schema
      * @param nodePath Node path (eg. validator.allowExtra)
      * @param schema Field schema
      */
-    node(nodePath: string, schema?: ResolverSchemaField): SchemaValidator;
+    node(nodePath: string, schema: Partial<ResolverSchemaField>): SchemaValidator;
+
+    /**
+     * Define node in schema
+     * @param nodePath Node path (eg. validator.allowExtra)
+     * @param scope    A Function that modify node schema
+     */
+    node(nodePath: string, scope: (node: ResolverSchemaFieldBuilder) => void): SchemaValidator;
 
     /**
      * Define node in schema
      * @param nodePath Node path (eg. validator.allowExtra)
      * @param type Field type
      */
-    node(nodePath: string, type?: string): SchemaValidator;
-    node(nodePath: string, type?: Partial<ResolverSchemaField>): SchemaValidator;
-    node(nodePath: string, type?: (node: ResolverSchemaField) => void): SchemaValidator;
-    node(nodePath: string, schema?: any): SchemaValidator
+    node(nodePath: string, type: string): SchemaValidator;
+
+    /**
+     * Get a node schema definition
+     * @param nodePath Node path
+     */
+    node(nodePath: string): ResolverSchemaField;
+    node(nodePath: string, schema?: any): SchemaValidator | ResolverSchemaField
     {
-        if (typeof schema == 'string') {
-            schema = {
-                type: schema
-            };
+        if (schema === undefined) return this.schema[nodePath];
+
+        if (typeof schema == 'function') {
+            let builder = new ResolverSchemaFieldBuilder();
+            schema(builder);
+            schema = builder;
+            // Sub-schema
+            if (builder.schema) {
+                for (let [subNodePath, subSchema] of Object.entries(builder.schema)) {
+                    this.node(builder.type == 'array' ? nodePath + '.*.' + subNodePath : nodePath + '.' + subNodePath, subSchema as any);
+                }
+            }
+        } else if (typeof schema == 'string') {
+            schema = { type: schema };
         }
+
         let node = this.schema[nodePath] || (this.schema[nodePath] = typeof schema == 'object' && schema || {});
-        node.nodePathTest = node.nodePathTest || new RegExp('^' + nodePath.replace(/\./g, '[.|]').replace(/\*{2}/g, '[^\\s]+').replace(/\*/g, '[^.|\\s]+') + '$');
-        node.path = nodePath;
-        if (typeof schema == 'function')
-            schema(node);
+        node.__nodePathTest = node.__nodePathTest || new RegExp('^' + nodePath.replace(/\./g, '[.|]').replace(/\*{2}/g, '[^\\s]+').replace(/\*/g, '[^.|\\s]+') + '$');
+        node.__path = nodePath;
         return this;
     }
 
-    searchCache: { [path: string]: ResolverSchemaField | undefined } = {};
+    /**
+     * Founded node cache
+     */
+    private searchCache: { [path: string]: ResolverSchemaField | undefined } = {};
 
+    /**
+     * Find a node by given path
+     * @param path Node path (e.g: database.connections)
+     */
     findNode(path: string | string[]) {
         if (Array.isArray(path)) path = path.join('|');
         else path = path.replace('.', '|');
         if (path in this.searchCache) return this.searchCache[path];
-        return this.searchCache[path] = Object.values(this.schema).find(node => node.nodePathTest!.test(path as string));
+        return this.searchCache[path] = Object.values(this.schema).find(node => node.__nodePathTest!.test(path as string));
+    }
+
+    private throwError(message: string | Error, node: ResolverSchemaField, ...params: any[]) {
+        throw new SchemaValidatorError(node.errorMessage ? (is.Function(node.errorMessage) ? node.errorMessage(params[0]) : node.errorMessage.replace('%value', params[0])) : String(message));
     }
 
     /**
-     * Validator resolver method
+     * Validator resolver methods
      */
     resolver = {
-        '*': (value: any, info: ResolverInfo) => {
+        '*': async (value: any, info: ResolverInfo) => {
             info.nonVisitedNodes = info.nonVisitedNodes || { ...this.schema };
             // Root node
             if (info.nodePath.length == 0 || info.nodePath[0] == '$schema')
@@ -107,38 +170,55 @@ export class SchemaValidator {
 
             // Array node
             if (isArrayItem && parentNode && parentNode.type == 'array') {
-                if (nodeSchema?.validate) return nodeSchema.validate(value, info);
+                if (nodeSchema?.validate) {
+                    if (is.Function(nodeSchema.validate)) {
+                        return await nodeSchema.validate(value, info);
+                    }
+                    await asyncEach(nodeSchema.validate, async validate => value = await validate(value, info));
+                }
                 return value;
             }
 
 
             if (nodeSchema) {
-                if (info.nonVisitedNodes[nodeSchema.path])
-                    delete info.nonVisitedNodes[nodeSchema.path];
+                if (info.nonVisitedNodes[nodeSchema.__path!])
+                    delete info.nonVisitedNodes[nodeSchema.__path!];
                 if (nodeSchema.type) {
                     let ok = false;
-                    let types = nodeSchema.type.split('|');
-                    for (let type of types) {
-                        if (type.indexOf(':') > 0) {
-                            let [typeName, params] = type.split(':');
-                            ok = ok || this.typeValidator[typeName](value, ...params.split(','));
+                    if (is.Function(nodeSchema.type)) {
+                        ok = nodeSchema.type(value);
+                    } else {
+                        let types = nodeSchema.type.split('|');
+                        for (let type of types) {
+                            if (type.indexOf(':') > 0) {
+                                let [typeName, params] = type.split(':');
+                                ok = ok || this.typeValidators[typeName](value, ...params.split(','));
+                            }
+                            else {
+                                ok = ok || this.typeValidators[type](value);
+                            }
+                            if (ok)
+                                break;
                         }
-                        else {
-                            ok = ok || this.typeValidator[type](value);
-                        }
-                        if (ok)
-                            break;
                     }
-                    if (!ok)
-                        throw Error(`Node value must be a valid "${nodeSchema.type}" (schemaPath: ${ nodeSchema.path }), given type is "${typeof value}"`);
+                    if (!ok) this.throwError(`Node value must be a valid "${nodeSchema.type}", given type is "${typeof value}"`, nodeSchema, value);
                 }
                 if (nodeSchema.skipChildren)
                     info.skipChildren = nodeSchema.skipChildren;
-                if (nodeSchema.validate)
-                    return nodeSchema.validate(value, info);
+                if (nodeSchema.validate) {
+                    try {
+                        if (is.Function(nodeSchema.validate)) {
+                            return await nodeSchema.validate(value, info);
+                        }
+                        await asyncEach(nodeSchema.validate, async validate => value = await validate(value, info));
+                        return value;
+                    } catch (e) {
+                        this.throwError(e, nodeSchema, value);
+                    }
+                }
             }
             else if (!this.allowExtra) {
-                throw Error(`This node not defined in schema`);
+                throw new SchemaValidatorError(`This node not defined in schema`);
             }
             return value;
         },
@@ -154,14 +234,14 @@ export class SchemaValidator {
 
         },
         afterResolve: (value: any, info: ResolverInfo) => {
-            let nonVisitedNodes: ResolverSchema = info.nonVisitedNodes || {};
+            let nonVisitedNodes: HashMap<ResolverSchemaField> = info.nonVisitedNodes || {};
             Object.keys(nonVisitedNodes).forEach(nodePath => {
                 let node = nonVisitedNodes[nodePath];
                 if (node.default) {
                     setProperty(value, nodePath, typeof node.default == 'function' ? node.default() : node.default);
                 }
                 else if (node.required) {
-                    throw Error(`Node "${nodePath}" (${node.description}) must be entered but not found any value`);
+                    throw Error(`Node "${nodePath}"${node.description ? `(${node.description})` : ``} is required`);
                 }
             });
             return value;
@@ -200,7 +280,7 @@ export class SchemaValidator {
                 // Type
                 if ( node.type ) {
                     let enums: any[] = [];
-                    let types = node.type.split('|').map(item => {
+                    let types = is.Function(node.type) ? 'string' :  node.type.split('|').map(item => {
                         let [type, params] = item.split(':');
                         if (type == 'in' || type == 'enum') {
                             enums = params.split(',');
@@ -283,17 +363,59 @@ export class SchemaValidator {
     }
 }
 
-export interface ResolverSchemaField {
-    path: string
+export class ResolverSchemaField {
     description?: string
     required?: boolean
-    validate?: (value: any, info: ResolverInfo) => any
+    validate?: ((value: any, info: ResolverInfo) => any) | ((value: any, info: ResolverInfo) => any)[]
     afterResolve?: (value: any, info: ResolverInfo) => any
-    type?: string
-    nodePathTest?: RegExp
+    type?: string | ((value: any) => boolean)
     default?: any
     skipChildren?: boolean
+    errorMessage?: string | ((value: string) => string)
+    schema?: ResolverSchema
+    __path?: string
+    __nodePathTest?: RegExp
 }
 
-export class ResolverSchema { [nodePath: string]: ResolverSchemaField }
+export class SchemaValidatorError extends Error {}
 
+export class ResolverSchemaFieldBuilder extends ResolverSchemaField {
+    withDefault(value: any) { this.default = value; return this; };
+    isEmail = () => this.addType('email');
+    isMobile = () => this.addType('mobile');
+    isRequired() { this.required = true; return this; }
+    isString = () => this.addType('string');
+    isObject = (schema?: ResolverSchema) => this.addType('object').withSchema(schema);
+    isFunction = () => this.addType('function');
+    isArray = (schema?: ResolverSchema) => this.addType('array').withSchema(schema);
+    isNumber = () => this.addType('number');
+    isIP = () => this.addType('ip');
+    isBoolean = () => this.addType('boolean');
+    isObjectId = () => this.addType('objectId');
+    isDate = () => this.addType('date');
+    isMatch = (pattern: string | RegExp) => this.addType(`match:${pattern instanceof RegExp ? pattern.source : pattern}`);
+    is(fn: (value: any) => boolean) { this.type = fn; return this; };
+    enum = (...values: string[]) => this.addType('enum:' + values.join(','));
+    between = (from: number, to: number) => this.addType(`between:${from},${to}`)
+    contains = (text: string) => this.addType('string').sanitize(v => { if (!String(v).includes(text)) throw new SchemaValidatorError(`Given value does not contains "${text}"`); v}); 
+    startsWith = (text: string) => this.addType('string').sanitize(v => { if (!String(v).startsWith(text)) throw new SchemaValidatorError(`Given value does not start with "${text}"`); v}); 
+    withError(message: string | ((value: string) => string)) { this.errorMessage = message; return this; }
+    sanitize(fn: (value: any, info: ResolverInfo) => any) { this.validate = this.validate === undefined ? fn : Array.isArray(this.validate) ? this.validate.concat(fn) : [this.validate, fn] ; return this; }
+    toString = () => this.sanitize(v => String(v));
+    toNumber = () => this.sanitize(v => Number(v));
+    trim = () => this.sanitize(v => String(v).trim());
+    escape = () => this.sanitize(v => encodeURIComponent(String(v)))
+    toArray = () => this.sanitize(v => Array.isArray(v) ? v : [v]);
+    toDate = () => this.sanitize(v => new Date(v));
+    mapBy = (dic: { [key: string]: any }) => this.sanitize(v => dic[v]);
+    toObjectId = () => this.sanitize(v => import('mongodb').then(m => new m.ObjectID(v)))
+    toLower = () => this.sanitize(v => String(v).toLowerCase());
+    toUpper = () => this.sanitize(v => String(v).toUpperCase());
+    replace = (search: any, replace: string) => this.sanitize(v => String(v).replace(search, replace));
+    protected addType(type: string) { this.type = (this.type ? this.type + '|' : '') + type; return this; }
+    withSchema = (schema?: ResolverSchema) => { this.schema = schema; return this; }
+}
+
+export type ResolverSchemaTypeValidator = (value: any, ...params: any[]) => boolean;
+
+export class ResolverSchema { [nodePath: string]: ResolverSchemaField | string | ((node: ResolverSchemaFieldBuilder) => void) }

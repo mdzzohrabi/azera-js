@@ -328,7 +328,7 @@ export namespace VirtualBrowser {
             this.location = url || '';
 
             setTimeout(() => {
-                new Promise(async (done, reject) => {
+                new Promise<void>(async (done, reject) => {
                     try {
                         // Load scripts
                         if (loadScripts) {
