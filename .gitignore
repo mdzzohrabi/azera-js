@@ -7,7 +7,6 @@ _recycle
 coverage
 dist
 .cache
-cache
 tmp
 doc
 db
