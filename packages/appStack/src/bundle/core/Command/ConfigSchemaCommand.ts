@@ -1,11 +1,10 @@
 import { Container, Inject } from '@azera/container';
 import { writeFileSync } from 'fs';
-import { Kernel } from '../../../Kernel';
-import { SchemaValidator } from '../../../objectResolver';
-import { Command } from '../../cli/Command';
 import { normalize } from 'path';
-import { Cli } from '../../cli/Cli';
 import { ConfigSchema } from '../../../ConfigSchema';
+import { Kernel } from '../../../Kernel';
+import { Cli } from '../../cli/Cli';
+import { Command } from '../../cli/Command';
 
 /**
  * Generate config json schema

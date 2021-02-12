@@ -16,9 +16,7 @@ export interface CacheProviderHit<T> {
  */
 export abstract class CacheProvider {
 
-    static get alias(): string {
-        throw Error(`Cache provider must be set its alias`);
-    }
+    static readonly alias: string;
 
     public name!: string;
     public url?: UrlWithStringQuery;

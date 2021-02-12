@@ -1,5 +1,5 @@
 import { Container, Inject } from '@azera/container';
-import { forEach } from '@azera/util';
+import { forEach, is } from '@azera/util';
 import { Connection, Document, Model } from 'mongoose';
 import { Bundle } from '../../Bundle';
 import { ConfigSchema } from '../../ConfigSchema';
@@ -33,12 +33,12 @@ export class MongooseBundle extends Bundle {
         .node('mongoose.connections.*.extra', { description: 'Extra connection options to be passed to the underlying driver. Use it if you want to pass extra settings to underlying database driver', type: 'object', skipChildren: true })
         .node('mongoose.connections.*.useNewUrlParser', { description: 'MongoDb useNewUrlParser', type: 'boolean', default: false })
         .node('mongoose.connections.*.useUnifiedTopology', { description: 'MongoDb useUnifiedTopology', type: 'boolean', default: false })
-        .node('mongoose.connections.*.models', { description: 'Models to be loaded and used for this connection', type: 'array' })
-        .node('mongoose.connections.*.models.*', { description: 'Connection entity', type: 'string', validate(entity) { return container.invoke(Kernel).use(entity) } })
+        .node('mongoose.connections.*.models', { description: 'Models to be loaded and used for this connection', type: 'array', skipChildren: true })
+        .node('mongoose.connections.*.models.*', { description: 'Connection entity', type: 'string' })
         .node('mongoose.proxy', { description: 'Proxy', type: 'string' })
     }
 
-    async boot(@Inject('$config') config: any, @Inject() cli: Cli, @Inject() container: Container) {
+    async boot(@Inject('$config') config: any, @Inject() cli: Cli, @Inject() container: Container, @Inject() kernel: Kernel) {
         
         // Skip configuration if not config exists
         if (!config?.mongoose?.connections) return;
@@ -47,9 +47,9 @@ export class MongooseBundle extends Bundle {
 
         if (Object.keys(connections).length > 0) {
             await import('mongoose').then(mongoose => {
-
+                
                 // Prepare connections
-                forEach(connections, (options: string|any, name: string) => {
+                forEach(connections, (options: string|any, name: string) => {                  
                     let serviceName = `mongoose.${name}`;
                     // Generate connection factory
                     container.setFactory(serviceName, function mongooseConnectionFactory() {
@@ -64,6 +64,8 @@ export class MongooseBundle extends Bundle {
                         dbOptions.models && delete dbOptions.models;
                         let uri = options.uri || `mongodb://${options.user ?? ''}${options.pass ? ':' + options.pass : ''}${options.user ? '@' : ''}${options.host ?? 'localhost'}:${options.port ?? 27017}/${options.dbName}`;
 
+                        dbOptions.uri && delete dbOptions.uri;
+                        
                         if (defaultConnection == name) mongoose.connect(uri, dbOptions);
 
                         return mongoose.createConnection(uri, dbOptions);
@@ -72,7 +74,11 @@ export class MongooseBundle extends Bundle {
                     // Prepare models
                     if (Array.isArray(options.models)) {
                         forEach(options.models as Model<Document>[], model => {
+
+                            if (is.String(model)) model = kernel.use(model) as any;
                             container.invoke<Connection>(serviceName).model(model.modelName, model.schema);
+                            container.setFactory(model, () => model);
+                            
                         });
                     }
                 });
@@ -86,7 +92,7 @@ export class MongooseBundle extends Bundle {
                 if (/Cannot find module 'mongoose'/.test(err.message ?? err)) {
                     cli.error(`Mongoose module not installed, install by 'yarn add mongoose @types/mongoose'`);
                 } else {
-                    cli.error(err.message ?? err);
+                    cli.error(err);
                 }
             })
         }

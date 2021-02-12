@@ -25,5 +25,5 @@ export interface DataModelFieldSchema {
     type: string
     size?: number
     default?: any
-    validator?: RegExp | ((value: any) => boolean)
+    validator?: RegExp | ((value: any) => boolean) | ((value: any) => boolean)[]
 }

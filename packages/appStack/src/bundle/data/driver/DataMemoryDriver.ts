@@ -1,4 +1,3 @@
-import { DataConnection } from '../DataConnection';
 import { DataConnectionOptions } from '../DataConnectionOptions';
 import { DataDriver } from '../DataDriver';
 import { DataType } from '../DataType';
@@ -10,7 +9,8 @@ export class DataMemoryDriver extends DataDriver {
     
     dataTypes: DataType[] = [
         {
-            typeName: 'string'
+            typeName: 'string',
+            encode: value => String(value)
         }
     ];
 

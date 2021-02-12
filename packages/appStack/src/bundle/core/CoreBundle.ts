@@ -1,25 +1,23 @@
 import { Container, Inject } from '@azera/container';
+import { ContainerInvokeOptions } from '@azera/container/build/container';
 import { forEach } from '@azera/util';
 import * as cluster from 'cluster';
+import { parse as pasrseUrl } from 'url';
 import { createLogger, transports } from 'winston';
 import { Bundle } from '../../Bundle';
-import { CacheManager, CacheProvider, MemoryCacheProvider } from '../../cache';
-import { FileCacheProvider } from '../../cache/provider/FileCacheProvider';
+import { CacheManager, CacheProvider, FileCacheProvider, MemoryCacheProvider, RedisCacheProvider } from '../../cache';
 import { ConfigSchema } from '../../ConfigSchema';
 import { EventManager } from '../../EventManager';
 import { camelCase, pascalCase, snakeCase } from '../../helper';
 import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
 import { WebClient } from '../../net';
+import { Workflow, WorkflowManager } from '../../workflow';
+import { CacheCleanCommand } from './Command/CacheCleanCommand';
 import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
+import { DiParametersCommand } from './Command/DIParametersCommand';
 import { DiTagCommand } from './Command/DITagCommand';
 import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
-import { WorkflowManager, Workflow } from '../../workflow';
-import { CacheCleanCommand } from './Command/CacheCleanCommand';
-import { DiParametersCommand } from './Command/DIParametersCommand';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
-import { parse as pasrseUrl } from 'url';
-import { RedisCacheProvider } from '../../cache/provider/RedisCacheProvider';
 
 /**
  * Core bundle

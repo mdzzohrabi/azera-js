@@ -227,7 +227,7 @@ export class Kernel {
             this.config = resolvedConfig;
 
         } catch (err) {
-            container.invoke(Cli).error(err.message);
+            container.invoke(Cli).error(err);
         }
 
         container.set('config', resolvedConfig);
@@ -255,7 +255,7 @@ export class Kernel {
             parameters = file;
         }
 
-        Object.keys(parameters).forEach(key => {
+        Object.keys(parameters ?? {}).forEach(key => {
             this.container.setParameter(key, parameters[key]);
         });
 
