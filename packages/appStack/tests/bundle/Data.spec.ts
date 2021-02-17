@@ -18,7 +18,7 @@ describe('DataBundle', () => {
         manager.newConnection('main', `memory://test:hello#123#@localhost:27017/expo`);
         manager.addModel(`main`, User);
 
-        console.log(manager.getModel(User));
+        // console.log(manager.getModel(User));
         
 
     });

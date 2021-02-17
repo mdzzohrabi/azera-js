@@ -4,7 +4,7 @@ import { is } from '@azera/util';
 import { HashMap } from '@azera/util/is';
 import { createDecorator, createMetaDecorator, getDecoratedParameters, getMeta, hasMeta } from '../../Metadata';
 import { invariant } from '../../Util';
-import { NextFn, Request, Response } from '../http';
+import type { NextFn, Request, Response } from '../http';
 import { GraphQlManager } from './GraphqlManager';
 
 export type FieldInputsType = {
@@ -182,8 +182,8 @@ export const GraphQl = {
             }
         }
 
-        if (this.returnType === undefined && this.propType === Function) {
-            throw Error(`Return type of Graphql Field must be declared explicity`);
+        if (this.returnType === undefined && this.propType === Function && !field.type) {
+            throw Error(`Return type of Graphql Field "${this.target.name}.${this.propName}" must be declared explicity`);
         }
 
         return { type: this.returnType || this.propType, name: this.propName, ...field };

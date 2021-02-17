@@ -131,6 +131,14 @@ export class GraphQlBuilder {
         return { directives, typeDefs, types };
     }
 
+    private escapeDescription(description: string) {
+        if (description.indexOf("\n") >= 0) {
+            return `"""\n${description}\n"""`;
+        } else {
+            return `"${description}"`;
+        }
+    }
+
     /**
      * Generate GraphQL SDL from Type decorated object
      * @param objects Target Type Objects
@@ -158,7 +166,7 @@ export class GraphQlBuilder {
             let instance: any;
 
             if (type.description) {
-                sdl = `# ${type.description}\n${sdl}`;
+                sdl = `${this.escapeDescription(type.description)}\n${sdl}`;
             }
 
             // Build resolver
@@ -191,7 +199,7 @@ export class GraphQlBuilder {
                                     return originalResolver.apply(instance, params);
                                 }
                             }
-                        } else {
+                        } else if (originalResolver !== undefined) {
                             instance[name] = () => originalResolver;
                         }
                     }
@@ -209,7 +217,7 @@ export class GraphQlBuilder {
                         if (Array.isArray(field.type) && this.isValidType(field.type[0])) objects.push(field.type[0]);
                         else if (this.isValidType(field.type)) objects.push(field.type);
 
-                        sdl += `\n\t${field.name}${inputs}: ${this.toGraphQlType(field.type)}${field.description ? ' # ' + field.description : ''}`;
+                        sdl += `\n\t${field.description ? this.escapeDescription(field.description) + "\n\t" : ''}${field.name}${inputs}: ${this.toGraphQlType(field.type)}`;
                     }
                 }
             });

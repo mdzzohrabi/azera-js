@@ -337,6 +337,9 @@ export class Kernel {
      */
     resolvePath(pathName: string) {
 
+        // Url
+        if ( /\:\/\//.test(pathName) ) return pathName;
+
         // Import from another package
         if ( !/^\.+\//.test(pathName) && !path.isAbsolute(pathName) ) {
             let moduleName = pathName.split('/').slice(0, pathName.startsWith('@') ? 2 : 1).join('/');

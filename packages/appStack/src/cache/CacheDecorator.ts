@@ -1,6 +1,13 @@
 import { getDefinition } from '@azera/container/build/decorators';
 import { CacheManager } from './CacheManager';
 
+/**
+ * Cache the result of method
+ * 
+ * @param key Cache key
+ * @param duration Expire duration in Miliseconds
+ * @param provider Cache provider name
+ */
 export function Cache(key: string | Function, duration?: number, provider?: string): MethodDecorator {
     return function methodCache(target: any, method: string, descriptor) {
         let originalAction = target[method];

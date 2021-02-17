@@ -9,7 +9,7 @@ import { CacheProvider, CacheProviderHit, CacheProviderOptions } from '../CacheP
  */
 export class RedisCacheProvider extends CacheProvider {
 
-    static readonly alias = 'redis';
+    static readonly schema = 'redis';
 
     getClient() {
         invariant(this.url, `Redis cache url not specified`);

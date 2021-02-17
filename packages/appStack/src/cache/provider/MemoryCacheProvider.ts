@@ -7,7 +7,7 @@ import { CacheProvider, CacheProviderOptions, CacheProviderHit } from '../CacheP
  */
 export class MemoryCacheProvider extends CacheProvider {
 
-    static readonly alias = 'memory';
+    static readonly schema = 'memory';
 
     cache: { [key: string]: CacheProviderHit<any> } = {};
     
@@ -63,6 +63,10 @@ export class MemoryCacheProvider extends CacheProvider {
             }
         }
         return count;
+    }
+
+    async has(key: string): Promise<boolean> {
+        return this.cache[key] !== undefined;
     }
 
 }

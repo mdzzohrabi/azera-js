@@ -1,10 +1,31 @@
 import { deepStrictEqual, strictEqual } from "assert";
-import * as mongoose from "mongoose";
 import { Kernel, MongooseBundle, MongooseSchema, MongooseUtil } from "../../src";
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
+import { mkdirSync, existsSync, unlinkSync } from 'fs';
 
 describe('Mongoose', () => {
+    
+    let dbPath = __dirname + '/../../var/db';
+    let db: ChildProcessWithoutNullStreams;
 
-    it('bundle (CRUD)', async () => {
+    before(async () => {
+        // Start database service    
+        if (!existsSync(dbPath)) mkdirSync(dbPath, { recursive: true });
+        
+        db = spawn(`mongod`, [`--dbpath`, dbPath]);
+    });
+
+    after(() => {
+        // Kill database
+        db.on('close', () => {
+            try {
+                if (existsSync(dbPath)) unlinkSync(dbPath);
+            } catch {}
+        });
+        db.kill('SIGINT');
+    });
+
+    it('bundle (CRUD)', async function () {
 
         let { Schema, Prop, Default, Required, Embed, Ref } = MongooseSchema;
 

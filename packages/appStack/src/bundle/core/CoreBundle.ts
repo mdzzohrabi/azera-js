@@ -1,11 +1,10 @@
 import { Container, Inject } from '@azera/container';
 import { ContainerInvokeOptions } from '@azera/container/build/container';
-import { forEach } from '@azera/util';
+import { forEach, is } from '@azera/util';
 import * as cluster from 'cluster';
-import { parse as pasrseUrl } from 'url';
 import { createLogger, transports } from 'winston';
 import { Bundle } from '../../Bundle';
-import { CacheManager, CacheProvider, FileCacheProvider, MemoryCacheProvider, RedisCacheProvider } from '../../cache';
+import { CacheManager, CacheProvider, FileCacheProvider, MemoryCacheProvider, RedisCacheProvider, MongoCacheProvider } from '../../cache';
 import { ConfigSchema } from '../../ConfigSchema';
 import { EventManager } from '../../EventManager';
 import { camelCase, pascalCase, snakeCase } from '../../helper';
@@ -68,7 +67,8 @@ export class CoreBundle extends Bundle {
                 Object.assign(info.context, value);
                 return value;
             }
-        });
+        })
+        .node('parameters.*', { description: 'Container parameter', type: 'string|object|array|number|boolean' });
 
         config
             .node('services', { description: 'Container services', type: 'array|object' })
@@ -89,9 +89,9 @@ export class CoreBundle extends Bundle {
             .node('cache', { description: 'Cache manager' })
             .node('cache.defaultProvider', { description: 'Default cache provider', type: 'string' })
             .node('cache.providers', { description: 'Cache providers', type: 'object' })
-            .node('cache.providers.*', { description: 'Cache provider' })
+            .node('cache.providers.*', { description: 'Cache provider', type: 'object|string' })
             .node('cache.providers.*.type', { description: 'Cache provider type (e.g: memory,file,redis)', type: 'string' })
-            .node('cache.providers.*.path', { description: 'Cache provider path/url', type: 'string' })
+            .node('cache.providers.*.path', { description: 'Cache provider path/url', type: 'string', validate: (value, info) => info.resolvePath(value) })
 
         config
             .node('workflow', { description: 'Workflow manager' })
@@ -131,15 +131,32 @@ export class CoreBundle extends Bundle {
         // CacheManager
         container.setFactory(CacheManager, function cacheManagerFactory($config) {
             let manager = new CacheManager();
-            manager.defaultProvider = $config?.cache?.defaultProvider;
 
+            // Default cache provider
+            manager.defaultProvider = $config?.cache?.defaultProvider;
+            
+            // Providers Class
             let providers = container.findByTag<typeof CacheProvider>(`cache_provider`);
             
-            for (let [name, config] of Object.entries($config?.cache?.provider || {})) {
-                let { type = 'memory', path } = config as any || {};
-                let url = path ? pasrseUrl(path) : undefined;
-                let provider = providers.find(p => p.service?.alias == type);
-                if (!provider) throw Error(`Cache provider "${type}" not found`);
+            // Providers
+            for (let [name, config] of Object.entries($config?.cache?.providers || {})) {
+                
+                let url: URL | undefined;
+                let schema: string = 'memory';
+                
+                if (is.String(config)) {
+                    url = new URL(config);
+                    schema = url.protocol.replace(':', '');
+                } else {
+                    let { type = schema , path } = config as any || {};
+                    schema = type;
+                    if (path) {
+                        url = new URL(path);
+                    }
+                }
+                
+                let provider = providers.find(p => p.service?.schema == schema);
+                if (!provider) throw Error(`Cache provider "${schema}" not found`);
                 let instance = container.invoke<CacheProvider>(provider.service!);
                 instance.name = name;
                 instance.url = url;
@@ -252,7 +269,8 @@ export class CoreBundle extends Bundle {
             CacheCleanCommand,
             FileCacheProvider,
             RedisCacheProvider,
-            MemoryCacheProvider
+            MemoryCacheProvider,
+            MongoCacheProvider
         ];
     }
 

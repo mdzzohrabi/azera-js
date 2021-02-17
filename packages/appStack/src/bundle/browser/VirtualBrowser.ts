@@ -4,8 +4,36 @@ import * as http from 'http';
 import * as https from 'https';
 import * as urlLib from 'url';
 import { assert } from 'console';
+import { promises as fs } from 'fs';
+import { is } from '@azera/util';
 
 export namespace VirtualBrowser {
+    export class HTMLCollection extends Array<Node | HTMLElement> {
+        constructor(items: (Node | HTMLElement)[]) {
+            if (is.Array(items)) {
+                super(...items);
+                items.forEach(item => {
+                    if (item instanceof HTMLElement && item.hasAttribute('name')) {
+                        this[ item.getAttribute('name') ] = item;
+                    }
+                });
+            } else {
+                super(items);
+            }
+        }
+
+        item(index: number) {
+            return this[index];
+        }
+
+        namedItem(name: string) {
+            return this[name as any];
+        }
+    }
+
+    export function Image(width?: number, height?: number) {
+        return new HtmlElements.image('img', { width, height });
+    }
 
     export class Location {
 
@@ -267,10 +295,17 @@ export namespace VirtualBrowser {
             req.end();
         });
     }
-    
+
     export class Window extends Events {
 
         public Node = Node;
+        public Location = Location;
+        public Screen = Screen;
+        public Navigator = Navigator;
+        public History = History;
+        public HTMLCollection = HTMLCollection;
+        public DOMImplementation = DOMImplementation;
+        public Image = Image;
 
         public document!: Document;
 
@@ -333,14 +368,25 @@ export namespace VirtualBrowser {
                         // Load scripts
                         if (loadScripts) {
                             let scripts = this.document.querySelectorAll('script');
+                            // Iterate over script tags
                             for (let script of scripts) {
-                                let scriptContent = script.innerText;
-                                let filename;
                                 if (script.hasAttribute('src')) {
-                                    scriptContent = (await getResource(script.getAttribute('src'), this._location)).toString('utf8');
-                                    filename = script.getAttribute('src');
+                                    if (script.hasAttribute('async')) {
+                                        // Async script
+                                        getResource(script.getAttribute('src'), this._location).then(buffer => buffer.toString('utf8')).then(scriptContent => {
+                                            this.eval(scriptContent, { filename: script.getAttribute('src') });
+                                        });
+                                    } else {
+                                        // Sync script
+                                        this.eval(
+                                            (await getResource(script.getAttribute('src'), this._location)).toString('utf8'),
+                                            { filename: script.getAttribute('src') }
+                                        );
+                                    }
+                                } else {
+                                    // Inline script
+                                    this.eval(script.innerText);
                                 }
-                                this.eval(scriptContent, { filename });
                             }
                         }
                         done()
@@ -362,6 +408,17 @@ export namespace VirtualBrowser {
                     console.error(err); 
                 });    
             })
+        }
+
+        public waitForLoad(): Promise<boolean> {
+            return new Promise((done , reject) => {
+                if (this.document.readyState == 'complete') return done(true);
+                let onLoad = () => {
+                    this.removeEventListener('DOMContentLoaded', onLoad);
+                    done(true);
+                }
+                this.addEventListener('DOMContentLoaded', onLoad);
+            });
         }
 
         eval(expr: string, options?: RunningScriptOptions) {
@@ -448,6 +505,10 @@ export namespace VirtualBrowser {
             return this.querySelector('html');
         }
 
+        get images() {
+            return new HTMLCollection(this.querySelectorAll('img'));
+        }
+
         public createElement(tagName: string) {
             return new HTMLElement(tagName, {}, [], undefined, this as any);
         }
@@ -477,6 +538,16 @@ export namespace VirtualBrowser {
 
     export function load(content: string, options: WindowOptions = {}): Window {
         return new Window(new HtmlParser().parse(content), options);
+    }
+
+    export async function loadUrl(url: string, options: WindowOptions = {}): Promise<Window> {
+        let pageContent = (await getResource(url)).toString('utf-8');
+        return new Window(new HtmlParser().parse(pageContent), options);
+    }
+
+    export async function loadFile(file: string, options: WindowOptions = {}): Promise<Window> {
+        let pageContent = await fs.readFile(file)
+        return new Window(new HtmlParser().parse(pageContent.toString('utf-8')), options);
     }
 
 }

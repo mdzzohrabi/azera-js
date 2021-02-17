@@ -41,9 +41,13 @@ export class GraphQlManager {
      * @param nodeName Node name
      * @param request Request
      */
-    public async execute(nodeName: string, request: GraphQLRequest) {
+    public async execute(nodeName: string, request: GraphQLRequest, options = { throwError: true }) {
         let node = await this.getNode(nodeName);
-        return node.executeOperation(request);
+        let result = await node.executeOperation(request);
+        if (options.throwError && result.errors) {
+            throw new Error(result.errors.toString());
+        }
+        return result;
     }
 
     public async createServer(config: ApolloServerExpressConfig) {
