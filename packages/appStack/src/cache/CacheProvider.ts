@@ -1,7 +1,10 @@
-import { UrlWithStringQuery } from "url";
+import { URL } from "url";
 
 export interface CacheProviderOptions {
+    // Expire duration in Miliseconds
     expire?: number
+
+    // If true when cache expired update will be done in background and old value returns until new value
     silent?: boolean
 }
 
@@ -16,12 +19,10 @@ export interface CacheProviderHit<T> {
  */
 export abstract class CacheProvider {
 
-    static get alias(): string {
-        throw Error(`Cache provider must be set its alias`);
-    }
+    static readonly schema: string;
 
     public name!: string;
-    public url?: UrlWithStringQuery;
+    public url?: URL;
 
     abstract set<T>(key: string, value: T): Promise<T>
     abstract get<T>(key: string, expire?: number): Promise<T | undefined>
@@ -29,5 +30,6 @@ export abstract class CacheProvider {
     abstract memo<T>(key: string, value: () => Promise<T>, expire?: number): Promise<T>
     abstract hit<T>(key: string): Promise<CacheProviderHit<T> | undefined>
     abstract delete(key: string): Promise<number>
+    abstract has(key: string): Promise<boolean>
 
 }

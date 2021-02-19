@@ -66,8 +66,8 @@ export class HtmlParser {
      */
     public parse(content: string) {
         if (typeof content != 'string') throw Error(`Content must be typeof string, but typeof ${typeof content} given`);
-        this.content = content;
-        this.length = content.length;
+        this.content = content.trim();
+        this.length = this.content.length;
         this.cursor = 0;
         this.children = [];
         let node: Node;

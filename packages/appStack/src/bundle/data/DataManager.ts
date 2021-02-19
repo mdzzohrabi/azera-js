@@ -86,6 +86,7 @@ export class DataManager {
         connection = typeof connection == 'string' ? this.connections[connection] : connection
 
         invariant(connection, `Connection %s not found`, connection);
+        invariant(this.schemas[model.name] == undefined, `Data model %s was defined before`, model.name);
 
         let dataModel = getMeta(DataModel, model);
         let props = getClassDecoratedProps(model).keys();
@@ -102,6 +103,13 @@ export class DataManager {
                 schema.fields[prop] = field as any;
             }
         }
+
+        this.schemas[schema.modelName] = schema;
+        return this;
+    }
+
+    public getModel(model: any) {
+        return this.schemas[is.Class(model) ? model.name : model];
     }
 
 }

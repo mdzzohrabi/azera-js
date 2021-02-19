@@ -44,7 +44,7 @@ describe('GraphQl Bundle', () => {
                     @GraphQl.Field({ description: 'Age of user' }) age!: Number;
                 }
     
-                strictEqual((await generator.build(User)).sdl, `type User {\n\tname: String\n\tage: Int # Age of user\n}`);    
+                strictEqual((await generator.build(User)).sdl, `type User {\n\tname: String\n\t"Age of user"\n\tage: Int\n}`);    
             });
 
             it('Inheritance', async () => {
@@ -76,8 +76,8 @@ type Animal {\n\tname: String\n}
         });
 
         describe('Directive', () => {
-            it('should resolve directive', async () => {
-
+            it('should resolve directive', async function () {
+                this.timeout(1000);
                 
                 class Directives {
                     @Directive() static fetch($url: string ): any {
@@ -158,9 +158,9 @@ type Animal {\n\tname: String\n}
 
                 strictEqual(
                     result.sdl,
-`type Query {\n\tversion: String\n\tusers(limit: Int = 10): [User] # List of all users\n}
+`type Query {\n\tversion: String\n\t"List of all users"\n\tusers(limit: Int = 10): [User]\n}
 type Mutation {\n\taddUser(user: UserInput!): [String]\n}
-# User type
+"User type"
 type User {\n\tusername: String\n\thasUsername: Boolean\n}
 input UserInput {\n\tusername: String\n}`
                 )
@@ -248,11 +248,12 @@ input UserInput {\n\tusername: String\n}`
             it('should execute query with execute()', async () => {
 
                 @Type() class User {
-                    public name!: string;
                     public friends: string[] = [];
-                    @Field() isFriend(@Parent() user: User, @Param() username: string): boolean {
-                        console.log('asdasdasd');
-                        
+                    @Field() public name!: string;
+                    @Field() isFriend(
+                        @Parent() user: User,
+                        @Param() username: string
+                    ): boolean {
                         return user.friends.includes(username) ? true : false;
                     }
                 }
@@ -261,8 +262,6 @@ input UserInput {\n\tusername: String\n}`
                     @Field() version: string = '1.0.0';
                     @Field() hello($name: string): string { return `Hello ${$name}`; }
                     @Field() user(): User {
-                        console.log('kjhkjhk');
-                        
                         return { name: 'Masoud', friends: [ 'Alireza' ] } as any;
                     }
                 }
@@ -273,19 +272,14 @@ input UserInput {\n\tusername: String\n}`
                 let schema = await builder.buildSchema(Query);
                 manager.addNode('public', { schema });
 
-                console.log(await (await builder.build(Query)));
-                
-
                 deepStrictEqual(
                     { ...(await manager.execute('public', { query: `{ version }` })).data },
-                    {
-                        version: '1.0.0'
-                    }
+                    { version: '1.0.0' }
                 );
 
                 deepStrictEqual(
-                    { ...(await manager.execute('public', { query: `{ user { name } }` })).data },
-                    { user: { name: 'Maosud', isFriend: true } }
+                    JSON.parse(JSON.stringify({ ...(await manager.execute('public', { query: `{ user { name isFriend(username: "Alireza") } }` })).data })),
+                    { user: { name: 'Masoud', isFriend: true } }
                 );
             });
 

@@ -14,6 +14,7 @@ export * from './cache';
 export * from './net';
 export * from './helper';
 export * from './workflow';
+export * from './collection';
 
 // // External libraries
 export * from '@azera/container';

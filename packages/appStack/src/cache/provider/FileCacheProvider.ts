@@ -9,17 +9,30 @@ import { CacheProviderHit, CacheProviderOptions, CacheProvider } from '../CacheP
  */
 export class FileCacheProvider extends CacheProvider {
 
-    static readonly alias = 'file';
+    static readonly schema = 'file';
 
     get path() {
-        return this.url?.path!;
+        return this.url?.pathname!;
+    }
+
+    private isFileExists(path: string) {
+        return fs.stat(path).then(s => s.isFile()).catch(e => false);
+    }
+
+    private isFolderExists(path: string) {
+        return fs.stat(path).then(s => s.isDirectory()).catch(e => false);
     }
 
     async has(key: string): Promise<boolean> {
-        return (await fs.stat(this.path + '/' + key)).isFile();
+        return this.isFileExists(this.path + '/' + key);
     }
     
     async set<T>(key: string, value: T): Promise<T> {
+
+        if (!await this.isFolderExists(this.path)) {
+            await fs.mkdir(this.path, { recursive: true });
+        }
+        
         await fs.writeFile(this.path + '/' + key, JSON.stringify({ value, updated: Date.now() }));
         return value;
     }
@@ -38,7 +51,7 @@ export class FileCacheProvider extends CacheProvider {
     async memo<T>(key: string, value: () => Promise<T>, options?: any): Promise<T>
     {
         if (typeof options == 'number') options = { expire: options };
-        let { expire, silent = false } = options;
+        let { expire, silent = false } = options ?? {};
         let data = await this.get<T>(key, expire);
         if (undefined === data) {
             await this.set(key, data = await value());

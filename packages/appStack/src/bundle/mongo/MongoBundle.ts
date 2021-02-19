@@ -7,6 +7,7 @@ import { Kernel } from '../../Kernel';
 import { Logger } from '../../Logger';
 import type { MongoClient } from 'mongodb';
 import { Cli } from '../cli';
+import { MongoManager } from './MongoManager';
 
 export class MongoBundle extends Bundle {
 
@@ -51,6 +52,8 @@ export class MongoBundle extends Bundle {
             defaultDatabase = connections[names[0]].database;
         }
 
+        let mongoManager = await container.invokeAsync(MongoManager);
+
         await import('mongodb').then(({ MongoClient, Db }) => {
             // Connections
             forEach(connections, (conn, name) => {
@@ -82,6 +85,9 @@ export class MongoBundle extends Bundle {
                     
                     return client.connect();
                 });
+
+                // Add to MongoManager
+                mongoManager.add(name, () => container.invokeAsync<MongoClient>(`mongo.${name}`));
 
                 let repositories: { [repo: string]: any } = conn.repositories ?? {};
 
