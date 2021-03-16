@@ -1,6 +1,6 @@
 import { expect } from 'chai';
-import { Kernel } from '../src/Kernel';
-import { Bundle } from '../src/Bundle';
+import { Kernel } from '../src/kernel/Kernel';
+import { Bundle } from '../src/bundle/Bundle';
 import { Container } from '../src';
 import { CoreBundle } from '../src/bundle/core/CoreBundle';
 

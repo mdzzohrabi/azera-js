@@ -1,4 +1,4 @@
-import { Event } from '../EventManager';
+import { Event } from '../event/EventManager';
 import { WorkflowTransition } from './Workflow';
 
 /**

@@ -1,6 +1,7 @@
 import { Request } from './Request';
 import { Response } from './Response';
-import { Event } from '../../EventManager';
+import { Event } from '../../event/EventManager';
+import { IHttpConfigRouteObject, IHttpRouteHandlerObject } from './Types';
 
 
 export const EVENT_HTTP_RESULT = 'http.result';
@@ -9,6 +10,7 @@ export const EVENT_HTTP_EXPRESS = 'http.expresss';
 export const EVENT_HTTP_EXPRESS_INIT = 'http.expresss_init';
 export const EVENT_HTTP_ERROR = 'http.error';
 export const EVENT_HTTP_ACTION = 'http.action';
+export const EVENT_CONFIGURE_ROUTE = 'http.configure_route';
 
 export class HttpResultEvent extends Event {
     constructor (
@@ -39,4 +41,11 @@ export class HttpActionEvent extends Event {
         public controller: object,
         public handler: Function
     ) { super() }
+}
+
+export class HttpRouteConfigEvent extends Event {
+    constructor(
+        public config: IHttpConfigRouteObject,
+        public route: IHttpRouteHandlerObject
+    ) { super(); }
 }

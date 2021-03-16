@@ -1,17 +1,23 @@
-import { Bundle } from '../../Bundle';
-import { Inject, Container } from '@azera/container';
-import { ConfigSchema } from '../../ConfigSchema';
-import { forEach } from '@azera/util';
-import { wrapCreateConnectionWithProxy } from '../../net/Network';
-import { Kernel } from '../../Kernel';
-import { Logger } from '../../Logger';
+import { Container, Inject } from '@azera/container';
+import { forEach, is } from '@azera/util';
 import type { MongoClient } from 'mongodb';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Kernel } from '../../kernel/Kernel';
+import { Logger } from '../../logger/Logger';
+import { wrapCreateConnectionWithProxy } from '../../net/Network';
+import { Bundle } from '../Bundle';
 import { Cli } from '../cli';
 import { MongoManager } from './MongoManager';
 
 export class MongoBundle extends Bundle {
 
     get bundleName() { return "Mongo"; }
+
+    async getServices() {
+        return [
+            (await import('./security/MongoAuthProvider')).MongoAuthProvider
+        ]
+    }
 
     @Inject() async init(config: ConfigSchema, container: Container) {
 
@@ -28,9 +34,12 @@ export class MongoBundle extends Bundle {
             .node('mongo.connections.*.useNewUrlParser', { description: 'MongoDb useNewUrlParser', type: 'boolean', default: false })
             .node('mongo.connections.*.useUnifiedTopology', { description: 'MongoDb useUnifiedTopology', type: 'boolean', default: false })
             .node('mongo.connections.*.repositories', { description: 'MongoDb Repositories', type: 'object|array' })
-            .node('mongo.connections.*.repositories.*', { description: 'Repositoriy', type: 'string', validate(repo) { return container.invoke(Kernel).use(repo) } })
+            .node('mongo.connections.*.repositories.*', { description: 'Repositoriy', type: 'string|object', validate(repo) { return is.String(repo) ? container.invoke(Kernel).use(repo) : repo } })
             .node('mongo.proxy', { description: 'Proxy', type: 'string' })
         ;
+
+        // Resolve Repository for Http secured routes
+        config.node('http.routes.*.secure.authRepository', { description: 'Authentication repository', type: 'string|object', validate(value) { return is.String(value) ? container.invoke(Kernel).use(value) : value } })
 
     }
 

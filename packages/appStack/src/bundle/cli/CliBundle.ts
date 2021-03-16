@@ -2,9 +2,9 @@ import { Container, Inject } from '@azera/container';
 import * as commander from 'commander';
 import { writeFileSync } from 'fs';
 import * as process from 'process';
-import { Bundle } from '../../Bundle';
-import { Logger } from '../../Logger';
-import { Profiler } from '../../Profiler';
+import { Bundle } from '../Bundle';
+import { Logger } from '../../logger/Logger';
+import { Profiler } from '../../debug/Profiler';
 import { Command } from './Command';
 
 export const DI_TAG_COMMAND = 'cli.command';

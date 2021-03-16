@@ -4,7 +4,7 @@ import { ConfigResolver, ConfigSchema, GraphQlBundle, HttpBundle, is, Kernel } f
 import { GraphQl } from "../../src/bundle/graph/Decorators";
 import { GraphQlBuilder } from '../../src/bundle/graph/GraphQlBuilder';
 import { GraphQlManager } from '../../src/bundle/graph/GraphqlManager';
-import { hasMeta } from '../../src/Metadata';
+import { hasMeta } from '../../src/decorator/Metadata';
 
 let { Type, Field, Input, Directive, Param, RequestConfig, Parent } = GraphQl;
 

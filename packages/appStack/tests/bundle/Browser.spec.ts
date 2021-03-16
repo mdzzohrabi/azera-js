@@ -1,6 +1,6 @@
 import { deepStrictEqual, ok, strictEqual } from "assert";
-import { HTMLElement, HtmlParser } from "../../src/bundle/browser/HtmlParser";
-import { VirtualBrowser } from "../../src/bundle/browser/VirtualBrowser";
+import { HTMLElement, HtmlParser } from "../../src/browser/HtmlParser";
+import { VirtualBrowser } from "../../src/browser/VirtualBrowser";
 import { readFileSync } from 'fs';
 import { runInNewContext } from "vm";
 

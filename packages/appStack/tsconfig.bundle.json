@@ -1,0 +1,21 @@
+{
+    "compilerOptions": {
+        "experimentalDecorators": true,
+        "emitDecoratorMetadata": true,
+        "strict": true,
+        "declaration": true,
+        "outFile": "bundle.js",
+        "module": "AMD",
+        "target": "es2017",
+        "rootDir": "./src",
+        "moduleResolution": "node",
+        "skipLibCheck": true,
+        "importHelpers": true,
+        "strictFunctionTypes": false,
+        "inlineSourceMap": false,
+        "noImplicitAny": true,
+        "removeComments": false
+    },
+    "include": ["src"],
+    "exclude": ["node_modules"]
+}

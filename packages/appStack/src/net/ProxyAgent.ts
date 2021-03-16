@@ -1,11 +1,16 @@
 import { EventEmitter } from 'events';
 import * as http from 'http';
 import * as net from 'net';
-import { format as formatUrl, parse as parseUrl, Url } from 'url';
-import { invariant } from '../Util';
+import { URL } from 'url';
+import { invariant } from '../helper/Util';
 import { HttpProxyAgent } from 'http-proxy-agent'
 import { HttpsProxyAgent } from 'https-proxy-agent'
 
+/**
+ * Net ProxyAgent
+ * 
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 export class ProxyAgent extends EventEmitter {
 
     static from(url: string, https = false) {
@@ -13,12 +18,13 @@ export class ProxyAgent extends EventEmitter {
         return new HttpProxyAgent(url);
     }
 
-    private proxy!: Url;
+    private proxy!: URL;
 
     constructor(proxyAddress: string) {
         super();
-        this.proxy = parseUrl(proxyAddress);
-        invariant(this.proxy, `an Http(s) proxy server must be defined for ProxyAgent`);
+        invariant(proxyAddress, `an Http(s) proxy server must be defined for ProxyAgent`);
+        if (!proxyAddress.match(/\:[\\\/]/)) proxyAddress = 'http://' + proxyAddress;
+        this.proxy = new URL(proxyAddress);
     }
 
     addRequest(request: http.ClientRequest, options: http.RequestOptions) {
@@ -27,7 +33,7 @@ export class ProxyAgent extends EventEmitter {
 
         let isSecure = options.protocol == 'https:';
 
-        let path = parseUrl(request.path);
+        let path = new URL(request.path);
         
         if (isSecure) {
             let payload = `CONNECT ${options.host}:443 HTTP/1.1\r\n`;
@@ -43,12 +49,11 @@ export class ProxyAgent extends EventEmitter {
             }
 
             // @ts-ignore
-            request.path = formatUrl({
-                ...path,
+            request.path = Object.assign(path, {
                 protocol: 'https:',
                 port: isSecure ? 443 : options.port,
                 hostname: options.host || options.hostname
-            });
+            }).toString();
 
             proxySocket.write(`${payload}\r\n`);
             proxySocket.once('data', buffer => {
@@ -59,11 +64,10 @@ export class ProxyAgent extends EventEmitter {
         }
         else {
             // @ts-ignore
-            request.path = formatUrl({
-                ...path,
+            request.path = Object.assign(path, {
                 port: options.port,
                 hostname: options.host || options.hostname
-            });
+            }).toString();
 
             request.onSocket(proxySocket);
         }

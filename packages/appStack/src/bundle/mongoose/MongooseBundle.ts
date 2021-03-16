@@ -1,9 +1,9 @@
 import { Container, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
 import { Connection, Document, Model } from 'mongoose';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { Kernel } from '../../Kernel';
+import { Bundle } from '../Bundle';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Kernel } from '../../kernel/Kernel';
 import { wrapCreateConnectionWithProxy } from '../../net/Network';
 import { Cli } from '../cli';
 

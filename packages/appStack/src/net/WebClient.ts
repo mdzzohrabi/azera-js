@@ -1,6 +1,5 @@
 import * as http from 'http';
 import * as https from 'https';
-import * as net from 'net';
 import { ProxyAgent } from './ProxyAgent';
 
 export interface WebClientRequestOptions extends http.RequestOptions {

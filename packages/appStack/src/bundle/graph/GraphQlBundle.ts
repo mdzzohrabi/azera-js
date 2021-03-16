@@ -1,9 +1,9 @@
 import { Container, Inject } from '@azera/container';
 import { is } from '@azera/util';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { Kernel } from '../../Kernel';
-import { invariant } from '../../Util';
+import { Bundle } from '../Bundle';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Kernel } from '../../kernel/Kernel';
+import { invariant } from '../../helper/Util';
 import { HttpBundle } from '../http';
 import { GraphQlBuilder } from './GraphQlBuilder';
 import { GraphQlManager } from './GraphqlManager';

@@ -3,7 +3,8 @@ import { Container, Inject } from '@azera/container';
 import { CacheManager } from '../../../cache';
 
 /**
- * Find tagged services
+ * Clean cache
+ * 
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class CacheCleanCommand extends Command {

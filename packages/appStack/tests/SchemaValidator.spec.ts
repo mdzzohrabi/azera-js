@@ -1,11 +1,12 @@
 import { deepStrictEqual, rejects } from "assert";
+import { expect } from "chai";
 import { ObjectResolver } from "../src";
 
 describe('SchemaValidator', () => {
 
     it('should work ok', async () => {
 
-        let resolver = ObjectResolver.schema({
+        let resolver = ObjectResolver.make({
             id: { type: 'objectId' },
             firstName: t => t.isRequired().isString(),
             lastName: t => t.isString(),
@@ -53,6 +54,18 @@ describe('SchemaValidator', () => {
             await resolver.resolve({ firstName: 'Masoud', gender: 'female', color: 'Red' }),
             { firstName: 'Masoud', color: 'White', gender: 'F' }
         )
+
+
+        class User {
+            firstName!: string;
+            gender!: any;
+        }
+
+        let user = new User();
+        user.firstName = 'Masoud';
+        user.gender = 'male';
+
+        expect(await resolver.resolve(user)).instanceOf(User);
 
     });
 

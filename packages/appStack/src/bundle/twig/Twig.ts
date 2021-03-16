@@ -1,4 +1,4 @@
-import * as twig from 'twig';
+import type * as twig from 'twig';
 
 type twigAsClass<T = typeof twig> = { [name in keyof T]: T[name] };
 

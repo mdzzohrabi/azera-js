@@ -1,7 +1,7 @@
 import type { GraphQLField } from 'graphql';
 import { Container, Inject } from '@azera/container';
-import { getClassDecoratedProps, getMeta, hasMeta } from '../../Metadata';
-import { invariant } from '../../Util';
+import { getClassDecoratedProps, getMeta, hasMeta } from '../../decorator/Metadata';
+import { invariant } from '../../helper/Util';
 import { FieldInputsType, GraphQl } from './Decorators';
 import { is } from '@azera/util';
 

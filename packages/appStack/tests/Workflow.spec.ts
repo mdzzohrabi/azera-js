@@ -1,5 +1,5 @@
 import { assert } from 'chai';
-import { Workflow, WorkflowManager } from "../src";
+import { Workflow, WorkflowManager } from "../src/workflow";
 
 describe('Workflow', () => {
 

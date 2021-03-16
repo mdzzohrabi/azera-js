@@ -1,4 +1,4 @@
-import { invariant } from '../Util';
+import { invariant } from '../helper/Util';
 
 export interface WorkflowTransition {
     from: string | string[];

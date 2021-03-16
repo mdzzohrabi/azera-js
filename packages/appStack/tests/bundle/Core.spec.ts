@@ -1,7 +1,7 @@
 import { Container } from "@azera/container";
 import { CacheManager } from "../../src/cache";
 import { CoreBundle } from "../../src/bundle/core/CoreBundle";
-import { Kernel } from '../../src/Kernel';
+import { Kernel } from '../../src/kernel/Kernel';
 import { deepStrictEqual, strictEqual } from "assert";
 import { WebClient } from "../../src";
 

@@ -1,13 +1,13 @@
 import { is } from '@azera/util';
-import { getClassDecoratedProps, getMeta, getMetaMap, hasMeta } from '../../Metadata';
-import { invariant } from '../../Util';
+import { Str } from '../../helper';
+import { getClassDecoratedProps, getMeta, hasMeta } from '../../decorator/Metadata';
+import { invariant } from '../../helper/Util';
 import { DataConnection } from './DataConnection';
 import { DataConnectionOptions } from './DataConnectionOptions';
 import { DataField, DataModel } from './DataDecorators';
 import { DataDriver } from './DataDriver';
 import { DataModelSchema } from './DataModelSchema';
 import { DataMemoryDriver } from './driver/DataMemoryDriver';
-import * as StringUtil from '../../helper/Strings';
 
 /**
  * Data manager
@@ -92,7 +92,7 @@ export class DataManager {
         let props = getClassDecoratedProps(model).keys();
         let schema: DataModelSchema = {
             connection,
-            collectionName: dataModel?.collectionName ?? StringUtil.snakeCase(model.name),
+            collectionName: dataModel?.collectionName ?? Str.snakeCase(model.name),
             modelName: model.name,
             fields: {}
         };

@@ -23,8 +23,14 @@ export class FileCacheProvider extends CacheProvider {
         return fs.stat(path).then(s => s.isDirectory()).catch(e => false);
     }
 
-    async has(key: string): Promise<boolean> {
-        return this.isFileExists(this.path + '/' + key);
+    async has(key: string, expire?: number): Promise<boolean> {
+        return this.isFileExists(this.path + '/' + key).then(async result => {
+            if (result && expire) {
+                let hit = JSON.parse((await fs.readFile(this.path + '/' + key)).toString('utf8'));
+                return (Date.now() - hit.updated) > expire;
+            }
+            return result;
+        });
     }
     
     async set<T>(key: string, value: T): Promise<T> {

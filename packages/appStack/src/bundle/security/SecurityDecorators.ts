@@ -1,35 +1,18 @@
-import { Middleware, NextFn, Request, Response } from '../http';
-import { AuthenticationManager } from './AuthenticationManager';
+import { Middleware } from '../http';
+import { AuthenticationManager } from './authentication/AuthenticationManager';
+import { createSecureMiddleware } from './HttpSecurityMiddleware';
 
 /**
  * Secure an http route (authentication middleware)
  * 
  * @param options Options
  */
-export function Secure(options?: { role?: string, redirectPath?: string, anonymous?: boolean })
+export function Secure(options?: { role?: string, redirectPath?: string, anonymous?: boolean, providerName?: string, [key: string]: any })
 {
+    let secureMiddleware = createSecureMiddleware(options);
     return function secureDecorator(...params: any[]) {
         Middleware([
-            [ AuthenticationManager, function secureMiddleware(authManager: AuthenticationManager ,req: Request, res: Response, next: NextFn) {
-                let { role, redirectPath, anonymous } = options || {};
-
-                authManager.authenticate(req, res).then(isOk => {
-
-                    if (anonymous) return next();
-
-                    if (isOk) {
-                        next();
-                    }
-                    else {
-                        if (redirectPath) res.redirect(redirectPath);
-                        else next(Error(`Authentication failed`));
-                    }
-                })
-                .catch(err => {
-                    if (redirectPath) res.redirect(redirectPath);
-                    else next(Error(`Authentication failed`));
-                });
-            }]
+            [ AuthenticationManager, secureMiddleware ]
         ])(...params);
     }
 }

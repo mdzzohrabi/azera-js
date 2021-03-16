@@ -1,5 +1,5 @@
-import { strictEqual } from "assert";
-import { FileCacheProvider, MemoryCacheProvider, RedisCacheProvider } from "../src";
+import { ok, strictEqual } from "assert";
+import { FileCacheProvider, MemoryCacheProvider, RedisCacheProvider, wait } from "../src";
 
 describe('Cache', () => {
 
@@ -9,7 +9,8 @@ describe('Cache', () => {
         strictEqual(RedisCacheProvider.schema, 'redis');
     });
 
-    it('memory', async () => {
+    it('memory', async function () {
+        this.timeout(10000);
 
         let memory = new MemoryCacheProvider();
 
@@ -36,6 +37,13 @@ describe('Cache', () => {
         await memory.delete('a');
         strictEqual( await memory.has('a') , false );
         strictEqual( await memory.get('a') , undefined );
+
+        // Expire
+        await memory.set('permanent', 10);
+        strictEqual(await memory.get('permanent'), 10);
+        strictEqual(await memory.get('permanent', 100), 10);
+        await wait(200);
+        strictEqual(await memory.get('permanent', 100), undefined);
             
     });
 

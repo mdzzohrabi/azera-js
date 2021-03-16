@@ -1,9 +1,8 @@
-import { Bundle } from '../../Bundle';
-import { Inject, Container } from '@azera/container';
-import * as twig from 'twig';
+import { Container, Inject } from '@azera/container';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Kernel } from '../../kernel/Kernel';
+import { Bundle } from '../Bundle';
 import { Twig } from './Twig';
-import { Kernel } from '../../Kernel';
-import { ConfigSchema } from '../../ConfigSchema';
 
 /**
  * Twig bundle
@@ -16,25 +15,28 @@ export class TwigBundle extends Bundle {
 
     static DI_PARAM_CACHE = 'twigCache';
 
-    @Inject() init(container: Container, kernel: Kernel, config: ConfigSchema) {
+    @Inject() init(container: Container, config: ConfigSchema) {
         config//.node('twig', { description: 'Twig bundle configuration' })
             .node('parameters.twigCache', { description: 'Cache twig rendered templates', type: 'boolean', default: true });
 
         container.setParameter(TwigBundle.DI_PARAM_CACHE, true);
 
-        // set HttpBundle view engine
-        if ( kernel.bundles.find(bundle => bundle.bundleName == 'Http') ) {
-            container.setParameter('http.viewEngine', twig.__express);
-        }
-
-        container.setFactory(Twig, function twigFactory() {
-            return twig;
+        // Twig factory
+        container.setFactory(Twig, async function twigFactory() {
+            return await import('twig');
         });
     }
 
-    @Inject() boot(container: Container) {
+    @Inject() async boot(container: Container, kernel: Kernel) {
+        // set HttpBundle view engine
+        if ( kernel.bundles.find(bundle => bundle.bundleName == 'Http') ) {            
+            container.setParameter('http.viewEngine', (await import('twig')).__express);
+        }
+
         // Twig cache
-        twig.cache( container.getParameter(TwigBundle.DI_PARAM_CACHE) );
+        if (container.hasParameter(TwigBundle.DI_PARAM_CACHE)) {
+            (await import('twig')).cache( container.getParameter(TwigBundle.DI_PARAM_CACHE) );
+        }
     }
 
 }

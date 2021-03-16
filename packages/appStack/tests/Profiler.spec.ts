@@ -1,5 +1,5 @@
 import { assert, expect } from 'chai';
-import { Profiler } from "../src";
+import { Profiler } from "../src/debug/Profiler";
 
 describe('Profiler', () => {
 

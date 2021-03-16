@@ -1,4 +1,4 @@
-import { createDecorator } from '../../Metadata';
+import { createDecorator } from '../../decorator/Metadata';
 
 export const DataModel = createDecorator((options: { collectionName?: string } = {}) => options, 'data:model', false);
 

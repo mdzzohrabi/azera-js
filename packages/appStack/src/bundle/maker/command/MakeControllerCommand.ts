@@ -1,8 +1,7 @@
 import { Inject } from '@azera/container';
-import { copyFileSync, existsSync, mkdirSync, readFileSync, readSync, unlinkSync, writeFileSync } from 'fs';
-import { dirname } from 'path';
-import { humanize, dasherize } from '../../../helper';
-import { Kernel } from '../../../Kernel';
+import { copyFileSync, existsSync, mkdirSync, readFileSync, unlinkSync, writeFileSync } from 'fs';
+import { Str } from '../../../helper';
+import { Kernel } from '../../../kernel/Kernel';
 import { Cli, Command, CommandInfo } from '../../cli';
 
 /**
@@ -21,7 +20,7 @@ export class MakeControllerCommand extends Command {
 
     @Inject() async run(kernel: Kernel, cli: Cli, name: string, { path, dir, backup }: { path?: string, dir?: string, backup?: boolean }): Promise<void> {
 
-        let fullName = humanize(name) + 'Controller';
+        let fullName = Str.humanize(name) + 'Controller';
         let dirPath = kernel.rootDir + ( dir ?? '/src/controller' );
         let file = dirPath + '/' + fullName + '.ts';
 
@@ -37,7 +36,7 @@ export class MakeControllerCommand extends Command {
             file,
 `import {Controller, Get, Request, Response, Inject} from '@azera/stack';
 
-@Controller(${path && path != '/' ? "'" + path.replace('%name%', dasherize(name)) + "'" : ''})
+@Controller(${path && path != '/' ? "'" + path.replace('%name%', Str.dasherize(name)) + "'" : ''})
 export class ${fullName} {
     @Get('/') @Inject() indexAction(req: Request, res: Response) {
         return 'Index action';

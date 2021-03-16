@@ -2,7 +2,7 @@ import * as check from 'express-validator';
 import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
-import { getMeta } from '../../Metadata';
+import { getMeta } from '../../decorator/Metadata';
 import { is } from '@azera/util';
 
 /**
