@@ -1,5 +1,5 @@
 import { Constructor } from '@azera/util';
-import { getClassDecoratedProps, getMeta } from '../../Metadata';
+import { getClassDecoratedProps, getMeta } from '../../decorator/Metadata';
 import { MongooseSchema } from './Decorators';
 import type { Model, Document } from 'mongoose';
 

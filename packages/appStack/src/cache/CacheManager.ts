@@ -1,3 +1,4 @@
+import { invariant } from '../helper/Util';
 import { CacheProvider } from './CacheProvider';
 
 /**
@@ -5,6 +6,12 @@ import { CacheProvider } from './CacheProvider';
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
 export class CacheManager {
+
+    constructor(providers: CacheProvider[] = []) {
+        invariant(Array.isArray(providers), `Providers must be an array of CacheProvider class`);
+        providers.forEach(p => this.addProvider(p));
+        if (providers.length > 0) this.defaultProvider = providers[0].name;
+    }
 
     /**
      * Default cache provider name

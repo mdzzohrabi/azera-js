@@ -1,12 +1,11 @@
 import { Inject, Decorator } from '@azera/container';
 import { ContainerInvokeOptions } from '@azera/container/build/container';
 import { getParameters } from '@azera/reflect';
+import { RouteMethods } from './Types';
 
 export const ROUTES_PROPERTY = 'routes';
 
-export let HttpMethods = [ 'get', 'post', 'put', 'any', 'delete', 'options' ];
-export type RouteMethods = 'get' | 'post' | 'put' | 'any' | 'delete' | 'options'
-
+export let HttpMethods = [ 'get', 'post', 'put', 'delete', 'options', 'head' ];
 export interface RoutesCollection {
     routes: { 
         path: string,

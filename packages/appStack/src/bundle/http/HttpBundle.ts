@@ -1,26 +1,28 @@
 import { Container, Inject } from '@azera/container';
+import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { forEach, is } from '@azera/util';
 import * as parser from 'body-parser';
+import * as cluster from 'cluster';
 import * as express from 'express';
 import * as path from 'path';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { EventManager } from '../../EventManager';
-import { Kernel } from '../../Kernel';
-import { Logger } from '../../Logger';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Profiler } from '../../debug/Profiler';
+import { EventManager } from '../../event/EventManager';
+import { debugName, invariant } from '../../helper/Util';
+import { Kernel } from '../../kernel/Kernel';
+import { Logger } from '../../logger/Logger';
+import { Bundle } from '../Bundle';
 import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
-import { HttpCoreMiddlewareFactory } from './CoreMiddleware';
-import { EVENT_HTTP_EXPRESS, EVENT_HTTP_LISTEN, HttpResultEvent, HttpActionEvent, EVENT_HTTP_ACTION, EVENT_HTTP_RESULT, EVENT_HTTP_ERROR, HttpErrorEvent, EVENT_HTTP_EXPRESS_INIT } from './Events';
+import { HttpStartCommand } from './Command/HttpStartCommand';
+import { EVENT_CONFIGURE_ROUTE, EVENT_HTTP_ACTION, EVENT_HTTP_ERROR, EVENT_HTTP_EXPRESS, EVENT_HTTP_EXPRESS_INIT, EVENT_HTTP_LISTEN, EVENT_HTTP_RESULT, HttpActionEvent, HttpErrorEvent, HttpResultEvent, HttpRouteConfigEvent } from './Events';
 import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
+import { HttpCoreMiddlewareFactory } from './middleware/CoreMiddleware';
+import { createRateLimiterMiddleware } from './middleware/RateLimiterMiddleware';
 import { Request } from './Request';
-import { Response, NextFn } from './Response';
+import { NextFn, Response } from './Response';
 import { RoutesCollection, ROUTES_PROPERTY } from './Route';
-import { debugName, invariant } from '../../Util';
-import { Profiler } from '../../Profiler';
-import * as cluster from 'cluster';
-import { forEach, is } from '@azera/util';
-import { HttpStartCommand } from './Command/HttpStartCommand';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { IHttpConfigRouteObject, IHttpRouteHandlerObject } from './Types';
 
 export { express };
 
@@ -39,6 +41,7 @@ export class HttpBundle extends Bundle {
     static EVENT_EXPRESS_INIT = EVENT_HTTP_EXPRESS_INIT;
     static EVENT_EXPRESS = EVENT_HTTP_EXPRESS;
     static EVENT_ERROR = EVENT_HTTP_ERROR;
+    static EVENT_CONFIGURE_ROUTE = EVENT_CONFIGURE_ROUTE;
 
     /** Http listen port */
     static DI_PARAM_PORT = 'httpPort';
@@ -86,6 +89,12 @@ export class HttpBundle extends Bundle {
             .node('web.routes.*.controller', { description: 'Route controller', type: 'string', validate(controller) { return kernel.use(controller) } })
             .node('web.routes.*.type', { description: 'Route type', type: 'enum:static,controller', default: 'controller' })
             .node('web.routes.*.method', { description: 'Method', type: 'enum:get,post,put,delete,head', default: 'get' })
+            .node('web.routes.*.rate_limiter', { description: 'Apply Rate-limiter middleware', type: 'array' })
+            .node('web.routes.*.rate_limiter.*', { description: 'Rate-limiter middleware', type: 'object' })
+            .node('web.routes.*.rate_limiter.*.name', { description: 'Limiter name that defined in rate_limiter config', type: 'string' })
+            .node('web.routes.*.rate_limiter.*.key', { description: 'Limiter key path based on request object', type: 'string' })
+            .node('web.routes.*.rate_limiter.*.message', { description: 'Limiter exeeded message', type: 'string' })
+            .node('web.routes.*.rate_limiter.*.tokens', { description: 'Limiter tokens (Default: 1)', type: 'string' })
             .node('web.routes.*.resource', { description: 'Route resource (e.g: /home/public)', type: 'string', validate(value, info) {
                 return info.resolvePath(value);
             } })
@@ -241,32 +250,48 @@ export class HttpBundle extends Bundle {
             if (routePath == '*') return;
             if (Array.isArray(route)) {
                 route.forEach(item => {
-                    let {handler, method} = resolveRoute(item);
-                    app[method](routePath, handler as any);
+                    let handler = resolveRoute(item);
+                    eventManager.emit(HttpBundle.EVENT_CONFIGURE_ROUTE, new HttpRouteConfigEvent(item, handler));
+                    app[handler.method](routePath, handler.middlewares, handler.handler as any);
                 })
             } else {
-                let {handler, method} = resolveRoute(route);
-                app[method](routePath, handler as any);
+                let handler = resolveRoute(route);
+                eventManager.emit(HttpBundle.EVENT_CONFIGURE_ROUTE, new HttpRouteConfigEvent(route, handler));
+                app[handler.method](routePath, handler.middlewares, handler.handler as any);
             }
         });
 
-        function resolveRoute(handler: { controller?: string, resource?: string, type?: string, method?: string }): { handler: Function, method: 'get' | 'put' | 'post' | 'use' | 'delete' | 'head' } {
+        function resolveRoute(handler: IHttpConfigRouteObject): IHttpRouteHandlerObject {
             if (typeof handler == 'object') {
                 let type = handler.type ?? 'controller';
                 let method = (handler.method ?? 'get').toLowerCase() as any;
+                let middlewares: any[] = [];
+
+                // Rate limiter middleware
+                if (handler.rate_limiter && Array.isArray(handler.rate_limiter)) {
+                    handler.rate_limiter.forEach(limit => {
+                        middlewares.push(createRateLimiterMiddleware({
+                            limiterName: limit.name,
+                            requestKey: limit.key,
+                            message: limit.message,
+                            tokens: limit.tokens
+                        }).bind({}, container));
+                    });
+                }
+
                 switch (type) {
                     case 'controller':
                         invariant(handler.controller, 'Controller not defined for route');
                         let [controller, action] = handler.controller!.split('::');
                         let target = kernel.use(controller) as any;
                         if (action) {
-                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, action, method, container.invokeLaterAsync( container.invoke(target) , action), eventManager), method };
+                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, action, method, container.invokeLaterAsync( container.invoke(target) , action), eventManager), method, middlewares };
                         } else {
-                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, '', method, kernel.container.invokeLaterAsync(target), eventManager), method }
+                            return { handler: httpBundle.$handleRequestWithProfile(profiler, target, '', method, kernel.container.invokeLaterAsync(target), eventManager), method, middlewares }
                         }
                     case 'static':
                         invariant(handler.resource, 'Resource must be defined for route with static type');
-                        return { handler: express.static(handler.resource!), method: 'use' };
+                        return { handler: express.static(handler.resource!), method: 'use', middlewares };
                 }
             }
             throw Error(`Invalid route type ${ typeof handler }`);

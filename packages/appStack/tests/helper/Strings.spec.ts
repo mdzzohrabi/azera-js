@@ -1,5 +1,6 @@
 import { strictEqual } from "assert";
-import { camelCase, dasherize, format, humanize, pascalCase, snakeCase } from "../../src/helper/Strings";
+import { Str } from "../../src/helper/Str";
+let { camelCase, dasherize, format, humanize, pascalCase, snakeCase } = Str;
 
 describe('Strings', () => {
     it('camelCase', () => {

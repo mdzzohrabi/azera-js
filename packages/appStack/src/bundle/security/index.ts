@@ -1,4 +1,4 @@
 export * from './SecurityBundle';
-export * from './AuthenticationProvider';
-export * from './AuthenticationManager';
+export * from './authentication/AuthenticationProvider';
+export * from './authentication/AuthenticationManager';
 export * from './SecurityDecorators';

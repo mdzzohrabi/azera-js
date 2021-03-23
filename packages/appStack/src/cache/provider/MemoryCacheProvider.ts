@@ -65,8 +65,12 @@ export class MemoryCacheProvider extends CacheProvider {
         return count;
     }
 
-    async has(key: string): Promise<boolean> {
-        return this.cache[key] !== undefined;
+    async has(key: string, expire?: number): Promise<boolean> {
+        let hit = this.cache[key];
+        if (hit  && expire && (Date.now() - hit.updated) > expire) {
+            return false;
+        }
+        return hit !== undefined;
     }
 
 }

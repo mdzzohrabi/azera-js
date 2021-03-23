@@ -1,5 +1,5 @@
-import { IEventSubscriber } from '../../EventManager';
-import { getMeta } from '../../Metadata';
+import { IEventSubscriber } from '../../event/EventManager';
+import { getMeta } from '../../decorator/Metadata';
 import { Header, Template } from './Decorators';
 import { EVENT_HTTP_RESULT, HttpResultEvent, EVENT_HTTP_ERROR, HttpErrorEvent } from './Events';
 

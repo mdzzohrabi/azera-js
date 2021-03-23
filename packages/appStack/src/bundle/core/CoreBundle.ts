@@ -3,20 +3,18 @@ import { ContainerInvokeOptions } from '@azera/container/build/container';
 import { forEach, is } from '@azera/util';
 import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
-import { Bundle } from '../../Bundle';
-import { CacheManager, CacheProvider, FileCacheProvider, MemoryCacheProvider, RedisCacheProvider, MongoCacheProvider } from '../../cache';
-import { ConfigSchema } from '../../ConfigSchema';
-import { EventManager } from '../../EventManager';
-import { camelCase, pascalCase, snakeCase } from '../../helper';
-import { Kernel } from '../../Kernel';
-import { Logger } from '../../Logger';
+import { CacheManager, CacheProvider } from '../../cache';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { EventManager } from '../../event/EventManager';
+import { Str } from '../../helper';
+import { Kernel } from '../../kernel/Kernel';
+import { Logger } from '../../logger/Logger';
 import { WebClient } from '../../net';
+import { RateLimiter } from '../../rate-limiter/RateLimiter';
+import { RateLimiterLimit } from '../../rate-limiter/RateLimiterLimit';
+import { AbstractRateLimitStrategy } from '../../rate-limiter/strategy/AbstractRateLimitStrategy';
 import { Workflow, WorkflowManager } from '../../workflow';
-import { CacheCleanCommand } from './Command/CacheCleanCommand';
-import { ConfigSchemaCommand } from './Command/ConfigSchemaCommand';
-import { DiParametersCommand } from './Command/DIParametersCommand';
-import { DiTagCommand } from './Command/DITagCommand';
-import { DumpProfilerCommand } from './Command/DumpProfilerCommand';
+import { Bundle } from '../Bundle';
 
 /**
  * Core bundle
@@ -72,7 +70,7 @@ export class CoreBundle extends Bundle {
 
         config
             .node('services', { description: 'Container services', type: 'array|object' })
-            .node('services.*', { description: 'Service', type: 'object|string', validate: function(service) {
+            .node('services.*', { description: 'Service', type: 'object|string|function', validate: function(service) {
                     //if (typeof service == 'string') return { service };
                     return service;
                 }
@@ -112,10 +110,20 @@ export class CoreBundle extends Bundle {
             .node('event_manager', { description: 'Event manager' })
             .node('event_manager.events', { description: 'Event listeners' })
             .node('event_manager.events.*', { description: 'Event', type: 'object' })
-            .node('event_manager.events.*.*', { description: 'Event listener', type: 'array' })
+            .node('event_manager.events.*.*', { description: 'Event listener', type: 'array' });
+
+        config
+            .node('rate_limiter', { description: 'Rate limiters' })
+            .node('rate_limiter.*', { description: 'Rate limiter' })
+            .node('rate_limiter.*.strategy', { description: 'Rate limiter strategy (e.g: fixed_window, slide_window, token_bucket)' })
+            .node('rate_limiter.*.limit', { description: 'Rate limiter window limited tokens' })
+            .node('rate_limiter.*.interval', { description: 'Rate limiter window reset interval' })
+            .node('rate_limiter.*.cache_provider', { description: 'Rate limiter cache provider name (if empty it will use defaultProvider)' })
+        ;
 
         container.add(EventManager);
         container.autoTag(CacheProvider, [`cache_provider`]);
+        container.autoTag(AbstractRateLimitStrategy, ['rate_limiter_strategy']);
 
         /**
          * WebClient
@@ -150,7 +158,8 @@ export class CoreBundle extends Bundle {
                 } else {
                     let { type = schema , path } = config as any || {};
                     schema = type;
-                    if (path) {
+                    if (typeof path == 'string') {
+                        if (!path.match(/\:[\/\\]/)) path = 'none://' + path;
                         url = new URL(path);
                     }
                 }
@@ -241,6 +250,20 @@ export class CoreBundle extends Bundle {
             });
         });
 
+        // Rate Limiter
+        container.setFactory(RateLimiter, async function rateLimiterFactory() {
+            let config = container.getParameter('config', {}).rate_limiter ?? {};
+            let strategies = await container.getByTagAsync<AbstractRateLimitStrategy>('rate_limiter_strategy');
+            let limiters: RateLimiterLimit[] = [];
+            forEach(config, (limit: any, name: string) => {
+                limiters.push(new RateLimiterLimit(
+                    name, limit.limit ?? 1000 , limit.interval ?? 60 * 1000 , limit.strategy ?? 'fixed_window', limit.cache_provider
+                ));
+            });
+
+            return new RateLimiter(strategies, limiters);
+        });
+
     }
 
     @Inject() handleError(serviceContainer: Container) {
@@ -260,17 +283,19 @@ export class CoreBundle extends Bundle {
         }
     }
 
-    getServices() {
+    async getServices() {
         return [
-            DumpProfilerCommand,
-            ConfigSchemaCommand,
-            DiTagCommand,
-            DiParametersCommand,
-            CacheCleanCommand,
-            FileCacheProvider,
-            RedisCacheProvider,
-            MemoryCacheProvider,
-            MongoCacheProvider
+            // Commands
+            (await import('./Command/DumpProfilerCommand')).DumpProfilerCommand,
+            (await import('./Command/ConfigSchemaCommand')).ConfigSchemaCommand,
+            (await import('./Command/DITagCommand')).DiTagCommand,
+            (await import('./Command/DIParametersCommand')).DiParametersCommand,
+            (await import('./Command/CacheCleanCommand')).CacheCleanCommand,
+            // Cache providers
+            (await import('../../cache/provider/FileCacheProvider')).FileCacheProvider,
+            (await import('../../cache/provider/RedisCacheProvider')).RedisCacheProvider,
+            (await import('../../cache/provider/MemoryCacheProvider')).MemoryCacheProvider,
+            (await import('../../cache/provider/MongoCacheProvider')).MongoCacheProvider
         ];
     }
 
@@ -296,13 +321,13 @@ export class CoreBundle extends Bundle {
 
             switch (kernelConfig.classNameFormatter) {
                 case 'pascalCase':
-                    kernel.importClassNameFormatter = pascalCase;
+                    kernel.importClassNameFormatter = Str.pascalCase;
                     break;
                 case 'snakeCase':
-                    kernel.importClassNameFormatter = snakeCase;
+                    kernel.importClassNameFormatter = Str.snakeCase;
                     break;
                 case 'camelCase':
-                    kernel.importClassNameFormatter = camelCase;
+                    kernel.importClassNameFormatter = Str.camelCase;
                     break;
                 default:
                     throw Error(`Import formatter "${ kernelConfig.classNameFormatter }" not defined`);
@@ -319,11 +344,12 @@ export class CoreBundle extends Bundle {
                     container.add( kernel.use(serviceName) );
                 } else if ( typeof service == 'string' ) {
                     container.add(kernel.use(service));
+                } else if ( typeof service == 'function' ) {
+                    container.add(service);
                 } else {
                     service.service = kernel.use(service.service || serviceName);
                     container.set(serviceName, service);
                 }
-
             });
             kernel.profiler.end('core.services');
         }   

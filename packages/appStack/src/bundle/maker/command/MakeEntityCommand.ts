@@ -1,7 +1,7 @@
 import { Inject } from '@azera/container';
 import { existsSync, mkdirSync, writeFileSync } from 'fs';
-import { humanize } from '../../../helper';
-import { Kernel } from '../../../Kernel';
+import { Str } from '../../../helper';
+import { Kernel } from '../../../kernel/Kernel';
 import { Cli, Command, CommandInfo } from '../../cli';
 
 /**
@@ -20,7 +20,7 @@ export class MakeEntityCommand extends Command {
 
     @Inject() async run(kernel: Kernel, cli: Cli, name: string, { mongo, dir, schema }: { mongo?: boolean, dir?: string, schema?: string }): Promise<void> {
 
-        let fullName = humanize(name);
+        let fullName = Str.humanize(name);
         dir = kernel.rootDir + ( dir ?? '/src/entity' );
         let file = dir + '/' + fullName + '.ts';
 

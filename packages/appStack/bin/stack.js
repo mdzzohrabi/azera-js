@@ -102,6 +102,7 @@ program
         writeFileSync(packagePath, JSON.stringify(package, null, "\t"));
 
         success(`Application structure generated successful`);
+        log(`Run "yarn cli" to see available commands`)
 
     });
 

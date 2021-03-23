@@ -1,13 +1,23 @@
 import { Container, Inject } from '@azera/container';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { AuthenticationProvider } from './AuthenticationProvider';
-import { AuthenticationManager } from './AuthenticationManager';
-import { SecurityEventSubscriber } from './SecurityEventSubscriber';
 import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { is } from '@azera/util';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { debugName, getProperty } from '../../helper/Util';
+import { Kernel } from '../../kernel/Kernel';
+import { Bundle } from '../Bundle';
+import { AuthenticationManager } from './authentication/AuthenticationManager';
+import { AuthenticationProvider } from './authentication/AuthenticationProvider';
 import { SecurityContext } from './SecurityDecorators';
+import { SecurityEventSubscriber } from './SecurityEventSubscriber';
 
+/**
+ * Security bundle
+ * 
+ * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ */
 export class SecurityBundle extends Bundle {
+
+    static DI_TAG_AUTHENTICATION_PROVIDER = 'security.authentication_provider';
 
     get bundleName() { return 'Security'; }
 
@@ -21,8 +31,16 @@ export class SecurityBundle extends Bundle {
             .node('security.authentication.providers.*', { description: 'Authentication provider' })
         ;
 
-        container.autoTag(AuthenticationProvider, ['security.authentication_provider']);
-        container.getDefinition(AuthenticationManager).parameters[0] = '$$security.authentication_provider';
+        config
+            .node('http.routes.*.secure', { description: 'Enable security in given route', type: 'boolean|object' })
+            .node('http.routes.*.secure.redirectPath', { description: 'Redirect path on authentication failed', type: 'string' })
+            .node('http.routes.*.secure.anonymoous', { description: 'Allow anonymous', type: 'boolean' })
+            .node('http.routes.*.secure.role', { description: 'Authorization checking role', type: 'string' })
+            .node('http.routes.*.secure.providerName', { description: 'Authentication provider name', type: 'string' })
+
+        container.autoTag(AuthenticationProvider, [SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER]);
+        container.getDefinition(AuthenticationManager).parameters[0] = '$$' + SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER;
+        container.getDefinition(AuthenticationManager).parameters[1] = '=invoke("$config").security.secret';
 
         /**
          * Security context provider
@@ -33,12 +51,24 @@ export class SecurityBundle extends Bundle {
         }, true);
     }
 
-    getServices() {
-        return [ SecurityEventSubscriber ];
+    @Inject() async boot(container: Container, kernel: Kernel) {
+        let $config = container.getParameter('config');
+        // Make authentication providers as tagged
+        getProperty($config, 'security.authentication.providers', []).forEach((provider: any) => {
+            if (is.String(provider)) {
+                provider = kernel.use(provider);
+            }
+            if (is.ClassObject(provider)) {
+                container.getDefinition(provider).tags.push(SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER);
+            } else {
+                throw Error(`AuthenticationProvider ${debugName(provider)} must be a class`);
+            }
+        });
+
     }
 
-    run(@Inject('$config') $config: any) {
-        let { security = {} } = $config || {};
+    getServices() {
+        return [ SecurityEventSubscriber ];
     }
     
 }

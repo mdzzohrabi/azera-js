@@ -1,8 +1,8 @@
 import { Workflow } from './Workflow';
-import { invariant } from '../Util';
+import { invariant } from '../helper/Util';
 import { TransitionError } from './TransitionError';
 import { forEach } from '@azera/util';
-import { EventManager } from '../EventManager';
+import { EventManager } from '../event/EventManager';
 import { Inject } from '@azera/container';
 import { TransitionEvent } from './TransitionEvent';
 

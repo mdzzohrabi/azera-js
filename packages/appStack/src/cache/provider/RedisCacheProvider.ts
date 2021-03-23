@@ -1,5 +1,5 @@
 import { format as formatUrl } from 'url';
-import { invariant } from '../../Util';
+import { invariant } from '../../helper/Util';
 import { CacheProvider, CacheProviderHit, CacheProviderOptions } from '../CacheProvider';
 
 /**

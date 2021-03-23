@@ -1,4 +1,4 @@
-import { createDecorator } from '../../Metadata';
+import { createDecorator } from '../../decorator/Metadata';
 import { MongooseUtil } from './MongooseUtil';
 
 export let MongooseSchema = {

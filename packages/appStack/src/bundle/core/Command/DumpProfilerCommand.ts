@@ -1,10 +1,10 @@
 import { Inject, Container } from '@azera/container';
-import { Kernel } from '../../../Kernel';
+import { Kernel } from '../../../kernel/Kernel';
 import { Command, CommandInfo } from '../../cli/Command';
 import { Cli } from '../../cli/Cli';
 import { forEach } from '@azera/util';
 import { existsSync, readFileSync } from 'fs';
-import { Profile } from '../../../Profiler';
+import { Profile } from '../../../debug/Profiler';
 
 /**
  * Dump profiles

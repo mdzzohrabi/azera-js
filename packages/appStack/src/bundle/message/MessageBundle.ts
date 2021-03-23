@@ -1,9 +1,9 @@
 import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
 import * as url from 'url';
-import { Bundle } from '../../Bundle';
-import { ConfigSchema } from '../../ConfigSchema';
-import { Kernel } from '../../Kernel';
+import { Bundle } from '../Bundle';
+import { ConfigSchema } from '../../config/ConfigSchema';
+import { Kernel } from '../../kernel/Kernel';
 import { MessageManager } from './MessageManager';
 import { AMQPTransport } from './transport/AMQPTransport';
 import { MailTransport } from './transport/MailTransport';

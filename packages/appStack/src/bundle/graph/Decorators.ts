@@ -2,8 +2,8 @@ import { Decorator, Inject } from '@azera/container';
 import { getParameters } from '@azera/reflect';
 import { is } from '@azera/util';
 import { HashMap } from '@azera/util/is';
-import { createDecorator, createMetaDecorator, getDecoratedParameters, getMeta, hasMeta } from '../../Metadata';
-import { invariant } from '../../Util';
+import { createDecorator, createMetaDecorator, getDecoratedParameters, getMeta, hasMeta } from '../../decorator/Metadata';
+import { invariant } from '../../helper/Util';
 import type { NextFn, Request, Response } from '../http';
 import { GraphQlManager } from './GraphqlManager';
 

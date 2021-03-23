@@ -1,7 +1,6 @@
 import { Container, Inject } from '@azera/container';
 import type { MongoClient } from 'mongodb';
-import { MongoManager } from '../../bundle/mongo/MongoManager';
-import { invariant } from '../../Util';
+import { invariant } from '../../helper/Util';
 import { CacheProvider, CacheProviderOptions } from '../CacheProvider';
 
 /**
@@ -13,7 +12,10 @@ export class MongoCacheProvider extends CacheProvider {
 
     static readonly schema = 'mongodb';
 
+    /** Mongo client */
     connection!: MongoClient;
+
+    /** Mongo database collection name */
     collectionName: string = 'cache';
 
     @Inject() container!: Container;
@@ -23,7 +25,7 @@ export class MongoCacheProvider extends CacheProvider {
 
         invariant(this.url, `MongoDb cache uri not specified`);
 
-        let mongoManager = await this.container.invokeAsync(MongoManager);
+        let mongoManager = await this.container.invokeAsync((await import('../../bundle/mongo/MongoManager')).MongoManager);
 
         // Use connections from MongoBundle
         if (mongoManager.has(this.url?.hostname!)) {
@@ -44,7 +46,13 @@ export class MongoCacheProvider extends CacheProvider {
         return db.db().collection<{ key: string, value: any, createdAt: number, expire?: number }>(this.collectionName);
     }
 
-    async has(key: string): Promise<boolean> {
+    async has(key: string, expire?: number): Promise<boolean> {
+        if (expire) {
+            let result = await this.hit(key);
+            if ( expire && Date.now() - result.createdAt > expire ) return false;
+            if ( result.expire && Date.now() - result.createdAt > result.expire ) return false;
+            return !!result;
+        }
         return await (await this.getCollection()).countDocuments({ key }) > 0;
     }
     

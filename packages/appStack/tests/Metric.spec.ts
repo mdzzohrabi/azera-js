@@ -1,6 +1,6 @@
 import { ok, strictEqual } from "assert";
-import { wait } from "../src";
-import { Metric } from "../src/Metric";
+import { wait } from "@azera/util";
+import { Metric } from "../src/debug/Metric";
 
 describe('Metric', () => {
 

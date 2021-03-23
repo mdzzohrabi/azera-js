@@ -9,7 +9,7 @@ describe('Mongoose', () => {
     let db: ChildProcessWithoutNullStreams;
 
     before(async () => {
-        // Start database service    
+        // Start database service
         if (!existsSync(dbPath)) mkdirSync(dbPath, { recursive: true });
         
         db = spawn(`mongod`, [`--dbpath`, dbPath]);
@@ -26,6 +26,7 @@ describe('Mongoose', () => {
     });
 
     it('bundle (CRUD)', async function () {
+        this.timeout(10000);
 
         let { Schema, Prop, Default, Required, Embed, Ref } = MongooseSchema;
 
@@ -76,7 +77,7 @@ describe('Mongoose', () => {
 
         strictEqual(await books.countDocuments(), 1, `Books must be equals to one`);
         deepStrictEqual(
-            (await books.findOne({ title: /Alice/ }, { title: 1, _id: 0 })).toObject(),
+            (await books.findOne({ title: /Alice/ }, { title: 1, _id: 0 }))?.toObject(),
             { title: 'Alice in wonderland' },
             `Alice in wonderland must be exists in database`
         );
