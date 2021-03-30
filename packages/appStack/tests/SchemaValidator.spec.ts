@@ -1,6 +1,6 @@
 import { deepStrictEqual, rejects } from "assert";
 import { expect } from "chai";
-import { ObjectResolver } from "../src";
+import { ObjectResolver } from "../src/object-resolver";
 
 describe('SchemaValidator', () => {
 
@@ -67,6 +67,20 @@ describe('SchemaValidator', () => {
 
         expect(await resolver.resolve(user)).instanceOf(User);
 
+    });
+
+    it('should generate schema from ObjectResolver.make', () => {
+        let resolver = ObjectResolver.make({
+            connections: _ => _.withDescription('Connections').isNamedKeyObject({
+                name: _ => _.withDescription('Connection name').isString()
+            }, 'Connection')
+        });
+
+        let jsonSchema = resolver.validator?.getJsonSchema();
+
+        console.log(jsonSchema?.properties.connections.patternProperties['.*'].properties);
+        
+        expect(jsonSchema).property('properties.connections.properties.patternProperties[".*].properties')
     });
 
 })

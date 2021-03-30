@@ -149,7 +149,7 @@ export class SchemaValidator {
     }
 
     private throwError(message: string | Error, node: ResolverSchemaField, ...params: any[]) {
-        throw new SchemaValidatorError(node.errorMessage ? (is.Function(node.errorMessage) ? node.errorMessage(params[0]) : node.errorMessage.replace('%value', params[0])) : String(message));
+        throw new SchemaValidatorError(node.errorMessage ? (is.Function(node.errorMessage) ? node.errorMessage(params[0]) : node.errorMessage.replace('%value%', params[0])) : String(message));
     }
 
     /**
@@ -390,7 +390,7 @@ export class ResolverSchemaFieldBuilder extends ResolverSchemaField {
     isRequired() { this.required = true; return this; }
     isString = () => this.addType('string');
     isObject = (schema?: ResolverSchema) => this.addType('object').withSchema(schema);
-    isNamedKeyObject = (schema: ResolverSchema) => this.addType('object').withSchema({ '*': schema! });
+    isNamedKeyObject = (schema: ResolverSchema, description?: string) => this.addType('object').withSchema({ '*': _ => _.withDescription(description ?? '').isObject(schema!) });
     isFunction = () => this.addType('function');
     isArray = (schema?: ResolverSchema) => this.addType('array').withSchema(schema);
     isNumber = () => this.addType('number');

@@ -41,7 +41,7 @@ export class OpenApiBundle extends Bundle {
             node
             .withDescription('Open-Api specificaion generator')
             .isObject({
-                apps: node => node.isObject({
+                apps: node => node.withDescription('Applications').isNamedKeyObject({
                     title: node => node.withDescription('Application title').isString(),
                     version: node => node.withDescription('Application version').isString(),
                     paths: node => node.withDescription('Paths').isNamedKeyObject({
