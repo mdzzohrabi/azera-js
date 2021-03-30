@@ -48,7 +48,7 @@ export class SecurityBundle extends Bundle {
         container.setFactory(SecurityContext, (invokeOptions: ContainerInvokeOptions) => {
             if (!invokeOptions.invokeArguments || !invokeOptions.invokeArguments[1]) return { context: null };
             return { context: invokeOptions.invokeArguments[1].locals.securityContext };
-        });
+        }, true);
     }
 
     @Inject() async boot(container: Container, kernel: Kernel) {
