@@ -65,10 +65,21 @@ const $$Directive = createDecorator(function Directive(options: DirectiveDecorat
     return { name: this.propName, on: 'FIELD_DEFINITION', ...options };
 }, 'graphql:directive', false)
 
+/**
+ * GraphQl Decorators
+ */
 export const GraphQl = {
 
+    /**
+     * GraphQl Request Configuration
+     */
     RequestConfig: createMetaDecorator<{ nodeName: string }, false>('graphql:request-config', false, true, true),
 
+    /**
+     * GraphQl Request decorator applies on controller actions
+     * @param options GraphQl Request options
+     * @returns 
+     */
     Request: function GraphQlRequest(options: string | { nodeName?: string, query: string, operationName?: string, variables?: HashMap<any> }): MethodDecorator {
         return function graphQlRequestDecorator(target: any, method: string, descr: PropertyDescriptor) {
             
@@ -101,19 +112,25 @@ export const GraphQl = {
     },
 
     /**
-     * Graphql Type resolver decorator
+     * Graphql Type resolver decorator applies on class
      */
     Type: createDecorator(function (type: TypeDecoratorOptions = {}) {
         return { type: 'type', name: this.target.name, ...type };
     }, 'graphql:type', false),
 
+    /**
+     * GraphQl Input decorator applies on class
+     */
     Input: createDecorator(function (input: TypeDecoratorOptions = {}) {
         return { type: 'input', name: this.target.name, ...input };
     }, `graphql:input`, false),
     
 
+    /** GraphQl Field Parameter decorator */
     Param: createDecorator(function (name?: string) { return { name, index: this.index } }, `graphql:parameter`, false),
+    /** GraphQl Field Context decorator */
     Context: createDecorator(function () { return { index: this.index } },`graphql:contextParameter`, false),
+    /** GraphQl Field Parent decorator */
     Parent: createDecorator(function () { return { index: this.index } },`graphql:parentParameter`, false),
 
     /**
