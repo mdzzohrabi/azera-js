@@ -1,6 +1,7 @@
 import { HashMap } from "@azera/util/is";
 import { Str } from "../helper";
-import microtime = require("microtime");
+import { getMicroseconds } from "../helper/Util";
+
 
 /**
  * Metrics provides a powerful toolkit of ways to measure the behavior of critical components in your production environment.
@@ -127,16 +128,18 @@ abstract class AbstractMetric {
 class Meter extends AbstractMetric {
     public hits: number = 0
     public lastHitTimeStamp: number = 0
-    public speed: number = 0   // Hits per microseconds
+    public speed: number = 0   // Hits per seconds
 
     /**
      * Hit meter by one
      */
     hit() {
         this.hits += 1;
-        let now = microtime.nowDouble();
+        let now = getMicroseconds();
         if (this.lastHitTimeStamp > 0) {
-            this.speed = 1 / (now - this.lastHitTimeStamp);
+            console.log(now - this.lastHitTimeStamp);
+            
+            this.speed = 1000 / (now - this.lastHitTimeStamp);
         }
         this.lastHitTimeStamp = now;
     }
@@ -195,11 +198,11 @@ class Timer extends AbstractMetric {
     }
 
     time<T>(action: () => T) {
-        let time = microtime.nowDouble();
+        let time = getMicroseconds();
         let result = action();
         if (result instanceof Promise) {
             result.then(r => {
-                let now = microtime.nowDouble();
+                let now = getMicroseconds();
                 time = now - time;
                 this.times.push(time);
                 this.hits += 1;
@@ -210,7 +213,7 @@ class Timer extends AbstractMetric {
                 return r;
             });
         } else {
-            let now = microtime.nowDouble();
+            let now = getMicroseconds();
             time = now - time;
             this.times.push(time);
             this.hits += 1;

@@ -1,4 +1,4 @@
-import { Inject } from '@azera/stack';
+import { Inject } from '@azera/container';
 import { promises } from 'fs';
 import { resolve as resolvePath, extname } from 'path';
 import { invariant } from '../../../helper/Util';
@@ -50,7 +50,7 @@ export class FileAssetProvider extends AssetProvider {
         return true;
     }
 
-    async list(storage: Storage, path?: string) {
+    async list(storage: Storage, path?: string): Promise<Omit<File, 'content'>[]> {
         await this.assertPath(storage);
         let result: Omit<File, 'content'>[] = [];
         for (let file of await readdir(resolvePath(storage.path!, path ?? ''))) {

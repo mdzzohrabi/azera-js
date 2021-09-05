@@ -1,9 +1,32 @@
+import { is } from '@azera/util';
 import * as check from 'express-validator';
+import { getMeta } from '../../decorator/Metadata';
+import { UnSerialize, isISerializable } from '../../helper/Serialize';
 import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
-import { getMeta } from '../../decorator/Metadata';
-import { is } from '@azera/util';
+
+/**
+ * Create check validator by type
+ * 
+ * @param propName Property name
+ * @param type Validator type
+ */
+export function createCheckValidatorByType(checker: check.ValidationChain, type: Function) {
+    switch (type) {
+        case Number: checker.isNumeric().toInt(); break;
+        case String: checker.toString(); break;
+        case Boolean: checker.isBoolean().toBoolean(); break;
+        case Array: checker.isArray().toArray(); break;
+        case Date: checker.isDate().toDate(); break;
+    }
+
+    if (isISerializable(type)) {
+        checker.customSanitizer(value => UnSerialize(value, type));
+    }
+
+    return checker;
+}
 
 /**
  * Controller action request validator decorator

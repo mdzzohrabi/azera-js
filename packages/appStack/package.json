@@ -21,8 +21,8 @@
 		"build": "rimraf ./dist && tsc",
 		"test": "sh ./scripts/test.sh",
 		"test:watch": "sh ./scripts/test-watch.sh",
-		"test-all": "mocha -r ts-node/register tests/**/*.spec.ts",
-		"test-cover": "nyc mocha -r ts-node/register tests/**/*.spec.ts",
+		"test-all": "mocha",
+		"test-cover": "nyc mocha",
 		"stack": "node bin/stack",
 		"postinstall": "yarn stack init"
 	},
@@ -48,7 +48,6 @@
 		"https-proxy-agent": "^5.0.0",
 		"js-yaml": "^4.0.0",
 		"jsonwebtoken": "^8.5.1",
-		"microtime": "^3.0.0",
 		"reflect-metadata": "^0.1.13",
 		"source-map-support": "^0.5.19",
 		"spdy": "^4.0.2",

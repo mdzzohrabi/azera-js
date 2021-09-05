@@ -120,7 +120,7 @@ class ConsoleApp {
 }
 ```
 
-### Auto tagging
+### Auto-Tagging
 You can do tagging automatically :
 ```typescript
 import {Container} from "@azera/container";
@@ -131,11 +131,15 @@ class RunCommand extends Command {}
 class HelpCommand extends Command {}
 
 container
-  .autoTag(Command, [ 'command' ])
+  .autoTag(Command, [ 'commands' ])
   .add(RunCommand, HelpCommand);
   
 class ConsoleApp {
-  @Inject('$$command') commands: Command[];
+  // When property is array it will assumes as tagged an its named used as tag name
+  @Inject() commands: Command[];
+
+  // When when property name differs from tag name we can use $$[tagName] as service name to inject tags 
+  @Inject('$$commands') commandsList: Command[];
 }
 
 let app = container.invoke(ConsoleApp);
@@ -143,7 +147,7 @@ let app = container.invoke(ConsoleApp);
 
 #### Create custom auto tagging function
 ```typescript
-container.autoTag( definition => {
+container.autoTag(definition => {
   return definition.name.endsWith('Command') ? ['command'] : []
 })
 ```
@@ -240,12 +244,13 @@ class Connection {
 }
 
 class Model {
-  constructor(@Inject() connection: Connection) {
-  }
+  constructor(@Inject() connection: Connection) {}
 }
 
-let container = new Container();
-container.invokeAsync(Model).then(model => {
-  console.log(model.connection.execute("SELECT * FROM User"));
-});
+async function run() {
+  let container = new Container();
+  let model = await container.invokeAsync(Model); // Model will resolve after conectionFactory() resolve
+  let result = model.connection.execute("SELECT * FROM User");
+}
+
 ```

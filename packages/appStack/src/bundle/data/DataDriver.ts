@@ -14,7 +14,7 @@ export abstract class DataDriver {
     abstract driverName: string;
 
     /** Data types */
-    abstract dataTypes: DataType[] = [];
+    public dataTypes: DataType[] = [];
 
     /** Create new connection */
     public abstract newConnection(connectionOptions: DataConnectionOptions): DataConnection

@@ -1,7 +1,10 @@
-import { Inject, Decorator } from '@azera/container';
+import { Decorator, Inject } from '@azera/container';
 import { ContainerInvokeOptions } from '@azera/container/build/container';
 import { getParameters } from '@azera/reflect';
+import { RequestInputContext } from '.';
+import { Request } from './Request';
 import { RouteMethods } from './Types';
+import { Check, createCheckValidatorByType } from './Validator';
 
 export const ROUTES_PROPERTY = 'routes';
 
@@ -50,27 +53,37 @@ export function Delete(path: string = '/'): MethodDecorator {
     return Route(path, 'delete');
 }
 
-export function RequestParam(name?: string, type: string = 'query') {
-    return (...params: any[]) => {        
-        if (Decorator.getType(params[0], params[1], params[2]) != Decorator.Type.MethodParameter) {
-            throw Error(`Query decorator only allowed to method parameters`);
+export function RequestParam(name?: string, type: RequestInputContext = 'query') {
+    return (...params: any[]) => {
+        let [target, methodName, paramIndex] = params;
+        if (Decorator.getType(target, methodName, paramIndex) != Decorator.Type.MethodParameter) {
+            throw Error(`"RequestParam" decorator only allowed to method parameters`);
         }
 
-        let _default: any = undefined;
-
+        let _default: any = undefined;       
+        
         if (!name) {
-            name = getParameters( params[0][params[1]] )[ params[2] ];
-        }
-
-        if (!name) {
-            throw Error(`Http request parameter decorator has no name for ${params[0].constructor.name}:${params[1]} parameter ${params[2]}`);
+            name = getParameters( target[methodName] )[ paramIndex ];
         }
         
+        if (!name) {
+            throw Error(`Http request parameter decorator has no name for ${target.constructor.name}:${methodName} parameter ${paramIndex}`);
+        }
+        
+        // Create validator
+        let methodParamTypes: Function[] = Reflect.getMetadata("design:paramtypes", target, methodName);
+        let paramType: Function | null = methodParamTypes && methodParamTypes[paramIndex];
+
+        if (paramType) {
+            Check(name, checker => createCheckValidatorByType(checker, paramType!!))(target, methodName);
+        }
+
+        // Inject request extractor dependencie
         Inject((invokeOptions: ContainerInvokeOptions) => {            
             if (!invokeOptions.invokeArguments) throw Error(`Query decorator only allowed on Express action`);
-            let req = invokeOptions.invokeArguments[0];
+            let req: Request = invokeOptions.invokeArguments[0];
             if (type in req) {
-                return req[type][name as string] ?? _default;
+                return req[type][name!!] ?? _default;
             } 
             throw Error(`Query decorator only allowed on Express action (Required Request)`);
         })(...params);

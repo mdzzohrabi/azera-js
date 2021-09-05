@@ -330,7 +330,7 @@ export class ObjectResolver {
 
         } catch (e) {
             if ( e instanceof ObjectResolverError ) throw e;
-            else this.$$throwError(e.message, info!);
+            else this.$$throwError(e instanceof Error ? e.message : String(e), info!);
         }
 
         return result;

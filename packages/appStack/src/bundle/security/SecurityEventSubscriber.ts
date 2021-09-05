@@ -28,10 +28,10 @@ export class SecurityEventSubscriber implements IEventSubscriber {
     }
 
     httpRouteConfig(event: HttpRouteConfigEvent) {
-        if ('secure' in event.config && event.config['secure']) {
+        if ('secure' in event.config && (event.config as any)['secure']) {
             let options: any = {};
-            if (typeof event.config['secure'] == 'object') {
-                options = event.config['secure'];
+            if (typeof (event.config as any)['secure'] == 'object') {
+                options = (event.config as any)['secure'];
             }
             event.route.middlewares.push(createSecureMiddleware(options).bind(this, this.container.invoke(AuthenticationManager)));
         }

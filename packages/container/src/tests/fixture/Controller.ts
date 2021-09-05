@@ -20,7 +20,7 @@ export class HomeController {
         return request.id;
     }
 
-    signUpAction( @Inject() request: Request, hello ) {
+    signUpAction( @Inject() request: Request, hello: string ) {
         return [ hello, request.id ];
     }
 

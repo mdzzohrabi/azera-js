@@ -78,9 +78,7 @@ describe('SchemaValidator', () => {
 
         let jsonSchema = resolver.validator?.getJsonSchema();
 
-        console.log(jsonSchema?.properties.connections.patternProperties['.*'].properties);
-        
-        expect(jsonSchema).property('properties.connections.properties.patternProperties[".*].properties')
+        expect(jsonSchema).property('properties.connections.patternProperties[.*].properties')
     });
 
 })

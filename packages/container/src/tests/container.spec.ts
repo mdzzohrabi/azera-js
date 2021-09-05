@@ -1,24 +1,17 @@
-//@ts-nocheck
-//@ts-ignore
-
-import { deepEqual, equal, notEqual, ok, throws, deepStrictEqual } from "assert";
-import { Container, getDependencies, isDefinition, isFactory, isService, ContainerInvokeOptions } from "../container";
-import { ContainerAware } from "../containerAware";
-import { Inject, Service } from "../decorators";
-import { IDefinition, IFactory, IServices } from "../types";
-import { FixtureApp } from './fixture/App';
-import { IBundle } from './fixture/IBundle';
-import { BundleA } from './fixture/BundleA';
-import { BundleB } from './fixture/BundleB';
-import { HomeController, Request } from './fixture/Controller';
-import { Decorator } from '../util';
-import forEach from "../../../util/src/forEach";
 import { getParameters } from '@azera/reflect';
+import { deepEqual, deepStrictEqual, equal, notEqual, ok, throws } from "assert";
+import * as expect from 'expect';
+import { Container, ContainerInvokeOptions, getDependencies, isServiceDefinition, isFactory, isService } from "..";
+import { ContainerAware } from "../containerAware";
+import { Inject, ParamConverter, Service } from "../decorators";
+import { ServiceDefinition, IFactory } from "../types";
+import { Decorator } from '../util';
+import { FixtureApp } from './fixture/App';
+import { HomeController, Request } from './fixture/Controller';
 
 describe('Util.Decorator', () => {
-
+    
     it('getType()', () => {
-
         let Type = Decorator.Type;
 
         function isType(type: Decorator.Type) {
@@ -38,17 +31,22 @@ describe('Util.Decorator', () => {
             method2( @isType(Type.MethodParameter) param2: any ) {}
         }
 
-        let s = new TestClass("");
-
+        new TestClass('Hello');
     });
 
 });
 
 describe('Container', () => {
+           
+    let container: Container;
+        
+    beforeEach(() => {
+        container = new Container;
+    });
 
     it('isDefinition()', () => {
-        ok(!isDefinition({}));
-        ok(isDefinition({ service: 12 }));
+        ok(!isServiceDefinition({}));
+        ok(isServiceDefinition({ service: 12 }));
     });
 
     describe('isService()', () => {
@@ -81,7 +79,7 @@ describe('Container', () => {
         });
 
         it('Function ($inject)', () => {
-            function myService(a, b, c) { }
+            function myService(a: any, b: any, c: any) { }
             myService['$inject'] = ['logger', 'messageBroker'];
             deepEqual(getDependencies(myService).deps, ['logger', 'messageBroker']);
         });
@@ -94,8 +92,8 @@ describe('Container', () => {
         });
 
         it('Arrow Function ($inject)', () => {
-            let myService = (a, b, c) => { };
-            myService['$inject'] = ['logger', 'messageBroker'];
+            let myService = (a: any, b: any, c: any) => { };
+            (myService as any)['$inject'] = ['logger', 'messageBroker'];
             deepEqual(getDependencies(myService).deps, ['logger', 'messageBroker']);
         });
 
@@ -117,7 +115,7 @@ describe('Container', () => {
 
         it('Class', () => {
             class MyService {
-                constructor(logger, broker) {}
+                constructor(logger: any, broker: any) {}
             }
             let { deps } = getDependencies( MyService );
             deepEqual( deps, ['logger', 'broker'] );
@@ -126,7 +124,7 @@ describe('Container', () => {
         it('Class ($inject)', () => {
             class MyService {
                 static $inject = [ 'logger', 'broker' ];
-                constructor(a, b) {}
+                constructor(a: any, b: any) {}
             }
             let { deps } = getDependencies( MyService );
             deepEqual( deps, ['logger', 'broker'] );
@@ -134,7 +132,7 @@ describe('Container', () => {
 
         it('Class (Inject decorator)', () => {
             @Inject([ 'logger', 'broker' ]) class MyService {
-                constructor(a, b) {}
+                constructor(a: any, b: any) {}
             }
             let { deps } = getDependencies( MyService );
             deepEqual( deps, ['logger', 'broker'] );
@@ -148,7 +146,7 @@ describe('Container', () => {
             it('should inject constructor parameters', () => {
                 @Inject([ 'logger', 'mailer' ])
                 class TestClass {
-                    constructor(logger, mailer) {}
+                    constructor(logger: any, mailer: any) {}
                 }
 
                 let dep = new Container().getDefinition(TestClass);
@@ -157,7 +155,7 @@ describe('Container', () => {
 
             it('should inject contructor parameters with @Inject in parameter', () => {
                 class TestClass {
-                    constructor( @Inject('logger') _logger, @Inject('mailer') _mailer ) {}
+                    constructor( @Inject('logger') _logger: any, @Inject('mailer') _mailer: any ) {}
                 }
                 deepStrictEqual(
                     new Container().getDefinition(TestClass).parameters,
@@ -167,7 +165,7 @@ describe('Container', () => {
 
             it('should inject contructor parameters with @Inject in parameter', () => {
                 class TestClass2 {
-                    constructor( @Inject('logger') _logger, _mailer ) {}
+                    constructor( @Inject('logger') _logger: any, _mailer: any ) {}
                 }
                 deepStrictEqual(
                     new Container().getDefinition(TestClass2).parameters,
@@ -177,7 +175,7 @@ describe('Container', () => {
 
             it('should inject contructor parameters with @Inject in methods', () => {
                 class TestClass2 {
-                    hello( @Inject('logger') _logger, _mailer ) {}
+                    hello( @Inject('logger') _logger: any, _mailer: any ) {}
                 }
                 deepStrictEqual(
                     new Container().getDefinition(TestClass2).methods['hello'],
@@ -203,12 +201,6 @@ describe('Container', () => {
 
 
     describe('Container', () => {
-        
-        let container: Container;
-        
-        before(() => {
-            container = new Container;
-        });
 
         it('size()', () => {
             equal( container.size, 1 );
@@ -245,13 +237,26 @@ describe('Container', () => {
         });
 
         it('get( parameter )', () => {
+            container.set('version', '1.0.2');
             equal( container.get('version'), '1.0.2' );
             equal( container.get('$version'), '1.0.2' );
         });
 
         it('get( service )', () => {
+            container.set({
+                logger: function loggerService() {
+                    this.age = 12;
+                },
+                broker: {
+                    service: class Broker {
+                        hello() { return 'hello'; }
+                    },
+                    private: true
+                }
+            });
+            
             ok( container.has('logger') , '"logger" service not found' );
-            equal( container.get<{ age: number }>('logger').age, 12 );
+            equal( container.get<{ age: number }>('logger')!.age, 12 );
             equal( container.get('logger'), container.get('logger'), 'Logger must be a shared service');
 
             notEqual( container.get('broker'), container.get('broker'), 'Broker must be a private service' );
@@ -262,7 +267,7 @@ describe('Container', () => {
 
             before(() => {
                 container = new Container({
-                    loggerService: function loggerService() { this.age = 12; },
+                    loggerService: function loggerService() { (this as any).age = 12; },
                     loggerFactory: function loggerFactory() {
                         return { age: 12 };
                     },
@@ -288,7 +293,7 @@ describe('Container', () => {
             });
 
             describe('anonymous service function', () => {
-                let def: IDefinition;
+                let def: ServiceDefinition;
                 before(() => def = container.getDefinition('loggerService'));
                 it('should resolve name of defined service', () => equal( def.name, 'loggerService' ));
                 it('should resolve anonyous service function as not invokable', () => equal(def.invoke, false));
@@ -296,7 +301,7 @@ describe('Container', () => {
             });
 
             describe('anonymous factory function', () => {
-                let def: IDefinition;
+                let def: ServiceDefinition;
                 before(() => def = container.getDefinition('loggerFactory'));
                 it('should resolve name of defined service', () => equal( def.name, 'loggerFactory' ));
                 it('should resolve anonyous factory function as invokable', () => equal(def.invoke, true));
@@ -304,7 +309,7 @@ describe('Container', () => {
             });
 
             describe('class', () => {
-                let def: IDefinition;
+                let def: ServiceDefinition;
                 before(() => def = container.getDefinition('loggerClass'));
                 it('should resolve name of named class', () => equal(def.name, 'loggerClass'));
                 it('should resolve class as not invokable', () => equal(def.invoke, false));
@@ -316,7 +321,7 @@ describe('Container', () => {
             equal( container.invoke(12), 12);
             equal( container.invoke <Container>('serviceContainer'), container );
             
-            let service = container.invoke(function () {
+            let service = container.invoke(function (this: { age: number }) {
                 this.age = 12;
                 return this;
             });
@@ -336,7 +341,7 @@ describe('Container', () => {
             describe('Invoke methods', () => {
 
                 it('should invoke methods', () => {
-                    let name: string;
+                    let name: string | null = null;
                     let container = new Container().set({
                         message: () => 'Masoud',
                         logger: {
@@ -365,6 +370,7 @@ describe('Container', () => {
             // Auto tag command services
             container.autoTag((service) => {
                 if ( service.name.endsWith('Command') ) return ['command'];
+                return [];
             });
 
             interface ICommand {
@@ -393,7 +399,7 @@ describe('Container', () => {
                 myCommand: function myCommandService() {
                     this.command = '12';
                 },
-                console: function consoleService( $$command ) {
+                console: function consoleService( $$command: any ) {
                     this.commands = $$command;
                 },
 
@@ -408,10 +414,10 @@ describe('Container', () => {
             equal( container.getByTag('command').length, 2);
             equal( container.findByTag('command').length, 2);
 
-            let vConsole = container.get<{ commands: Function[] }>('console');
+            let vConsole = container.get<{ commands: Function[] }>('console')!;
             equal( vConsole.commands.length , 2);
 
-            let app = container.get<ConsoleApp>('consoleClass');
+            let app = container.get<ConsoleApp>('consoleClass')!;
 
             deepEqual(container.getDefinition(ConsoleApp).properties, {
                 commands: {
@@ -440,7 +446,7 @@ describe('Container', () => {
             }
 
             class Mailer {
-                @Inject('logger', { lateBinding: true }) logger: Logger;
+                @Inject('logger', { lateBinding: true }) logger!: Logger;
                 
                 send() {
                     this.logger.send();
@@ -453,7 +459,7 @@ describe('Container', () => {
             });
 
             equal(resolved, false);
-            let mailer = container.get <Mailer>('mailer');
+            let mailer = container.get <Mailer>('mailer')!;
             equal(resolved, false);
             mailer.send();
             equal(resolved, true);
@@ -510,18 +516,18 @@ describe('Container', () => {
             container.setParameter('loggerNS', 'app');
 
             abstract class BaseLogger {
-                abstract log(message: string);
+                abstract log(message: string): void;
             }
 
             @Service('logger') class Logger extends BaseLogger {
 
-                @Inject('serviceContainer') container: Container;
+                @Inject('serviceContainer') container!: Container;
 
                 log(message: string) {
                     invoked = true;
                 }
 
-                @Inject('loggerNS') public namespace: string;
+                @Inject('loggerNS') public namespace!: string;
 
                 get hasContainer() {
                     return !!this.container;
@@ -567,7 +573,7 @@ describe('Container', () => {
             equal( container.getByTag('command').length , 2);
 
             class Console {
-                @Inject( '$$command' ) commands: Command[];
+                @Inject( '$$command' ) commands!: Command[];
             }
 
             let c = container.invoke(Console);
@@ -590,14 +596,15 @@ describe('Container', () => {
             class Firewall extends Middleware {}
             class Logger {}
 
+            // @ts-ignore
             function Custom() {
-                return (target, key) => null;
+                return (target: any, key: any) => null;
             }
 
             class App {
 
-                @Inject() middlewares: Middleware[];
-                @Inject() logger: Logger;
+                @Inject() middlewares!: Middleware[];
+                @Inject() logger!: Logger;
 
                 @Inject() run( logger: Logger, name: string ) {
                     return { logger , name, self: this };
@@ -653,43 +660,6 @@ describe('Container', () => {
         });
 
 
-        it('# Type-based factory', () => {
-
-            let container = new Container;
-
-            class Logger {}
-
-            @Service({ private: true })
-            class Monolog extends Logger { }
-
-            class App {
-                constructor( @Inject() public logger: Logger ) { }
-            }
-
-            ok( container.invoke(App).logger instanceof Logger, 'App.logger must be instanceof Logger');
-
-            container.setFactory(Logger, function () {
-                return 'Hello';
-            });
-
-            equal( container.invoke(Logger), 'Hello', `Container must use factory for Logger type`);
-
-            equal( container.invoke([Logger, function (logger) {
-                return logger;
-            }]), 'Hello');
-
-
-            class LoggerFactory implements IFactory {
-                create() {
-                    return new Monolog;
-                }
-            }
-
-            container.setFactory(Logger, LoggerFactory);
-            ok( container.invoke(Logger) instanceof Monolog );
-
-        });
-
         it('# Fixture - Controller', () => {
 
             let container = new Container;
@@ -734,46 +704,6 @@ describe('Container', () => {
 
         });
 
-        describe('Type-Based Factory', () => {
-            
-            it('should invoke create one time for non-private services', () => {
-                let container = new Container();
-                let count = 0;
-                class A {}
-                class B {
-                    create() {
-                        count++;
-                        return new A;
-                    }
-                }
-                container.setFactory(A, B);
-                container.invoke(A);
-                container.invoke(A);
-
-                equal(count, 1);
-            });
-
-
-            it('should invoke create every time for private services', () => {
-                let container = new Container();
-                let count = 0;
-                @Service({ private: true })
-                class A {}
-                class B {
-                    create() {
-                        count++;
-                        return new A;
-                    }
-                }
-                container.setFactory(A, B);
-                container.invoke(A);
-                container.invoke(A);
-
-                equal(count, 2);
-            });
-
-        });
-
         describe('Type-Based Properties Injection', () => {
 
             let container1: Container;
@@ -785,10 +715,10 @@ describe('Container', () => {
 
             class A {}
             class B {
-                @Inject() public a: A;
+                @Inject() public a!: A;
             }
             class C {
-                @Inject() public a: A;
+                @Inject() public a!: A;
             }
 
             it('should separate different containers', () => {
@@ -813,12 +743,79 @@ describe('Container', () => {
             });
 
         });
+    });
+
+    describe('Factory', () => {       
+        describe('Type-Based Factory', () => {
+            it('Simple factory', () => {
+                let container = new Container;
+                class Logger {}
+    
+                @Service({ private: true })
+                class Monolog extends Logger { }
+    
+                class App {
+                    constructor( @Inject() public logger: Logger ) { }
+                }
+
+                ok( container.invoke(App).logger instanceof Logger, 'App.logger must be instanceof Logger');
+                container.setFactory(Logger, function () {
+                    return 'Hello';
+                });
+    
+                equal( container.invoke(Logger), 'Hello', `Container must use factory for Logger type`);    
+                equal( container.invoke([Logger, function (logger) {
+                    return logger;
+                }]), 'Hello');
+                class LoggerFactory implements IFactory {
+                    create() {
+                        return new Monolog;
+                    }
+                }
+                container.setFactory(Logger, LoggerFactory);
+                ok( container.invoke(Logger) instanceof Monolog );
+            });
+            
+            it('should invoke create one time for non-private services', () => {
+                let container = new Container();
+                let count = 0;
+                class A {}
+                class B {
+                    create() {
+                        count++;
+                        return new A;
+                    }
+                }
+                container.setFactory(A, B);
+                container.invoke(A);
+                container.invoke(A);
+
+                equal(count, 1);
+            });
+
+            it('should invoke create every time for private services', () => {
+                let container = new Container();
+                let count = 0;
+                @Service({ private: true })
+                class A {}
+                class B {
+                    create() {
+                        count++;
+                        return new A;
+                    }
+                }
+                container.setFactory(A, B);
+                container.invoke(A);
+                container.invoke(A);
+
+                equal(count, 2);
+            });
+
+        });
 
         describe('Factory decorated service', () => {
             it('should use factory for decorated services', () => {
-
                 let container = new Container();
-
                 @Service({
                     factory: () => new Connection("dev")
                 })
@@ -827,7 +824,6 @@ describe('Container', () => {
                 }
 
                 equal( container.invoke(Connection).name, "dev" );
-
             });
         });
 
@@ -857,11 +853,9 @@ describe('Container', () => {
                 deepEqual([ ...(c2 as any).instances.keys() ], [CounterFactory, Count]);
 
                 ok(c2.invoke(Count) instanceof Count);
-
             });
 
             it('should not conflict with more than one container', () => {
-
                 let c1 = new Container();
                 let c2 = new Container();
     
@@ -890,10 +884,7 @@ describe('Container', () => {
                 deepEqual([ ...(c2 as any).instances.keys() ], [CounterFactory]);
     
             });
-    
-
         });
-
     });
 
     describe(`Async`, () => {
@@ -933,7 +924,7 @@ describe('Container', () => {
             let container = new Container();
 
             class Connection { constructor(public name = '') {} }
-            class Model { @Inject() public connection: Connection; }
+            class Model { @Inject() public connection!: Connection; }
 
             container.set('connectionString', function connectionStringFactory() {
                 return new Promise((resolve, reject) => {
@@ -1054,7 +1045,7 @@ describe('Container', () => {
             let howMuch = container.invokeLaterAsync(Controller, 'howMuch');
 
             equal(await howMuch(), 10);
-            container.setAlias(Counter, { count: 12 }, 'setAlias not work for method injected service');
+            container.setAlias(Counter, { count: 12 });
             equal(await howMuch(), 12);
 
         });
@@ -1063,17 +1054,22 @@ describe('Container', () => {
 
     describe('ContainerInvokeOptions', () => {
         it('should works', (done) => {
-
-            let container = new Container();
-
-            
+            let container = new Container();           
             class Request { id: number = 10; }
+            class Numbers { num = 20 }
             
-            class Numbers {
-                num = 20
+            function Query(name?: string): ParameterDecorator {
+                return (...params: any[]) => {
+                    
+                    if (!name) {
+                        name = getParameters(params[0][params[1]])[params[2]];
+                    }
+                    
+                    Inject((invokeOptions: ContainerInvokeOptions) => {
+                        return invokeOptions?.invokeArguments![0][name as any];
+                    })(...params);
+                };
             }
-
-            container.ignoreInvokeLaterDep(Request);
 
             class Controller {
                 @Inject() index(numbers: Numbers, @Query('id') reqId: number, @Query() id: number, req: Request) {
@@ -1081,26 +1077,122 @@ describe('Container', () => {
                 }
             }
             
-            function Query(name?: string): PropertyDecorator {
-                return (...params: any[]) => {
-
-                    if (!name) {
-                        name = getParameters(params[0][params[1]])[params[2]];
-                    }
-
-                    Inject((invokeOptions: ContainerInvokeOptions) => {
-                        return invokeOptions.invokeArguments[0][name];
-                    })(...params);
-                };
-            }
-
-
+            container.ignoreInvokeLaterDep(Request);
             container.invokeLaterAsync(Controller, 'index')({ id: 12 }).then(result => {
                 deepEqual(result, [20, 12,12,12]);
                 done();
             });
 
         });
+    });
+
+    describe('ParamConverter', () => {
+
+        describe('argumentConverter (global)', () => {
+            it('should works', () => {
+
+                class Book {
+                    constructor(public title: string) {}
+                }
+    
+                class BookController {
+                    @Inject() findBook(book: Book) {
+                        return book;
+                    }
+                }
+    
+                container.argumentConverter(Book, ({ value }) => new Book(value));
+    
+                let bookController = container.invoke(BookController);
+                let result = container.invoke(bookController, 'findBook', 'Alice in the wonderland');
+                ok(result instanceof Book, 'The result of BookController.findBook must be instance of Book');
+                equal(result.title, 'Alice in the wonderland');
+    
+            });    
+        });
+
+        describe('ParamConverter decorator', () => {
+            it('should works with class decorator', () => {
+                class Book { constructor(public title: string) {} };
+                @ParamConverter(Book, function bookControllerConverter(value) { return new Book(value.value) })
+                class BookController {
+                    @Inject() findBook(book: Book) {
+                        return book;
+                    }
+                }
+
+                class BookControllerNoConverter {
+                    @Inject() findBook(book: Book) {
+                        return book;
+                    }
+                }
+
+                container.setFactory(Book, function defaultBookFactory() { return new Book('Default title'); }, true);
+
+                let controller = container.invoke(BookController);
+                let result = container.invoke(controller, 'findBook', 'Alice in the wonderland');
+
+                expect(result).toBeInstanceOf(Book);
+                expect(result.title).toEqual('Alice in the wonderland');
+
+                let controllerNoConveter = container.invoke(BookControllerNoConverter);
+                let result2 = container.invoke(controllerNoConveter, 'findBook', 'Alice in the wonderland');
+
+                expect(result2).toBeInstanceOf(Book);
+                expect(result2.title).toEqual('Default title');
+            })
+
+            it('should works with method decorator', () => {
+                class Book { constructor(public title: string) {} };
+                class BookController {
+                    
+                    @ParamConverter(Book, value => new Book(value.value))
+                    @Inject()
+                    findBook(book: Book) {
+                        return book;
+                    }
+
+                    @Inject()
+                    findBookNoConvert(book: Book) {
+                        return book;
+                    }
+
+                }
+
+                container.setFactory(Book, function defaultBookFactory() { return new Book('Default title'); }, true);
+
+                let controller = container.invoke(BookController);
+                let result = container.invoke(controller, 'findBook', 'Alice in the wonderland');
+                let result2 = container.invoke(controller, 'findBookNoConvert', 'Alice in the wonderland no convert');
+
+                expect(result).toBeInstanceOf(Book);
+                expect(result.title).toEqual('Alice in the wonderland');
+                expect(result2).toBeInstanceOf(Book);
+                expect(result2.title).toEqual('Default title');
+            })
+
+            it('should works with parameter decorator', () => {
+                class Book { constructor(public title: string) {} };
+                class BookController {                 
+                    @Inject() findBook(
+                        @ParamConverter(value => new Book(value.value)) book: Book,
+                        book2: Book
+                    ) {
+                        return [book, book2];
+                    }
+                }
+
+                container.setFactory(Book, function defaultBookFactory() { return new Book('Default title'); }, true);
+
+                let controller = container.invoke(BookController);
+                let [book1, book2] = container.invoke(controller, 'findBook', 'Alice in the wonderland', 'Book title 2');
+
+                expect(book1).toBeInstanceOf(Book);
+                expect(book1.title).toEqual('Alice in the wonderland');
+                expect(book2).toBeInstanceOf(Book);
+                expect(book2.title).toEqual('Default title');
+            })
+        })
     });
 
 });

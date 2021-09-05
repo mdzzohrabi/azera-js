@@ -1,6 +1,7 @@
 import { ok, strictEqual } from "assert";
 import { wait } from "@azera/util";
 import { Metric } from "../src/debug/Metric";
+import { expect } from "chai";
 
 describe('Metric', () => {
 
@@ -17,7 +18,7 @@ describe('Metric', () => {
         strictEqual(meter.hits, 2);
         strictEqual(meter.name, 'requests');
         ok(meter.lastHitTimeStamp > 0, 'Last Meter time stamp must be greater than zero');
-        ok( Math.ceil(meter.speed) > 15 && Math.ceil(meter.speed) < 25, `Meter speed must be equals to 20 not ${Math.ceil(meter.speed)}`);
+        ok( meter.speed > 15 && meter.speed < 25, `Meter speed must be approximately to 20 not ${meter.speed}`);
     });
 
     it('Gauge', async () => {
@@ -62,7 +63,7 @@ describe('Metric', () => {
         strictEqual(timer.hits, 0);
         await timer.time(() => wait(50));
         strictEqual(timer.hits, 1);
-        strictEqual( timer.minTime.toPrecision(1), '0.05');
+        expect( (timer.minTime / 1000) % 50 ).below( 5 , 'Timer captures must be approximately 50ms' );
     });
     
     it('HealthCheck', async () => {

@@ -37,6 +37,7 @@ export class RateLimiterLimit {
     public perMinute(maxAttempts: number)
     {
         this.maxAttempts = maxAttempts;
+        this.decaySeconds = 60;
         return this;
     }
 

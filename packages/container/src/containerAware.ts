@@ -1,6 +1,6 @@
-import { Container } from ".";
-import { setDefinition } from "./decorators";
+import { Container } from "./container";
 import { IInternalDefinition, Constructor } from "./types";
+import { setServiceDefinition } from './util';
 
 //@ts-ignore
 export function ContainerAware <TBase extends Constructor>(extend: TBase = undefined) {
@@ -11,7 +11,7 @@ export function ContainerAware <TBase extends Constructor>(extend: TBase = undef
         container?: Container;
     };
 
-    setDefinition(_class, {
+    setServiceDefinition(_class, {
         properties: {
             container: 'serviceContainer'
         },

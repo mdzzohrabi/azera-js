@@ -1,4 +1,4 @@
-import { Service, Inject } from '@azera/stack';
+import { Service, Inject } from '@azera/container';
 import { AssetProvider } from './provider/AssetProvider';
 import { File } from './File';
 import { Storage } from './Storage';
@@ -10,15 +10,17 @@ import { Storage } from './Storage';
 })
 export class AssetManager {
 
-    /**
-     * Asset providers
-     */
-    @Inject('$$asset.provider') public providers: AssetProvider[] = [];
+    constructor(
+        /**
+         * Asset providers
+         */
+        @Inject('$$asset.provider') public providers: AssetProvider[] = [],
 
-    /**
-     * Asset storages
-     */
-    @Inject('=invoke("$config").assets?.storages || []') public storages: Storage[] = [];
+        /**
+         * Asset storages
+         */
+        @Inject('=invoke("$config").assets?.storages || []') public storages: Storage[] = []
+    ) {}
 
     /**
      * Save a file and return its saved location

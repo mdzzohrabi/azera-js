@@ -217,7 +217,7 @@ export class SchemaValidator {
                         await asyncEach(nodeSchema.validate, async validate => value = await validate(value, info));
                         return value;
                     } catch (e) {
-                        this.throwError(e, nodeSchema, value);
+                        this.throwError(e instanceof Error ? e.message : String(e), nodeSchema, value);
                     }
                 }
             }

@@ -1,8 +1,9 @@
 import { HashMap } from "@azera/util/is";
+import type { Container } from "./container";
 export { HashMap };
 
 // export type 
-export type Service = IDefinition | Function | any[];
+export type ServiceType = ServiceDefinition | Function | any[];
 export type Factory<T = {}> = Constructor<IFactory<T>> | FunctionOf<T>;
 export type ContainerValue = any;
 export type Constructor<T= {}> = new (...args: any[]) => T;
@@ -16,21 +17,12 @@ export type FunctionOf<T> = (...params: any[]) => T;
 export type Injectable<T = any> = InjectableFunction<T> | Function | Array<string | Function | FunctionOf<T>>;
 export type InvokableFunctions<T> = Injectable<T> | Constructor<T> | Factory<T>;
 export type Invokable<T> = InvokableFunctions<T> | string | T;
-export type IServices = HashMap< IDefinition | Function | any[] >;
-export interface IAutoTagger { (service: IDefinition): string[]; }
+export type IServices = HashMap< ServiceDefinition | Function | any[] >;
+export interface IAutoTagger { (service: ServiceDefinition): string[]; }
 
-export type ServiceDefinitionCollection = HashMap<Service>;
+export type ServiceDefinitionCollection = HashMap<ServiceType>;
 
-export interface IContainer {
-    set(values: { [name: string]: IDefinition | ContainerValue }[] ): this;
-    set(name: string, value: IDefinition | ContainerValue ): this;
-
-    get <T>(name: string): T | undefined;
-
-    invoke <T>(value: Invokable<T>): T | undefined;
-}
-
-export interface IDefinition<T = Function> {
+export interface ServiceDefinition<T = Function> {
     // Service name
     name: string;
     // Service function or class
@@ -48,7 +40,7 @@ export interface IDefinition<T = Function> {
     // Service is factory instead of orginal service
     isFactory: boolean;
     // Factory function
-    factory?: Function | IFactory;
+    factory?: Factory;
     // Service tags
     tags: string[];
     // Invoke service instead of create instance
@@ -59,9 +51,13 @@ export interface IDefinition<T = Function> {
     autoTags: ({ class: Function, tags: string[] }|IAutoTagger)[];
     // True if service is a named service
     namedService?: boolean;
+    // Parameter converters
+    paramConverters?: { type: Function, methodName?: string, paramIndex?: number , converter: IArgumentConverterFunction }[];
+    // true if $prepareDefinition called on definition
+    $$prepared?: boolean
 }
 
-export interface IInternalDefinition extends IDefinition {
+export interface IInternalDefinition extends ServiceDefinition {
     compiled?: boolean;
     inherited?: boolean;
     $target?: Function;
@@ -72,11 +68,45 @@ export interface IPropertyInjection {
     name?: string | Function;
 }
 
+export interface IFactoryCondition {
+    target?: Function;
+    methodName?: string;
+    paramIndex?: number;
+}
+
 export interface IFactory<T = any> {
     create(...params: any[]): T;
+    factoryCondition?: IFactoryCondition;
+    isPrivateFactory?: boolean;
 }
 
 export interface IMethod {
     context: any;
     method: string;
 }
+
+export interface ArgumentConverterOptions {
+    type: Function
+    value: any
+    target: any
+    method: string
+    parameterName: string
+    parameterIndex: number
+}
+
+export interface IArgumentConverterFunction<T = any> { (value: ArgumentConverterOptions, container: Container): T }
+
+export interface IContainerInvokeOptions<Async=boolean> {
+    context?: any;
+    override?: Partial<ServiceDefinition>;
+    async?: Async;
+    invokeArguments?: any[];
+    argumentIndex?: number;
+    private?: boolean;
+    methodName?: string;
+    methodTarget?: any;
+    stack: any[];
+}
+
+export class IContainerInvokeOptions<Async=boolean> {}
+export class ContainerInvokeOptions extends IContainerInvokeOptions {}

@@ -1,6 +1,7 @@
 import { existsSync } from 'fs';
 import { dirname } from 'path';
 import { is } from '@azera/util';
+import { hrtime } from 'process';
 
 /**
  * Get node package directory
@@ -229,4 +230,16 @@ export function deepClone<T>(value: T): T {
         return result;
     }
     return value;
+}
+
+export function isInternalType(type: any) {
+    return [Number, String, Boolean, Function, Object, Date, Array].includes(type);
+}
+
+export function getNanoseconds() {
+    return hrtime.bigint();
+}
+
+export function getMicroseconds() {
+    return Number(hrtime.bigint() / BigInt(1000));
 }

@@ -1,4 +1,4 @@
-import * as microtime from 'microtime';
+import { getMicroseconds } from "../helper/Util";
 
 /**
  * Profiler
@@ -36,7 +36,7 @@ export class Profiler {
      */
     start(name: string, detail?: any) {
         if (!this.enabled) return;
-        let timestamp = microtime.now();
+        let timestamp = getMicroseconds();
         let profile = this.profiles[name] || ( this.profiles[name] = { name, times: [], lastOpenTime: -1, firstStart: timestamp } );
         let time: Profile['times'][0] = {
             start: timestamp,
@@ -49,7 +49,7 @@ export class Profiler {
         return {
             end() {
                 profile.lastOpenTime--;
-                profile.lastEnd = time.end = microtime.now();
+                profile.lastEnd = time.end = getMicroseconds();
             }
         }
     }
@@ -64,7 +64,7 @@ export class Profiler {
         if (!this.enabled) return;
         let profile = this.profiles[name];
         if (!profile) throw Error(`Profile ${name} not started`);
-        profile.lastEnd = profile.times[ profile.times.length - 1 ].end = microtime.now();
+        profile.lastEnd = profile.times[ profile.times.length - 1 ].end = getMicroseconds();
     }
 
     /**

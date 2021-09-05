@@ -1,4 +1,4 @@
-import { Container, Inject, Service } from '../..';
+import { Container, Service } from '../..';
 import { IBundle } from "./IBundle";
 
 @Service({

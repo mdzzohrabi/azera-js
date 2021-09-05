@@ -19,6 +19,7 @@ export function isDecoratedController(_func: Function): _func is Constructor<Dec
 /**
  * Controller decorator
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
+ * @decorator Controller
  */
 export function Controller(routePrefix?: string, options?: ControllerOptions) {
     return function controllerDecorator(controller: Function) {

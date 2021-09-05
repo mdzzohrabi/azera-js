@@ -1,11 +1,5 @@
 {
     "extends": "../../tsconfig.json",
-    "compilerOptions": {
-        "strict": false,
-        "noImplicitAny": false,
-        "noUnusedLocals": false,
-        "noUnusedParameters": false
-    },
     "include": ["./"],
     "exclude": ["node_modules"]
 }
