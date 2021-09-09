@@ -75,6 +75,12 @@ program
                 },
                 "include": ["src"],
                 "exclude": ["node_modules", "src/**/public"]
+            }, null, "\t"),
+            './nodemon.json': JSON.stringify({
+                "$schema": "https://json.schemastore.org/nodemon",
+                "watch": ["./dist/**/*.js", "./app.config.json", "./**/*.yml"],
+                "exec": "node dist/index http:start",
+                "ext": "js"
             }, null, "\t")
         };
 
@@ -101,7 +107,7 @@ program
 
         writeFileSync(packagePath, JSON.stringify(package, null, "\t"));
 
-        success(`Application structure generated successful`);
+        success(`Application structure generated successful, run "yarn cli config:schema" to generate configuration schema`);
         log(`Run "yarn cli" to see available commands`)
 
     });
