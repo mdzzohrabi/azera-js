@@ -1,5 +1,5 @@
 import { Container, Inject, IFactory } from '@azera/container';
-import { Middleware } from '../Middleware';
+import { Middleware } from '../decorator/Middleware';
 import { Request } from '../Request';
 import { Response } from '../Response';
 

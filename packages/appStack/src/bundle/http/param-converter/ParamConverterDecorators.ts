@@ -1,7 +1,5 @@
-import { Container } from "@azera/container";
-import { Middleware } from "../Middleware";
 import { RequestInputContext } from "../Request";
-import { createRequestDataConverterMiddleware, RequestDataConverters } from "./ParamConverterMiddleware";
+import { RequestDataConverters } from "./ParamConverterMiddleware";
 
 /**
  * Request data converters decorator that makes a middleware to convert parameters

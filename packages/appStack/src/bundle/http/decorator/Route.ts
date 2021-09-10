@@ -1,9 +1,8 @@
-import { Decorator, Inject } from '@azera/container';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { ContainerInvokeOptions, Decorator, Inject } from '@azera/container';
 import { getParameters } from '@azera/reflect';
-import { RequestInputContext } from '.';
-import { Request } from './Request';
-import { RouteMethods } from './Types';
+import { RequestInputContext } from '..';
+import { Request } from '../Request';
+import { RouteMethods } from '../Types';
 import { Check, createCheckValidatorByType } from './Validator';
 
 export const ROUTES_PROPERTY = 'routes';
@@ -78,7 +77,7 @@ export function RequestParam(name?: string, type: RequestInputContext = 'query')
             Check(name, checker => createCheckValidatorByType(checker, paramType!!))(target, methodName);
         }
 
-        // Inject request extractor dependencie
+        // Inject request extractor dependency
         Inject((invokeOptions: ContainerInvokeOptions) => {            
             if (!invokeOptions.invokeArguments) throw Error(`Query decorator only allowed on Express action`);
             let req: Request = invokeOptions.invokeArguments[0];

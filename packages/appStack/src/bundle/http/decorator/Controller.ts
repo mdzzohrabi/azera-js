@@ -1,6 +1,6 @@
 import { Service } from '@azera/container';
 import { Constructor } from '@azera/util';
-import { HttpBundle } from './HttpBundle';
+import { HttpBundle } from '../HttpBundle';
 import { HttpMethods, Route, RoutesCollection } from './Route';
 
 export interface ControllerOptions {

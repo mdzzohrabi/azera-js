@@ -847,12 +847,14 @@ export class Container {
             create(invokeOptions: IContainerInvokeOptions) {
                 let { methodName, invokeArguments, argumentIndex, methodTarget } = invokeOptions;
                 if (!methodName || !invokeArguments || typeof argumentIndex == 'undefined' || !methodTarget) return;
-                return converter({ method: methodName, target: methodTarget, value: invokeArguments[argumentIndex], parameterIndex: argumentIndex, parameterName: '', type }, container);
+                return converter({ method: methodName, target: methodTarget, value: invokeArguments[argumentIndex], parameterIndex: argumentIndex, parameterName: '', type, parameters: invokeArguments, container }, container);
             }
 
             static factoryCondition: IFactoryCondition = { target, methodName: targetMethod, paramIndex: targetArgumentIndex }
             static isPrivateFactory = true;
         }, true);
+
+        return this;
     }
 
     /**

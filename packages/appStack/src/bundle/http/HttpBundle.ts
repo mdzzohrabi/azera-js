@@ -1,10 +1,9 @@
-import { Container, Inject } from '@azera/container';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { Container, ContainerInvokeOptions, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
-import * as parser from 'body-parser';
 import * as cluster from 'cluster';
 import * as express from 'express';
 import * as path from 'path';
+import { isHttpRequest } from '.';
 import { ConfigSchema } from '../../config/ConfigSchema';
 import { Profiler } from '../../debug/Profiler';
 import { EventManager } from '../../event/EventManager';
@@ -12,16 +11,16 @@ import { debugName, invariant } from '../../helper/Util';
 import { Kernel } from '../../kernel/Kernel';
 import { Logger } from '../../logger/Logger';
 import { Bundle } from '../Bundle';
-import { DumpRoutesCommand } from './Command/DumpRoutesCommand';
-import { HttpStartCommand } from './Command/HttpStartCommand';
+import { DumpRoutesCommand } from './command/DumpRoutesCommand';
+import { HttpStartCommand } from './command/HttpStartCommand';
+import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './decorator/Middleware';
+import { RoutesCollection, ROUTES_PROPERTY } from './decorator/Route';
 import { EVENT_CONFIGURE_ROUTE, EVENT_HTTP_ACTION, EVENT_HTTP_ERROR, EVENT_HTTP_EXPRESS, EVENT_HTTP_EXPRESS_INIT, EVENT_HTTP_LISTEN, EVENT_HTTP_RESULT, HttpActionEvent, HttpErrorEvent, HttpResultEvent, HttpRouteConfigEvent } from './Events';
 import { HttpEventSubscriber } from './HttpEventSubsriber';
-import { MiddlewaresCollection, MIDDLEWARES_PROPERTY } from './Middleware';
 import { HttpCoreMiddlewareFactory } from './middleware/CoreMiddleware';
-import { createRateLimiterMiddleware } from './middleware/RateLimiterMiddleware';
+import { createRateLimiterMiddleware } from './rate-limiter/RateLimiterMiddleware';
 import { Request } from './Request';
 import { NextFn, Response } from './Response';
-import { RoutesCollection, ROUTES_PROPERTY } from './Route';
 import { IHttpConfigRouteObject, IHttpRouteHandlerObject } from './Types';
 
 export { express };
@@ -60,7 +59,7 @@ export class HttpBundle extends Bundle {
     constructor(
         // Middlewares
         public middlewares: express.RequestHandler[] = [
-            parser.json()
+            express.json()
         ]
     ) { super(); }
 
@@ -110,38 +109,27 @@ export class HttpBundle extends Bundle {
 
         // Default listen port
         container.setParameter(HttpBundle.DI_PARAM_PORT, 9095);
-        
-        let bundle = this;
-
-        
+ 
+        // Decorated parameters factory
         container
             // Request
-            .setFactory(Request, function requestFactory(invokeOptions: ContainerInvokeOptions) {
-                let args = invokeOptions.invokeArguments ?? [];
-                if (!args[0] || !('query' in args[0])) {
-                    throw Error(`Invalid Request injection`);
-                }
-                return args[0];
-            }, true)
+            .argumentConverter(Request, ({ parameters }) => {
+                if (isHttpRequest(parameters[0])) return parameters[0];
+                return null;
+            })
             // Response
-            .setFactory(Response, function responseFactory(invokeOptions: ContainerInvokeOptions) {
-                let args = invokeOptions.invokeArguments ?? [];
-                if (!('send' in args[1])) {
-                    throw Error(`Invalid Response injection`);
-                }
-                return args[1];
-            }, true)
+            .argumentConverter(Response, ({ parameters }) => {
+                if ('end' in parameters[1]) return parameters[1];
+                return null;
+            })
             // Next
-            .setFactory(NextFn, function nextFnFactory(invokeOptions: ContainerInvokeOptions) {
-                let args = invokeOptions.invokeArguments ?? [];
-                if (args[2] instanceof Function) {
-                    return args[2];
-                }
-                throw Error(`Invalid NextFn injection`);
-            }, true)
+            .argumentConverter(NextFn, ({ parameters }) => {
+                if (arguments[2] instanceof Function) return parameters[2];
+                return null;
+            })
             
         container.setFactory(HttpBundle.DI_SERVER, async function expressFactory() {
-            let server = bundle.server = express();
+            let server = httpBundle.server = express();
             let middlewares = await container.getByTagAsync(HttpBundle.DI_TAG_MIDDLEWARE) as any[];
             let controllers = await container.getByTagAsync(HttpBundle.DI_TAG_CONTROLLER) as any[];
             let profiler = await container.invokeAsync(Profiler);

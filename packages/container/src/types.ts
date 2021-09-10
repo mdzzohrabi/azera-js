@@ -92,6 +92,8 @@ export interface ArgumentConverterOptions {
     method: string
     parameterName: string
     parameterIndex: number
+    parameters: any[]
+    container: Container
 }
 
 export interface IArgumentConverterFunction<T = any> { (value: ArgumentConverterOptions, container: Container): T }

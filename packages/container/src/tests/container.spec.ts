@@ -1094,19 +1094,30 @@ describe('Container', () => {
                 class Book {
                     constructor(public title: string) {}
                 }
-    
+
+                class Request {
+                    constructor(public ip: string) {}
+                }
+
                 class BookController {
                     @Inject() findBook(book: Book) {
                         return book;
                     }
+
+                    @Inject() getRequest(request: Request) { return request; }
                 }
     
                 container.argumentConverter(Book, ({ value }) => new Book(value));
-    
+                container.argumentConverter(Request, ({ value, parameters }) => new Request(parameters[1]));
+                
                 let bookController = container.invoke(BookController);
                 let result = container.invoke(bookController, 'findBook', 'Alice in the wonderland');
                 ok(result instanceof Book, 'The result of BookController.findBook must be instance of Book');
                 equal(result.title, 'Alice in the wonderland');
+                
+                let request = container.invoke(bookController, 'getRequest', 'User-Agent', 'User-IP');
+                expect(request).toBeInstanceOf(Request);
+                expect(request).toHaveProperty('ip', 'User-IP');
     
             });    
         });
