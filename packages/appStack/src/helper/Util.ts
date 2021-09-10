@@ -241,5 +241,5 @@ export function getNanoseconds() {
 }
 
 export function getMicroseconds() {
-    return Number(hrtime.bigint() / BigInt(1000));
+    return Number(hrtime.bigint() / BigInt(1000000));
 }

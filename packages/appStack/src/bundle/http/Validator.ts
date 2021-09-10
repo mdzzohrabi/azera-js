@@ -1,7 +1,7 @@
 import { is } from '@azera/util';
 import * as check from 'express-validator';
 import { getMeta } from '../../decorator/Metadata';
-import { UnSerialize, isISerializable } from '../../helper/Serialize';
+import { DeSerialize, isISerializable } from '../../helper/Serialize';
 import { Middleware } from './Middleware';
 import { Request } from './Request';
 import { Response } from './Response';
@@ -22,7 +22,7 @@ export function createCheckValidatorByType(checker: check.ValidationChain, type:
     }
 
     if (isISerializable(type)) {
-        checker.customSanitizer(value => UnSerialize(value, type));
+        checker.customSanitizer(value => DeSerialize(value, type));
     }
 
     return checker;

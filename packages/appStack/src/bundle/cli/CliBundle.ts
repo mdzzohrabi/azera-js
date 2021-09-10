@@ -22,7 +22,7 @@ export class CliBundle extends Bundle {
         container.autoTag(Command, [DI_TAG_COMMAND]);
 
         let profilerExecuted = false;
-        commander.option('--profile', 'Enable profiler', function enableProfile() {
+        commander.program.option('--profile', 'Enable profiler', function enableProfile() {
             if (profilerExecuted) return;
             profilerExecuted = true;
             
@@ -69,18 +69,19 @@ export class CliBundle extends Bundle {
 
         // Register commands
         commands.sort((a, b) => a.name > b.name ? -1 : 1).forEach(command => {
+            let commanderCommand = commander.program.createCommand(command.name);
             container.invoke(command, 'configure',
-                commander
-                    .command(command.name)
+                commanderCommand
                     .action(container.invokeLaterAsync(command, 'run') as any)
             )
+            commander.program.addCommand(commanderCommand);
         });
 
     }
 
     @Inject() run(container: Container, log: Logger, action: string) {
         if (action == 'cli') {
-            commander.parse(process.argv);
+            commander.program.parse(process.argv);
         }
     }
 

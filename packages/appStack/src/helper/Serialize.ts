@@ -33,7 +33,7 @@ export function Serialize(value: any): string {
  * @param value Serialized value
  * @returns 
  */
-export function UnSerialize<T>(value: any, type?: Constructor<T> | object): T {
+export function DeSerialize<T>(value: any, type?: Constructor<T> | object): T {
     if (!type) return JSON.parse(value);
     if (isISerializable(type)) return type.unserialize(value) as T;
     let object: any = is.Class(type) ? new type() : type;

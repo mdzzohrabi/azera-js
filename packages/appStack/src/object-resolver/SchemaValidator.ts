@@ -413,7 +413,7 @@ export class ResolverSchemaFieldBuilder extends ResolverSchemaField {
     toArray = () => this.sanitize(v => Array.isArray(v) ? v : [v]);
     toDate = () => this.sanitize(v => new Date(v));
     mapBy = (dic: { [key: string]: any }) => this.sanitize(v => dic[v]);
-    toObjectId = () => this.sanitize(v => import('mongodb').then(m => new m.ObjectID(v)))
+    toObjectId = () => this.sanitize(v => import('mongodb').then(m => new m.ObjectId(v)))
     toLower = () => this.sanitize(v => String(v).toLowerCase());
     toUpper = () => this.sanitize(v => String(v).toUpperCase());
     replace = (search: any, replace: string) => this.sanitize(v => String(v).replace(search, replace));

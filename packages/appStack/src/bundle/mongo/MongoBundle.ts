@@ -77,9 +77,7 @@ export class MongoBundle extends Bundle {
                         auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;
                     }
                     let client = new MongoClient(`mongodb://${auth}${conn.host}:${conn.port ?? 27017}?authSource=${conn.database}&ssl=${conn.host.startsWith('https')}`, {
-                        useNewUrlParser: conn.useNewUrlParser,
-                        useUnifiedTopology: conn.useUnifiedTopology,
-                        auth: conn.username ? { user: conn.username, password: conn.password } : undefined
+                        auth: conn.username ? { username: conn.username, password: conn.password } : undefined
                     });
 
                     client.on('error', async (err) => {

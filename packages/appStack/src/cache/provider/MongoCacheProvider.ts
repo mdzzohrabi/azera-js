@@ -34,7 +34,8 @@ export class MongoCacheProvider extends CacheProvider {
         }
         else {
             let mongo = await import('mongodb');
-            this.connection = await mongo.connect(this.url?.toString()!, { useNewUrlParser: true, useUnifiedTopology: true });
+            let client = new mongo.MongoClient(this.url?.toString()!);
+            this.connection = await client.connect();
             this.collectionName = this.name;
         }
 
