@@ -3,6 +3,7 @@ import { AssetProvider } from './provider/AssetProvider';
 import { File } from './File';
 import { Storage } from './Storage';
 
+// @ts-ignore
 @Service({
     autoTags: [
         { class: AssetProvider, tags: [ 'asset.provider' ] }

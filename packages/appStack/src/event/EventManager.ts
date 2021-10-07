@@ -12,6 +12,7 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
  * 
  * @author Masoud Zohrabi <mdzzohrabi@gmail.com>
  */
+// @ts-ignore
 @Service({
     factory: async ($isDevelopment: string, serviceContainer: Container) => {
         // Use DebugEventManager is Development environment

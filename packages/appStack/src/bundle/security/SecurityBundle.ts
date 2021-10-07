@@ -1,5 +1,4 @@
-import { Container, Inject } from '@azera/container';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { Container, ContainerInvokeOptions, Inject } from '@azera/container';
 import { is } from '@azera/util';
 import { ConfigSchema } from '../../config/ConfigSchema';
 import { debugName, getProperty } from '../../helper/Util';

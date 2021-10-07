@@ -11,14 +11,14 @@ class ClassMetaData {
 }
 
 export function getDecoratedParameters(target: Function, property: string): MetaMap<MetaMap> {
-    let baseTarget = getTarget(target);
+    let baseTarget = getMetadataTarget(target);
     let metaData: ClassMetaData = baseTarget[META_DATA];
     if (!metaData || !metaData.properties.has(property)) return new Map();
     return metaData.properties.get(property)!.parameters;
 }
 
 export function getClassDecoratedProps(target: Function): MetaMap<MetaMap> {
-    let baseTarget = getTarget(target);
+    let baseTarget = getMetadataTarget(target);
     let metaData: ClassMetaData = baseTarget[META_DATA];
     if (!metaData) return new Map();
     let result = new Map();
@@ -30,7 +30,7 @@ export function getClassDecoratedProps(target: Function): MetaMap<MetaMap> {
 }
 
 export function hasMetaMap(target: Function, property?: string) {
-    let baseTarget = getTarget(target);
+    let baseTarget = getMetadataTarget(target);
     if (property) return baseTarget[META_DATA] && (baseTarget[META_DATA] as ClassMetaData).properties.has(property);
     return !!baseTarget[META_DATA];
 }
@@ -43,7 +43,7 @@ export function getMetaMap(target: Function, property?: string, index?: number):
 export function getMetaMap(target: Function, property: string | undefined, index: number | undefined, init: false): MetaMap | undefined
 export function getMetaMap(target: Function, property?: string, index?: number, init: boolean = true): MetaMap | undefined
 {
-    let baseTarget = getTarget(target);
+    let baseTarget = getMetadataTarget(target);
     invariant(is.Function(baseTarget), `Target must be a function or class`, TypeError);
     let metaData: ClassMetaData = baseTarget[META_DATA];
 
@@ -123,7 +123,7 @@ export function setMeta<T>(key: string | Function, value: T, target: Function, p
     return value;
 }
 
-export function getTarget(value: any) {
+export function getMetadataTarget(value: any) {
     if (typeof value == 'function') return value;
     else if (typeof value == 'object' && 'constructor' in value) return value.constructor;
     else throw Error(`Metadata target must be a function`);
@@ -137,7 +137,7 @@ export function createMetaDecorator<T, M extends boolean>(key: string, multi = t
     let decorator = function metaDecorator(value: T) {
         return (target: any, propName?: any, descriptor?: any) => {
 
-            target = getTarget(target);
+            target = getMetadataTarget(target);
 
             if (multi) pushMeta(key, value, target, propName, typeof descriptor == 'number' ? descriptor : undefined);
             else setMeta(key, value, target, propName, typeof descriptor == 'number' ? descriptor : undefined);
@@ -158,7 +158,7 @@ export function createDecorator<D extends DecoratorValueExtractor, M extends boo
                 let returnType = propName ? Reflect.getMetadata('design:returntype', target, propName) : undefined;
                 let paramTypes = propName ? Reflect.getMetadata('design:paramtypes', target, propName) : undefined;
 
-                target = getTarget(target);
+                target = getMetadataTarget(target);
 
                 let value = valueGetter.call({ returnType, propType, propName, paramTypes, target, descriptor: typeof descriptor == 'object' ? descriptor : undefined, index: typeof descriptor == 'number' ? descriptor: undefined }, ...args);
 

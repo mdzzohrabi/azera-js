@@ -1,5 +1,5 @@
 import { Container, Inject } from '@azera/container';
-import { ContainerInvokeOptions } from '@azera/container/build/container';
+import { ContainerInvokeOptions } from '@azera/container';
 import { forEach, is } from '@azera/util';
 import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
