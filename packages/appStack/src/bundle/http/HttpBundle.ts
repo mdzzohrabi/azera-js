@@ -1,4 +1,4 @@
-import { Container, ContainerInvokeOptions, Inject } from '@azera/container';
+import { Container, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
 import * as cluster from 'cluster';
 import * as express from 'express';
@@ -226,11 +226,11 @@ export class HttpBundle extends Bundle {
         });
     }
 
-    configureRoutesFromConfiguration(kernel: Kernel, app: express.Express, routes: { [path: string]: object | object[] }) {     
+    async configureRoutesFromConfiguration(kernel: Kernel, app: express.Express, routes: { [path: string]: object | object[] }) {     
 
         let container = kernel.container;
-        let eventManager = container.invoke(EventManager);
-        let profiler = container.invoke(Profiler);
+        let eventManager = await container.invokeAsync(EventManager);
+        let profiler = await container.invokeAsync(Profiler);
         let httpBundle = this;
 
         forEach(routes, (route, routePath) => {
