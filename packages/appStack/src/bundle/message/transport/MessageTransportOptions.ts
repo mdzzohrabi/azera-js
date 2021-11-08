@@ -1,6 +1,6 @@
-import { Url } from 'url';
+import { URL } from 'url';
 
-export interface MessageTransportOptions extends Url {
+export interface MessageTransportOptions extends URL {
     sendTypes?: Function[]
     receiveTypes?: Function[]
     name?: string

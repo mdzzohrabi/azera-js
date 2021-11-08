@@ -1,6 +1,6 @@
 import { Container, Inject } from '@azera/container';
 import { forEach } from '@azera/util';
-import * as url from 'url';
+import { URL } from 'url';
 import { Bundle } from '../Bundle';
 import { ConfigSchema } from '../../config/ConfigSchema';
 import { Kernel } from '../../kernel/Kernel';
@@ -41,7 +41,7 @@ export class MessageBundle extends Bundle {
                     let types: Function[] = (transport.types ?? []).map(type => kernel.use(type));
 
                     // Transport options
-                    let options: MessageTransportOptions = url.parse(transport.transport);
+                    let options: MessageTransportOptions = new URL(transport.transport);
                         options.sendTypes = types;
                         options.receiveTypes = types;
 
