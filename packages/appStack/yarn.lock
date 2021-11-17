@@ -46,10 +46,10 @@
     http-errors "^1.7.3"
     object-path "^0.11.4"
 
-"@azera/container@^2.1.2":
-  version "2.1.2"
-  resolved "https://registry.yarnpkg.com/@azera/container/-/container-2.1.2.tgz#56445eec589a9b29702819ab2af52aa249a6d389"
-  integrity sha512-TXD4XuiyfKFwhoURiRCylj7gbVb7Ug67Cgg5kGZj3Z/SIFmUu0x8KJcdBxlBbaSLP8Czp2LKObQb4KvK2ZfuVw==
+"@azera/container@^2.1.3":
+  version "2.1.3"
+  resolved "https://registry.yarnpkg.com/@azera/container/-/container-2.1.3.tgz#84f1a589382e746b2d51515781f077d092ac9435"
+  integrity sha512-QttN3anMGeNsykhnOQxy/bqX25KzkumrV+dc/RusXa94OEzARe1TQkGEWbVJSGqmG2LTiHzDwdA49g4G01Bz5Q==
   dependencies:
     "@azera/reflect" "^1.0.9"
     "@azera/util" "^1.0.18"

@@ -1,17 +1,5 @@
-import { IFactory, Inject, Container } from '@azera/container';
-import { Middleware, Request, Response, NextFn } from '../http';
+import { NextFn, Request, Response } from '../http';
 import { AuthenticationManager } from './authentication/AuthenticationManager';
-
-@Middleware()
-export class HttpSecurityMiddlewareFactory implements IFactory {
-    
-    @Inject() create(container: Container) {
-        return function httpSecurityMiddleware(req: Request, res: Response, next: NextFn) {
-
-        }
-    }
-
-}
 
 /**
  * Generate secure http middleware

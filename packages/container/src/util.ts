@@ -2,7 +2,8 @@ import { getParameters } from "@azera/reflect";
 import { is } from "@azera/util";
 import { FACTORY_REGEX, META_INJECT, META_PARAMETERS_INJECT, SERVICE_REGEX } from "./constants";
 import { DecoratorError } from "./errors";
-import { Injectable, IMethod, ServiceDefinition, Factory, IInternalDefinition } from "./types";
+import { Injectable, IMethod, Factory, IInternalDefinition } from "./types";
+import { ServiceDefinition } from "./serviceDefinition";
 import { ServiceType } from "./types";
 
 export namespace Decorator {
@@ -69,9 +70,9 @@ export namespace Decorator {
  * Create new container definition
  * @returns {ServiceDefinition}
  */
-export function createServiceDefinition(definition: ServiceDefinition): ServiceDefinition {
+export function createServiceDefinition(definition: Partial<ServiceDefinition>): ServiceDefinition {
     if (typeof definition.name !== 'string') throw Error(`Service name must be string`);
-    return definition;
+    return Object.assign(new ServiceDefinition(), definition);
 }
 
 export function isFactory(value: any): value is Factory { return value instanceof Function && FACTORY_REGEX.test(value.name); }
@@ -132,17 +133,11 @@ export function getInitialServiceDefinition(target: Function, context?: any): Se
         $target: target,
         service: target,
         name: target.name,
-        properties: {},
         parameters: deps,
         private: false,
-        tags: [],
         isFactory: isFactory(target),
         invoke: !is.Class(target) && !SERVICE_REGEX.test(target.name),
-        calls: {},
-        methods: {},
-        imports: [],
-        autoTags: []
-    } as IInternalDefinition);
+    } as Partial<IInternalDefinition>);
 }
 
 /**

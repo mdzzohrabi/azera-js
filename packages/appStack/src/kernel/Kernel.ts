@@ -141,10 +141,10 @@ export class Kernel {
         logger.debug('Kernel bootstrap');
         
         // Bundles services
-        bundles.forEach(async bundle => {
+        for (let bundle of bundles) {
             let services = await container.invokeAsync(bundle, 'getServices');
             container.add(...services);
-        });
+        }
 
         profiler.start('kernel.boot.bundles', { bundles: bundles.map(bundle => bundle.bundleName)});
         

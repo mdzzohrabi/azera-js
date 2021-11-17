@@ -53,7 +53,7 @@ export class MailTransport extends MessageTransport {
     }
 
     protected async createTransport() {
-        let [user, pass] = this.options.auth?.split(':') ?? [];
+        let {username: user, password: pass} = this.options;
 
         return (await this.getNodeMailer()).createTransport({
             host: this.options.host!,

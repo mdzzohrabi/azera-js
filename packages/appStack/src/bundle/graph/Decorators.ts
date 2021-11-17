@@ -71,12 +71,28 @@ const $$Directive = createDecorator(function Directive(options: DirectiveDecorat
 export const GraphQl = {
 
     /**
-     * GraphQl Request Configuration
+     * GraphQl Client Request Configuration
+     * 
+     * ```ts
+     * const {RequestConfig, Request} = GraphQl;
+     * 
+     * @RequestConfig({ nodeName: 'main' })
+     * class UsersController {
+     *      @Request('{ users { id username } }') users() {}
+     * }
+     * ```
      */
     RequestConfig: createMetaDecorator<{ nodeName: string }, false>('graphql:request-config', false, true, true),
 
     /**
      * GraphQl Request decorator applies on controller actions
+     * 
+     * ```ts
+     * class UsersController {
+     *      @GraphQl.Request({ nodeName: 'main', query: '{ users { id username } }') users() {}
+     * }
+     * ```
+     * 
      * @param options GraphQl Request options
      * @returns 
      */
@@ -113,6 +129,12 @@ export const GraphQl = {
 
     /**
      * Graphql Type resolver decorator applies on class
+     * 
+     * ```ts
+     * @GraphQl.Type()
+     * class Query {
+     * }
+     * ```
      */
     Type: createDecorator(function (type: TypeDecoratorOptions = {}) {
         return { type: 'type', name: this.target.name, ...type };
@@ -135,6 +157,13 @@ export const GraphQl = {
 
     /**
      * Graphql Field resolver decorator
+     * 
+     * ```ts
+     * @GraphQl.Type()
+     * class Query {
+     *      @Field() version = '1.1.0'
+     * }
+     * ```
      */
     Field: createDecorator(function (field?: string | FieldDecoratorOptions) {
 

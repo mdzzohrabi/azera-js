@@ -23,6 +23,7 @@ export interface IHttpConfigRouteObject {
 }
 
 export type RouteMethods = 'get' | 'post' | 'put' | 'delete' | 'options' | 'use'
+export type SecFetchModes = 'cors' | 'no-cors' | 'navigate' | 'same-origin' | 'websocket';
 
 export interface IHttpRouteHandlerObject {
     handler: Function

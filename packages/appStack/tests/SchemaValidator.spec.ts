@@ -71,14 +71,15 @@ describe('SchemaValidator', () => {
 
     it('should generate schema from ObjectResolver.make', () => {
         let resolver = ObjectResolver.make({
-            connections: _ => _.withDescription('Connections').isNamedKeyObject({
-                name: _ => _.withDescription('Connection name').isString()
+            connections: connections => connections.withDescription('Connections').isNamedKeyObject({
+                name: name => name.withDescription('Connection name').isString()
             }, 'Connection')
         });
 
         let jsonSchema = resolver.validator?.getJsonSchema();
 
-        expect(jsonSchema).property('properties.connections.patternProperties[.*].properties')
+        expect(jsonSchema).nested.property('properties.connections.patternProperties')
+        expect(jsonSchema?.properties.connections.patternProperties['.*']).nested.property('properties.name.description', 'Connection name')
     });
 
 })

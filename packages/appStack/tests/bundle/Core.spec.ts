@@ -1,23 +1,13 @@
-import { Container } from "@azera/container";
-import { CacheManager } from "../../src/cache";
-import { CoreBundle } from "../../src/bundle/core/CoreBundle";
-import { Kernel } from '../../src/kernel/Kernel';
 import { deepStrictEqual, strictEqual } from "assert";
-import { WebClient } from "../../src";
+import { WebClient } from "../../src/net/WebClient";
+import { CacheManager } from "../../src/cache/CacheManager";
+import { Kernel } from '../../src/kernel/Kernel';
 
 describe('CoreBundle', () => {
+    it('Cache configuration', async function () {
+        this.timeout(4000);
+        let kernel = new Kernel('test');
 
-    let kernel: Kernel;
-    let coreBundle: CoreBundle;
-    let container: Container;
-
-    beforeEach(() => {
-        coreBundle = new CoreBundle();
-        container = new Container();
-        kernel = new Kernel('test', [ coreBundle ], container);
-    });
-
-    it('Cache configuration', async () => {
         await kernel.loadConfig({
             cache: {
                 providers: {
@@ -29,7 +19,6 @@ describe('CoreBundle', () => {
         });
 
         await kernel.boot();
-
         let cacheManager = await kernel.container.invokeAsync(CacheManager);
 
         deepStrictEqual(Object.keys(cacheManager.providers), ['memory', 'file', 'redis']);
@@ -39,6 +28,8 @@ describe('CoreBundle', () => {
     });
 
     it('WebClient', async () => {
+        let kernel = new Kernel('test');
+
         await kernel.loadConfig({
             web_client: { proxy: '127.0.0.1:9090' }
         });

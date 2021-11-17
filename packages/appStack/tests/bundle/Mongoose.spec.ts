@@ -2,6 +2,7 @@ import { deepStrictEqual, strictEqual } from "assert";
 import { Kernel, MongooseBundle, MongooseSchema, MongooseUtil } from "../../src";
 import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import { mkdirSync, existsSync, unlinkSync } from 'fs';
+import { Connection } from 'mongoose';
 
 describe('Mongoose', () => {
     
@@ -88,6 +89,9 @@ describe('Mongoose', () => {
         strictEqual( await books.countDocuments(), 2);
 
         strictEqual(await books.countDocuments({ author }), 1);
+
+        let connection = await kernel.container.invokeAsync(Connection);
+        connection.close();
 
 
     });

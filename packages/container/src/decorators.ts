@@ -2,7 +2,8 @@ import { is } from "@azera/util";
 import "reflect-metadata";
 import { META_PARAMETERS_INJECT } from "./constants";
 import { Container } from "./container";
-import { IArgumentConverterFunction, ServiceDefinition } from "./types";
+import { IArgumentConverterFunction } from "./types";
+import { ServiceDefinition } from "./serviceDefinition";
 import { Decorator, extendServiceDefinition, getServiceDefinition, getParameterServiceOrThrow, IPropertyInjectionOptions, isInternalClass, optimizeServiceType, setServiceDefinition } from './util';
 let { Type } = Decorator;
 
@@ -92,13 +93,13 @@ export function Tag(...tags: string[]): ClassDecorator {
  * @param definition Service configuration
  * @returns 
  */
-export function Service(definition: Partial<ServiceDefinition> | string = {}): ClassDecorator {
+export function Service<T>(definition: Partial<ServiceDefinition<T>> | string = {}): ClassDecorator {
     return (target: Function) => {
         if ( typeof definition === 'string' ) {
             definition = { name: definition };
         }
         Container.checkInheritance(target);
-        extendServiceDefinition(target, definition);
+        extendServiceDefinition(target, definition as any);
     };
 }
 

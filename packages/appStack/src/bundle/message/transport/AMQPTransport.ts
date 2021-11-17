@@ -13,7 +13,7 @@ export class AMQPTransport extends MessageTransport<Message> {
 
     constructor(options: MessageTransportOptions) {
         super(options);
-        if (!options.path) {
+        if (!options.pathname) {
             throw Error(`Queue name must be defined to amqp transport`);
         }
     }
@@ -34,16 +34,16 @@ export class AMQPTransport extends MessageTransport<Message> {
     async send(message: Message, extra: object) {
         let conn = await this.getConnection();
         let channel = await conn.createChannel();
-        await channel.assertQueue(this.options.path!);
-        return channel.sendToQueue(this.options.path!, Buffer.from(JSON.stringify(message)) );
+        await channel.assertQueue(this.options.pathname!);
+        return channel.sendToQueue(this.options.pathname!, Buffer.from(JSON.stringify(message)) );
     }
 
     async *waitForMessage() {
         let conn = await this.getConnection();
         let channel = await conn.createChannel();
-        await channel.assertQueue(this.options.path!);
+        await channel.assertQueue(this.options.pathname!);
         let onMessage: (message: any) => void
-        channel.consume(this.options.path!, message => onMessage(message));
+        channel.consume(this.options.pathname!, message => onMessage(message));
 
         while (true) {
             yield await new Promise(resolve => {
@@ -57,7 +57,7 @@ export class AMQPTransport extends MessageTransport<Message> {
     async ack(message: any) {
         let conn = await this.getConnection();
         let channel = await conn.createChannel();
-        await channel.assertQueue(this.options.path!);
+        await channel.assertQueue(this.options.pathname!);
         channel.ack(message);
     }
 

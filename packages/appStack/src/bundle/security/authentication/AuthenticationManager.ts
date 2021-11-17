@@ -30,7 +30,7 @@ export class AuthenticationManager {
         for (let provider of this.authenticationProviders) {
             if (provider.authenticationName == name) return provider;
         }
-        throw Error(`Authentication provider ${name} not found`);
+        throw Error(`Authentication provider '${name}' not found`);
     }
 
     /**

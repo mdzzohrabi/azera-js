@@ -1,5 +1,6 @@
 import { HashMap } from "@azera/util/is";
 import type { Container } from "./container";
+import { ServiceDefinition } from "./serviceDefinition";
 export { HashMap };
 
 // export type 
@@ -21,41 +22,6 @@ export type IServices = HashMap< ServiceDefinition | Function | any[] >;
 export interface IAutoTagger { (service: ServiceDefinition): string[]; }
 
 export type ServiceDefinitionCollection = HashMap<ServiceType>;
-
-export interface ServiceDefinition<T = Function> {
-    // Service name
-    name: string;
-    // Service function or class
-    service?: T;
-    // Constructor parameters
-    parameters: ( string | Function )[];
-    // Function/Class properties
-    properties: HashMap<string | Function | IPropertyInjection>;
-    // Methods injections
-    methods: { [name: string]: (string|Function)[] };
-    // Call methods
-    calls: { [name: string]: (string|Function)[] };
-    // Private service flag
-    private: boolean;
-    // Service is factory instead of orginal service
-    isFactory: boolean;
-    // Factory function
-    factory?: Factory;
-    // Service tags
-    tags: string[];
-    // Invoke service instead of create instance
-    invoke: boolean;
-    // Imports files or services
-    imports: (string | Function)[];
-    // Auto tagging definition
-    autoTags: ({ class: Function, tags: string[] }|IAutoTagger)[];
-    // True if service is a named service
-    namedService?: boolean;
-    // Parameter converters
-    paramConverters?: { type: Function, methodName?: string, paramIndex?: number , converter: IArgumentConverterFunction }[];
-    // true if $prepareDefinition called on definition
-    $$prepared?: boolean
-}
 
 export interface IInternalDefinition extends ServiceDefinition {
     compiled?: boolean;

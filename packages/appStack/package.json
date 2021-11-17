@@ -27,7 +27,7 @@
 		"postinstall": "yarn stack init"
 	},
 	"dependencies": {
-		"@azera/container": "^2.1.2",
+		"@azera/container": "^2.1.3",
 		"@azera/reflect": "^1.0.9",
 		"@azera/util": "^1.0.18",
 		"@types/body-parser": "^1.19.0",

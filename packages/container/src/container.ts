@@ -3,7 +3,8 @@ import type { HashMap } from "@azera/util/is";
 import { createServiceDefinition, getDependencies, isServiceDefinition, MethodInvoke, isMethodInvoke, getServiceDefinition, getTarget, hasServiceDefinition, setServiceDefinition } from "./util";
 import { META_INJECT } from "./constants";
 import { ServiceNotFoundError } from "./errors";
-import { Constructor, ContainerInvokeOptions, ContainerValue, Factory, IArgumentConverterFunction, IAutoTagger, IContainerInvokeOptions, ServiceDefinition, IFactoryCondition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, MockMethodAsync, ServiceType } from "./types";
+import { Constructor, ContainerInvokeOptions, ContainerValue, Factory, IArgumentConverterFunction, IAutoTagger, IContainerInvokeOptions, IFactoryCondition, IInternalDefinition, IMethod, Injectable, Invokable, MockMethod, MockMethodAsync, ServiceType } from "./types";
+import { ServiceDefinition } from "./serviceDefinition";
 
 /**
  * Dependency Injection Container
@@ -269,28 +270,30 @@ export class Container {
             if (async) {
 
                 let resolver = new Promise(async (resolve, reject) => {
-                    parameters = await Promise.all(parameters);
+                    try {
+                        parameters = await Promise.all(parameters);
 
-                    for (let key in parameters) {
-                        if (Array.isArray(parameters[key])) {
-                            parameters[key] = await Promise.all(parameters[key]);
+                        for (let key in parameters) {
+                            if (Array.isArray(parameters[key])) {
+                                parameters[key] = await Promise.all(parameters[key]);
+                            }
                         }
-                    }
 
-                    for (let prop of properties) {
-                        prop.name = await Promise.resolve(this._invoke(prop.name, options));
-                    }
-
-                    let { result: object } = createService(parameters, properties);
-
-                    // Pipelines                    
-                    if (service.service && this.pipes.has(service.service)) {
-                        for (let pipe of (this.pipes.get(service.service) ?? [])) {
-                            await Promise.resolve(pipe(object, this));
+                        for (let prop of properties) {
+                            prop.name = await Promise.resolve(this._invoke(prop.name, options));
                         }
-                    }
 
-                    resolve(object);
+                        let { result: object } = createService(parameters, properties);
+
+                        // Pipelines                    
+                        if (service.service && this.pipes.has(service.service)) {
+                            for (let pipe of (this.pipes.get(service.service) ?? [])) {
+                                await Promise.resolve(pipe(object, this));
+                            }
+                        }
+
+                        resolve(object);
+                    } catch (err) { reject(err); }
                 });
 
                 if (!isPrivate) this.instances.set(cacheKey, resolver);

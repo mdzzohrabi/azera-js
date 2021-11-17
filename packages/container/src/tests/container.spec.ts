@@ -4,7 +4,8 @@ import * as expect from 'expect';
 import { Container, ContainerInvokeOptions, getDependencies, isServiceDefinition, isFactory, isService } from "..";
 import { ContainerAware } from "../containerAware";
 import { Inject, ParamConverter, Service } from "../decorators";
-import { ServiceDefinition, IFactory } from "../types";
+import { ServiceDefinition } from '../serviceDefinition';
+import { IFactory } from "../types";
 import { Decorator } from '../util';
 import { FixtureApp } from './fixture/App';
 import { HomeController, Request } from './fixture/Controller';
@@ -1204,6 +1205,33 @@ describe('Container', () => {
                 expect(book2.title).toEqual('Default title');
             })
         })
+    });
+
+
+    describe('Error handling', () => {
+        it('should throw errors during dependency resolution in sync invoke', () => {
+            let container = new Container();
+
+            class ThrowabeService {
+                constructor() {
+                    throw Error(`Custom Error`);
+                }
+            }
+            
+            expect(() => container.invoke(ThrowabeService)).toThrowError(/Custom Error/);
+        });
+
+        it('should throw errors during dependency resolution in async invoke', async () => {
+            let container = new Container();
+
+            class ThrowabeService {
+                constructor() {
+                    throw Error(`Custom Error`);
+                }
+            }
+
+            await expect(container.invokeAsync(ThrowabeService)).rejects.toThrow(/Custom Error/);
+        });
     });
 
 });

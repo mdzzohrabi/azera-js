@@ -8,5 +8,6 @@ export * from './decorator/Decorators';
 export * from './decorator/Middleware';
 export * from './decorator/Route';
 export * from './decorator/Validator';
+export * from './decorator/CrossOrigin';
 export * from './rate-limiter/RateLimiterDecorator';
 export * from './rate-limiter/RateLimiterMiddleware';

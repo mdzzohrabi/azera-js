@@ -137,8 +137,6 @@ class Meter extends AbstractMetric {
         this.hits += 1;
         let now = getMicroseconds();
         if (this.lastHitTimeStamp > 0) {
-            console.log(now - this.lastHitTimeStamp);
-            
             this.speed = 1000 / (now - this.lastHitTimeStamp);
         }
         this.lastHitTimeStamp = now;

@@ -7,3 +7,4 @@ spec: tests/**/*.spec.ts
 package: package.json
 # watch": true
 color: true
+exit: true

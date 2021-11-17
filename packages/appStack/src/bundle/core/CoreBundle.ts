@@ -1,5 +1,4 @@
-import { Container, Inject } from '@azera/container';
-import { ContainerInvokeOptions } from '@azera/container';
+import { Container, ContainerInvokeOptions, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
 import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
@@ -148,7 +147,6 @@ export class CoreBundle extends Bundle {
             
             // Providers
             for (let [name, config] of Object.entries($config?.cache?.providers || {})) {
-                
                 let url: URL | undefined;
                 let schema: string = 'memory';
                 
@@ -174,6 +172,9 @@ export class CoreBundle extends Bundle {
 
             return manager;
         });
+
+        // Default cache provider
+        container.setFactory(CacheProvider, () => container.invoke(CacheManager).get());
 
         // Logger
         container.setFactory(Logger, function loggerFactory(invokeOptions: ContainerInvokeOptions) {

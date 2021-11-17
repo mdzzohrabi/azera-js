@@ -45,7 +45,7 @@ export class SecurityBundle extends Bundle {
          * Security context provider
          */
         container.setFactory(SecurityContext, (invokeOptions: ContainerInvokeOptions) => {
-            if (!invokeOptions.invokeArguments || !invokeOptions.invokeArguments[1]) return { context: null };
+            if (!invokeOptions.invokeArguments || !invokeOptions.invokeArguments[1] || !invokeOptions.invokeArguments[1].locals) return { context: null };
             return { context: invokeOptions.invokeArguments[1].locals.securityContext };
         }, true);
     }
@@ -57,10 +57,11 @@ export class SecurityBundle extends Bundle {
             if (is.String(provider)) {
                 provider = kernel.use(provider);
             }
+            
             if (is.ClassObject(provider)) {
                 container.getDefinition(provider).tags.push(SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER);
             } else {
-                throw Error(`AuthenticationProvider ${debugName(provider)} must be a class`);
+                throw Error(`AuthenticationProvider ${debugName(provider)} must be a class that implements 'AuthenticationProvider'`);
             }
         });
 
