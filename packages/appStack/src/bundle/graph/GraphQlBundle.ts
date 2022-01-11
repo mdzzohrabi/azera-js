@@ -6,7 +6,7 @@ import { Kernel } from '../../kernel/Kernel';
 import { invariant } from '../../helper/Util';
 import { HttpBundle } from '../http';
 import { GraphQlBuilder } from './GraphQlBuilder';
-import { GraphQlManager } from './GraphqlManager';
+import { GraphQlManager } from './GraphQlManager';
 import type { ApolloServer } from 'apollo-server-express';
 
 interface IGraphQlBundleConfig {
@@ -54,28 +54,26 @@ export class GraphQlBundle extends Bundle {
                 if (node.enabled === false) continue;
                 invariant((node.types ?? []).length > 0, `GraphQl Node "${name}" has no types`);
 
-                container.set(`graphql_node_${name}`, {
-                    factory: async function graphqlNode() {
-                        let builder = await container.invokeAsync(GraphQlBuilder);
-                        let manager = await container.invokeAsync(GraphQlManager);
-                        let kernel = await container.invokeAsync(Kernel);
+                container.setFactory(`graphql_node_${name}`, async function graphqlNodeFactory() {
+                    let builder = await container.invokeAsync(GraphQlBuilder);
+                    let manager = await container.invokeAsync(GraphQlManager);
+                    let kernel = await container.invokeAsync(Kernel);
 
-                        // Build GraphQl Schema
-                        let schema = await builder.buildSchema(
-                            ...(node.types?.map(type => is.String(type) ? kernel.use(type) : type) ?? [])
-                        );
+                    // Build GraphQl Schema
+                    let schema = await builder.buildSchema(
+                        ...(node.types?.map(type => is.String(type) ? kernel.use(type) : type) ?? [])
+                    );
 
-                        // GraphQl Context
-                        let context = is.String(node.context) ? kernel.use(node.context) as Function : (node.context ?? {});
+                    // GraphQl Context
+                    let context = is.String(node.context) ? kernel.use(node.context) as Function : (node.context ?? {});
 
-                        return await manager.createServer({
-                            schema,
-                            playground: node.playground ?? false,
-                            debug: node.debug,
-                            uploads: { maxFileSize: node.maxFileSize },
-                            context
-                        });
-                    }
+                    return await manager.createServer({
+                        schema,
+                        playground: node.playground ?? false,
+                        debug: node.debug,
+                        uploads: { maxFileSize: node.maxFileSize },
+                        context
+                    });
                 });
 
                 /** Add node to Graphql Manager nodes */

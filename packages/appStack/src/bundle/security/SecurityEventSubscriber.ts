@@ -24,7 +24,7 @@ export class SecurityEventSubscriber implements IEventSubscriber {
     }
 
     initHttpServer(server: express.Express) {
-        this.logger.debug('Security bundle prepare http server');
+        this.logger?.debug('Security bundle prepare http server');
     }
 
     httpRouteConfig(event: HttpRouteConfigEvent) {

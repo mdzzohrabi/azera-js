@@ -13,61 +13,36 @@ export class RedisCacheProvider extends CacheProvider {
 
     getClient() {
         invariant(this.url, `Redis cache url not specified`);
-        return import('redis').then(redis => redis.createClient(formatUrl(this.url!)));
+        return import('redis').then(redis => redis.createClient({
+            url: this.url?.toString()
+        }));
     }
 
     async has(key: string): Promise<boolean> {
         const client = await this.getClient();
-        return new Promise<boolean>((resolve, reject) => {
-            client.exists(key, (err, n) => {
-                if (err)
-                    reject(err);
-                else
-                    resolve(n > 0);
-            });
-        });
+        return client.exists(key);
     }
     
     async set<T>(key: string, value: T): Promise<T> {
         const client = await this.getClient();
-        return new Promise<T>((resolve, reject) => {
-            client.set(key, JSON.stringify(value), (err, result_1) => {
-                if (err || result_1 !== 'OK')
-                    reject(err);
-                else
-                    resolve(value);
-            });
-        });
+        await client.set(key, JSON.stringify(value));
+        return value;
     }
 
     async get<T>(key: string, expire?: number | undefined): Promise<T | undefined> {
         const client = await this.getClient();
-        return new Promise<T>((resolve, reject) => {
-            client.get(key, (err, result) => {
-                if (err || result !== 'OK') reject(err);
-                else resolve(JSON.parse(result));
-            });
-        });
+        let value = await client.get(key);
+        if (value)
+            return JSON.parse(value);
     }
 
     async expire(key: string, secs: number) {
         const client = await this.getClient();
-        return new Promise<number>((resolve, reject) => {
-            client.expire(key, secs, (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
-        });
+        return client.expire(key, secs);
     }
 
     async ttl(key: string, secs: number) {
-        const client = await this.getClient();
-        return new Promise<number>((resolve, reject) => {
-            client.ttl(key, (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
-        });
+        return (await this.getClient()).ttl(key);
     }
 
     async memo<T>(key: string, value: () => Promise<T>, options?: CacheProviderOptions): Promise<T>
@@ -89,12 +64,7 @@ export class RedisCacheProvider extends CacheProvider {
 
     async delete(key: string): Promise<number> {
         const client = await this.getClient();
-        return new Promise<number>((resolve, reject) => {
-            client.del(key, (err, result) => {
-                if (err) reject(err);
-                else resolve(result);
-            });
-        });
+        return client.del(key);
     }
 
 }

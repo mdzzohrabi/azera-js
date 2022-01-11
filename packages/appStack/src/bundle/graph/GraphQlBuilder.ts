@@ -1,4 +1,4 @@
-import type { GraphQLField } from 'graphql';
+import type { GraphQLSchema } from 'graphql';
 import { Container, Inject } from '@azera/container';
 import { getClassDecoratedProps, getMeta, hasMeta } from '../../decorator/Metadata';
 import { invariant } from '../../helper/Util';
@@ -96,7 +96,7 @@ export class GraphQlBuilder {
     }
    
     async buildDirectives(...objects: any) {
-        let { SchemaDirectiveVisitor } = await import('apollo-server-express');
+        let { mapSchema, MapperKind, getDirective } = await import('@graphql-tools/utils');
         let directives: Function[] = [];
         let typeDefs: string[] = [];
         let types: any[] = [];
@@ -114,16 +114,16 @@ export class GraphQlBuilder {
                         types.push(inputTypes);
                     }
 
-                    // Visitor
-                    let visitor = class extends SchemaDirectiveVisitor {
-                        visitFieldDefinition(field: GraphQLField<any, any>) {
-                            let baseResolve = field.resolve;
-                            field.resolve = meta.resolver;
+                    /** Directive Transformer */
+                    let directiveTransformer = (schema: GraphQLSchema, directiveName: string) => mapSchema(schema, {
+                        [MapperKind.OBJECT_FIELD]: (fieldConfig) => {
+                            let baseResolve = fieldConfig.resolve;
+                            fieldConfig.resolve = meta.resolver;
+                            return fieldConfig;
                         }
-                    }
+                    });
 
-                    directives.push(visitor);
-
+                    directives.push(directiveTransformer);
                 }
             });
         }

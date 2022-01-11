@@ -39,7 +39,7 @@ export class SecurityBundle extends Bundle {
 
         container.autoTag(AuthenticationProvider, [SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER]);
         container.getDefinition(AuthenticationManager).parameters[0] = '$$' + SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER;
-        container.getDefinition(AuthenticationManager).parameters[1] = '=invoke("$config").security.secret';
+        container.getDefinition(AuthenticationManager).parameters[1] = '=invoke("$config")?.security?.secret';
 
         /**
          * Security context provider

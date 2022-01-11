@@ -148,13 +148,13 @@ export class ObjectResolver {
         this._context.env = process.env;
 
         if (value.startsWith('=')) {
-            return runInNewContext( value.substr(1), this._context );
+            return runInNewContext( value.substring(1), this._context );
         }
-        else if (value.indexOf('%') >= 0) {
-            value = value.replace(/%(.*)?%/, (t, expr) => {
-                return runInNewContext(expr, this._context);
-            });
-        }
+
+        value = value.replace(/%\((.*)\)%/, (t, expr) => {
+            return runInNewContext(expr, this._context);
+        });
+
         return value;
     }
 

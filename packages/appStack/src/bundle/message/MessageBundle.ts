@@ -52,7 +52,7 @@ export class MessageBundle extends Bundle {
                         throw Error(`Transport provider for protocol "${options.protocol}" not provided`);
                     }
 
-                    let object = new (transportProvider as any)({ ...options, name });
+                    let object = new (transportProvider as any)(Object.assign(options, { name }));
 
                     if ('container' in object) {
                         object.container = container;

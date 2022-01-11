@@ -1,6 +1,5 @@
 import { Container, ContainerInvokeOptions, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
-import * as cluster from 'cluster';
 import { createLogger, transports } from 'winston';
 import { CacheManager, CacheProvider } from '../../cache';
 import { ConfigSchema } from '../../config/ConfigSchema';
@@ -14,6 +13,7 @@ import { RateLimiterLimit } from '../../rate-limiter/RateLimiterLimit';
 import { AbstractRateLimitStrategy } from '../../rate-limiter/strategy/AbstractRateLimitStrategy';
 import { Workflow, WorkflowManager } from '../../workflow';
 import { Bundle } from '../Bundle';
+const cluster = require('cluster');
 
 /**
  * Core bundle
@@ -88,7 +88,7 @@ export class CoreBundle extends Bundle {
             .node('cache.providers', { description: 'Cache providers', type: 'object' })
             .node('cache.providers.*', { description: 'Cache provider', type: 'object|string' })
             .node('cache.providers.*.type', { description: 'Cache provider type (e.g: memory,file,redis)', type: 'string' })
-            .node('cache.providers.*.path', { description: 'Cache provider path/url', type: 'string', validate: (value, info) => info.resolvePath(value) })
+            .node('cache.providers.*.path', { description: 'Cache provider path/url', type: 'string', validate: (value, info) => info.resolvePath(value) });
 
         config
             .node('workflow', { description: 'Workflow manager' })
@@ -191,8 +191,8 @@ export class CoreBundle extends Bundle {
             };
 
             // Add worker Id in clustered process
-            if (cluster.isWorker) {
-                defaultMeta['workerId'] = cluster.worker.id;
+            if (cluster.isPrimary) {
+                defaultMeta['workerId'] = cluster.worker?.id;
             }
 
             // Create logger instance

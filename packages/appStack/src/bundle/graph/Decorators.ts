@@ -5,7 +5,7 @@ import { HashMap } from '@azera/util/is';
 import { createDecorator, createMetaDecorator, getDecoratedParameters, getMeta, hasMeta } from '../../decorator/Metadata';
 import { invariant } from '../../helper/Util';
 import type { NextFn, Request, Response } from '../http';
-import { GraphQlManager } from './GraphqlManager';
+import { GraphQlManager } from './GraphQlManager';
 
 export type FieldInputsType = {
     [name: string]: any | { index: number, type: any, required?: boolean, default?: string }

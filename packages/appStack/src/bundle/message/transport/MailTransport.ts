@@ -29,8 +29,8 @@ export class MailTransport extends MessageTransport {
     
     constructor(options: MessageTransportOptions) {
         super(options);
-        invariant(options.host, `Mail transport hostname not specified`);
-        this.isTest = this.options.host == "test";
+        invariant(options.hostname, `Mail transport hostname not specified`);
+        this.isTest = this.options.hostname == "test";
     }
 
     protected async getNodeMailer() {
@@ -56,10 +56,10 @@ export class MailTransport extends MessageTransport {
         let {username: user, password: pass} = this.options;
 
         return (await this.getNodeMailer()).createTransport({
-            host: this.options.host!,
+            host: this.options.hostname!,
             port: Number(this.options.port!) ?? 587,
             secure: this.options.port == '465',
-            auth: { user, pass }
+            auth: { user: decodeURIComponent(user), pass: decodeURIComponent(pass) }
         })
     }
 

@@ -81,14 +81,15 @@ export class HttpEventSubscriber implements IEventSubscriber {
     headerAnnotation({ defaultPrevented, response, controller, action }: HttpResultEvent) {
         if (defaultPrevented || response.headersSent) return;
 
+        let controllerClass = controller;
         // Controller headers (Hierarchial)
-        while (controller) {
-            let classHeaders = getMeta(Header, controller);
+        while (controllerClass) {
+            let classHeaders = getMeta(Header, controllerClass);
             if (Array.isArray(classHeaders)) {
                 classHeaders.forEach(item => response.setHeader(item.key, item.value));
             }
             
-            controller = controller.parentController;
+            controllerClass = controllerClass.parentController;
         }
         
         // Action headers

@@ -1,9 +1,8 @@
 import { Container, Inject } from '@azera/container';
 import { forEach, is } from '@azera/util';
-import * as cluster from 'cluster';
+import cluster from 'cluster';
 import * as express from 'express';
 import * as path from 'path';
-import { isHttpRequest } from '.';
 import { ConfigSchema } from '../../config/ConfigSchema';
 import { Profiler } from '../../debug/Profiler';
 import { EventManager } from '../../event/EventManager';
@@ -19,7 +18,7 @@ import { EVENT_CONFIGURE_ROUTE, EVENT_HTTP_ACTION, EVENT_HTTP_ERROR, EVENT_HTTP_
 import { HttpEventSubscriber } from './HttpEventSubsriber';
 import { HttpCoreMiddlewareFactory } from './middleware/CoreMiddleware';
 import { createRateLimiterMiddleware } from './rate-limiter/RateLimiterMiddleware';
-import { Request } from './Request';
+import { isHttpRequest, Request } from './Request';
 import { NextFn, Response } from './Response';
 import { IHttpConfigRouteObject, IHttpRouteHandlerObject } from './Types';
 
@@ -196,7 +195,7 @@ export class HttpBundle extends Bundle {
                     } else {
                         handler = (<Function>controller[ route.action ]).bind( controller );
                     }
-
+                                      
                     let event = new HttpActionEvent(routePath, route.method, route.action, controller, handler);
                     events.emit(EVENT_HTTP_ACTION, event);
 
@@ -354,7 +353,7 @@ export class HttpBundle extends Bundle {
             httpPort = Number(httpPort) || 9090;
             forks = Number(forks) || 1;
 
-            if (forks > 1 && cluster.isMaster) {
+            if (forks > 1 && cluster.isPrimary) {
                 // Create promise to prevent continue to next bundles run when forks are more than one
                 logger.info(`Fork application at scale ${forks}`);
                 for (let i = 0; i < forks; i++) {

@@ -78,7 +78,7 @@ export function RequestParam(name?: string, type: RequestInputContext = 'query')
         }
 
         // Inject request extractor dependency
-        Inject((invokeOptions: ContainerInvokeOptions) => {            
+        Inject(function requestProviderPrivateFactory(invokeOptions: ContainerInvokeOptions) {
             if (!invokeOptions.invokeArguments) throw Error(`Query decorator only allowed on Express action`);
             let req: Request = invokeOptions.invokeArguments[0];
             if (type in req) {
