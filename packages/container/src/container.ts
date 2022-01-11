@@ -343,7 +343,7 @@ export class Container {
 
     async getByTagAsync<T>(tag: string): Promise<T[]> {
         const services = await Promise.all(this.findByTag(tag).map(definition => this._invoke<T>(definition.name, { stack: [], async: true })));
-        return services.filter((service): service is T => service != undefined);
+        return services.filter((service): service is Awaited<T> => service != undefined);
     }
 
     /**

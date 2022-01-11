@@ -1054,7 +1054,7 @@ describe('Container', () => {
     });
 
     describe('ContainerInvokeOptions', () => {
-        it('should works', (done) => {
+        it('should works', async () => {
             let container = new Container();           
             class Request { id: number = 10; }
             class Numbers { num = 20 }
@@ -1066,7 +1066,7 @@ describe('Container', () => {
                         name = getParameters(params[0][params[1]])[params[2]];
                     }
                     
-                    Inject((invokeOptions: ContainerInvokeOptions) => {
+                    Inject(function queryPrivateFactory(invokeOptions: ContainerInvokeOptions) {
                         return invokeOptions?.invokeArguments![0][name as any];
                     })(...params);
                 };
@@ -1079,11 +1079,15 @@ describe('Container', () => {
             }
             
             container.ignoreInvokeLaterDep(Request);
-            container.invokeLaterAsync(Controller, 'index')({ id: 12 }).then(result => {
+
+            await container.invokeLaterAsync(Controller, 'index')({ id: 12 }).then(result => {
                 deepEqual(result, [20, 12,12,12]);
-                done();
             });
 
+            // Check if values are cached
+            await container.invokeLaterAsync(Controller, 'index')({ id: 13 }).then(result => {
+                deepEqual(result, [20, 13, 13, 13]);
+            });
         });
     });
 

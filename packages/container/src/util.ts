@@ -5,6 +5,7 @@ import { DecoratorError } from "./errors";
 import { Injectable, IMethod, Factory, IInternalDefinition } from "./types";
 import { ServiceDefinition } from "./serviceDefinition";
 import { ServiceType } from "./types";
+import { PRIVATE_FACTORY_REGEX } from ".";
 
 export namespace Decorator {
 
@@ -74,7 +75,7 @@ export function createServiceDefinition(definition: Partial<ServiceDefinition>):
     if (typeof definition.name !== 'string') throw Error(`Service name must be string`);
     return Object.assign(new ServiceDefinition(), definition);
 }
-
+export function isPrivateFactory(value: any): value is Factory { return value instanceof Function && PRIVATE_FACTORY_REGEX.test(value.name); }
 export function isFactory(value: any): value is Factory { return value instanceof Function && FACTORY_REGEX.test(value.name); }
 export function isService(value: any): value is ServiceType { return value instanceof Function && !FACTORY_REGEX.test(value.name); }
 export function isServiceDefinition(value: any): value is ServiceDefinition {
@@ -134,7 +135,7 @@ export function getInitialServiceDefinition(target: Function, context?: any): Se
         service: target,
         name: target.name,
         parameters: deps,
-        private: false,
+        private: isPrivateFactory(target) || (typeof target == 'function' && (<any>target)['isPrivateService'] == true),
         isFactory: isFactory(target),
         invoke: !is.Class(target) && !SERVICE_REGEX.test(target.name),
     } as Partial<IInternalDefinition>);
