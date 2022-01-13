@@ -8,6 +8,7 @@ import { AuthenticationManager } from './authentication/AuthenticationManager';
  */
 export function createSecureMiddleware(options?: { role?: string, redirectPath?: string, anonymous?: boolean, providerName?: string, [key: string]: any }) {
     return function secureMiddleware(authManager: AuthenticationManager, req: Request, res: Response, next: NextFn) {
+        if (req.method.toLowerCase() == 'options') return next();   // CORS-preflight
         let { role, redirectPath, anonymous, providerName } = options || {};
     
         // Check client authentication
@@ -24,12 +25,12 @@ export function createSecureMiddleware(options?: { role?: string, redirectPath?:
                 // Redirect to given redirectRoute
                 if (redirectPath) res.redirect(redirectPath);
                 // or return Error
-                else next(Error(`Authentication failed`));
+                else res.status(401).json({ error: 'Authentication failed' });
             }
         })
         .catch(err => {
             if (redirectPath) res.redirect(redirectPath);
-            else next(Error(`Authentication failed`));
+            else res.status(401).json({ error: 'Authentication failed' });
         });
     }
 }
