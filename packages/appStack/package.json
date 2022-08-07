@@ -49,7 +49,7 @@
 		"https-proxy-agent": "^5.0.0",
 		"js-yaml": "^4.0.0",
 		"jsonwebtoken": "^8.5.1",
-		"node-forge": "1.0.0",
+		"node-forge": "1.3.0",
 		"reflect-metadata": "^0.1.13",
 		"source-map-support": "^0.5.21",
 		"spdy": "^4.0.2",
