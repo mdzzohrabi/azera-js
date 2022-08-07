@@ -1,9 +1,7 @@
 import { Container } from '@azera/container';
-import { deepStrictEqual, ok, strictEqual } from 'assert';
+import { deepStrictEqual, equal, ok, strictEqual } from 'assert';
 import { ConfigResolver, ConfigSchema, GraphQlBundle, HttpBundle, is, Kernel } from '../../src';
-import { GraphQl } from "../../src/bundle/graph/Decorators";
-import { GraphQlBuilder } from '../../src/bundle/graph/GraphQlBuilder';
-import { GraphQlManager } from '../../src/bundle/graph/GraphqlManager';
+import { GraphQlManager, GraphQlBuilder, GraphQl } from '../../src/bundle/graph';
 import { hasMeta } from '../../src/decorator/Metadata';
 
 let { Type, Field, Input, Directive, Param, RequestConfig, Parent } = GraphQl;
@@ -77,7 +75,7 @@ type Animal {\n\tname: String\n}
 
         describe('Directive', () => {
             it('should resolve directive', async function () {
-                this.timeout(1000);
+                this.timeout(3000);
                 
                 class Directives {
                     @Directive() static fetch($url: string ): any {
@@ -297,10 +295,9 @@ input UserInput {\n\tusername: String\n}`
                 let container = new Container();
                 let builder = await container.invokeAsync(GraphQlBuilder);
                 let manager = await container.invokeAsync(GraphQlManager);
-                
                 let schema = await builder.buildSchema(Query);
-                manager.addNode('public', { schema });
 
+                manager.addNode('public', { schema });
                 let controllerResult = await container.invokeAsync(VersionController, 'version' as any);
 
                 deepStrictEqual(

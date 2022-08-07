@@ -1,1 +1,1 @@
-yarn mocha -r ts-node/register tests/${1}.spec.ts --watch --watch-files tests/${1}.spec.ts,${2}
+yarn mocha --no-config -r ts-node/register tests/${1}.spec.ts --watch --watch-files tests/${1}.spec.ts,${2}

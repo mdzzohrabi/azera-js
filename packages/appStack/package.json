@@ -1,6 +1,6 @@
 {
 	"name": "@azera/stack",
-	"version": "1.1.33",
+	"version": "1.1.34",
 	"description": "Azera Web Framework",
 	"main": "dist/index.js",
 	"author": "Masoud Zohrabi <mdzzohrabi@gmail.com>",

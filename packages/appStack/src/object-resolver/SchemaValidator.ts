@@ -40,7 +40,7 @@ export class SchemaValidator {
         /** Enum (Array.includes) */
         enum: (value, ...items) => items.includes(value),
         /** is Valid Email address */
-        email: value => /[a-zA-Z_-.0-9]\@[a-zA-Z_-.0-9]/.test(value),
+        email: value => /[a-zA-Z_\-.0-9]\@[a-zA-Z_\-.0-9]/.test(value),
         /** Phone number */
         phone: value => /[0-9]{4,20}/.test(value),
         /** Mobile number */

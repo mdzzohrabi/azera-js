@@ -7,6 +7,8 @@ import { invariant } from '../../helper/Util';
 import type { NextFn, Request, Response } from '../http';
 import { GraphQlManager } from './GraphQlManager';
 
+export { GraphQlManager }
+
 export type FieldInputsType = {
     [name: string]: any | { index: number, type: any, required?: boolean, default?: string }
 }
