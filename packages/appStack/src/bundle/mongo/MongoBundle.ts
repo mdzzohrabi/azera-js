@@ -64,14 +64,15 @@ export class MongoBundle extends Bundle {
         let mongoManager = await container.invokeAsync(MongoManager);
 
         await import('mongodb').then(({ MongoClient, Db }) => {
+
+            // Proxy
+            if (proxy)
+                MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, MongoClient.prototype.connect);
+
             // Connections
             forEach(connections, (conn, name) => {
                 let serviceName = `mongo.${name}`;
                 container.setFactory(serviceName, function mongoConnectionFactory() {
-                    // Proxy
-                    if (proxy)
-                        MongoClient.prototype.connect = wrapCreateConnectionWithProxy(proxy, MongoClient.prototype.connect);
-
                     let auth = "";
                     if (conn.username) {
                         auth = `${conn.username}:${encodeURIComponent(conn.password)}@`;

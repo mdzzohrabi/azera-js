@@ -1,4 +1,3 @@
-import { format as formatUrl } from 'url';
 import { invariant } from '../../helper/Util';
 import { CacheProvider, CacheProviderHit, CacheProviderOptions } from '../CacheProvider';
 
@@ -20,7 +19,7 @@ export class RedisCacheProvider extends CacheProvider {
 
     async has(key: string): Promise<boolean> {
         const client = await this.getClient();
-        return client.exists(key);
+        return await client.exists(key) > 0;
     }
     
     async set<T>(key: string, value: T): Promise<T> {

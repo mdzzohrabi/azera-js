@@ -69,9 +69,7 @@ export class GraphQlBundle extends Bundle {
 
                     return await manager.createServer({
                         schema,
-                        playground: node.playground ?? false,
                         debug: node.debug,
-                        uploads: { maxFileSize: node.maxFileSize },
                         context
                     });
                 });
@@ -84,6 +82,7 @@ export class GraphQlBundle extends Bundle {
                     tags: [ HttpBundle.DI_TAG_MIDDLEWARE ],
                     factory: async function graphqlNodeMiddleware() {
                         let nodeApp = await container.invokeAsync<ApolloServer>(`graphql_node_${name}`);
+                        await nodeApp.start();
                         return nodeApp.getMiddleware({
                             path: node.path
                         });

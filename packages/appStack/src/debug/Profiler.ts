@@ -92,7 +92,7 @@ export class Profiler {
     profileMethod<T extends { [name: string]: any }>(context: T, method: keyof T, profileName: string, detail?: (target: T, ...params: any[]) => any): void {
         let self = this;
         let base = context[method];
-        let methodName = method + '$profile';
+        let methodName = String(method) + '$profile';
         context[method] = ({
             async [methodName](...params: any[]) {
                 let profile = self.start(profileName, detail ? detail(this as any, ...params) : undefined );

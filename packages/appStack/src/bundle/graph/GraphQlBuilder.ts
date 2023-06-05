@@ -237,7 +237,8 @@ export class GraphQlBuilder {
 
     async buildSchema(...objects: any[]) {
         let { resolvers, sdl } = await this.build(...objects);
-        let { makeExecutableSchema } = await import('apollo-server-express');
+        let { makeExecutableSchema } = await import('@graphql-tools/schema');
+console.log(resolvers,sdl);
 
         return makeExecutableSchema({
             typeDefs: sdl,
