@@ -225,6 +225,8 @@ export class GraphQlBuilder {
             sdl += `\n}`;
 
             if (instance) {
+                console.log(type.name, instance);
+                
                 resolvers[type.name] = instance;
             }
 
@@ -238,7 +240,6 @@ export class GraphQlBuilder {
     async buildSchema(...objects: any[]) {
         let { resolvers, sdl } = await this.build(...objects);
         let { makeExecutableSchema } = await import('@graphql-tools/schema');
-console.log(resolvers,sdl);
 
         return makeExecutableSchema({
             typeDefs: sdl,
