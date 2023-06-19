@@ -10,6 +10,7 @@ import { Logger } from '../logger/Logger';
 import { Profiler } from '../debug/Profiler';
 import { enableSourceMap, getPackageDir } from '../helper/Util';
 import { Cli } from '../bundle/cli';
+import { globSync } from 'glob';
 
 /**
  * Application kernel
@@ -336,7 +337,9 @@ export class Kernel {
      * Will require entered file and return the exported class according to file name, e.g :
      * ```
      * Kernel.use("/controller/home-controller"); // returns HomeController class
+     * Kernel.use("/controller/home-controller@HomeController"); // returns HomeController class
      * Kernel.use("/controller/home-controller::indexAction"); // returns invokeLater(HomeController, 'indexAction') class
+     * Kernel.use("/controller/home-controller@HomeController::indexAction"); // returns invokeLater(HomeController, 'indexAction') class
      * ```
      * @param fullName Name
      */

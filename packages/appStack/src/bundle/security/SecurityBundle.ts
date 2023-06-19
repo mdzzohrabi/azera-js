@@ -31,11 +31,11 @@ export class SecurityBundle extends Bundle {
         ;
 
         config
-            .node('http.routes.*.secure', { description: 'Enable security in given route', type: 'boolean|object' })
-            .node('http.routes.*.secure.redirectPath', { description: 'Redirect path on authentication failed', type: 'string' })
-            .node('http.routes.*.secure.anonymoous', { description: 'Allow anonymous', type: 'boolean' })
-            .node('http.routes.*.secure.role', { description: 'Authorization checking role', type: 'string' })
-            .node('http.routes.*.secure.providerName', { description: 'Authentication provider name', type: 'string' })
+            .node('web.routes.*.secure', { description: 'Enable security in given route', type: 'boolean|object' })
+            .node('web.routes.*.secure.redirectPath', { description: 'Redirect path on authentication failed', type: 'string' })
+            .node('web.routes.*.secure.anonymoous', { description: 'Allow anonymous', type: 'boolean' })
+            .node('web.routes.*.secure.role', { description: 'Authorization checking role', type: 'string' })
+            .node('web.routes.*.secure.providerName', { description: 'Authentication provider name', type: 'string' })
 
         container.autoTag(AuthenticationProvider, [SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER]);
         container.getDefinition(AuthenticationManager).parameters[0] = '$$' + SecurityBundle.DI_TAG_AUTHENTICATION_PROVIDER;

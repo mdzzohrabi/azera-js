@@ -65,17 +65,21 @@ export class CliBundle extends Bundle {
 
     @Inject() boot(container: Container) {
 
-        let commands = container.getByTag(DI_TAG_COMMAND) as Command[];
+        let commands = container.getByTag<Command>(DI_TAG_COMMAND);
 
         // Register commands
-        commands.sort((a, b) => a.name > b.name ? -1 : 1).forEach(command => {
-            let commanderCommand = commander.program.createCommand(command.name);
-            container.invoke(command, 'configure',
-                commanderCommand
-                    .action(container.invokeLaterAsync(command, 'run') as any)
-            )
-            commander.program.addCommand(commanderCommand);
-        });
+        commands
+            // Sort by name ASC
+            .sort((a, b) => a.name > b.name ? -1 : 1)
+            .forEach(command => {
+                // Create commander command object
+                let commanderCommand = commander.program.command(command.name);
+                commanderCommand.description(command.description);
+                commanderCommand.action(container.invokeLaterAsync(command, 'run') as any);
+
+                // Call Command.configure method
+                container.invoke(command, 'configure', commanderCommand)
+            });
 
     }
 

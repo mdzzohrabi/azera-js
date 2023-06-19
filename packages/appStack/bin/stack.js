@@ -79,7 +79,7 @@ program
             './nodemon.json': JSON.stringify({
                 "$schema": "https://json.schemastore.org/nodemon",
                 "watch": ["./dist/**/*.js", "./app.config.json", "./**/*.yml"],
-                "exec": "node dist/index http:start",
+                "exec": "yarn build && yarn cli config:schema && node dist/index http:start",
                 "ext": "js"
             }, null, "\t")
         };
@@ -94,6 +94,7 @@ program
         log(`Add default commands to package.json ...`);
 
         let scripts = {
+            dev: 'nodemon',
             cli: 'node dist/index',
             web: 'node dist/index http:start',
             watch: 'yarn tsc -w',

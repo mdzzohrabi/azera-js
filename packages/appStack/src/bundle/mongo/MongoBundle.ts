@@ -39,7 +39,7 @@ export class MongoBundle extends Bundle {
         ;
 
         // Resolve Repository for Http secured routes
-        config.node('http.routes.*.secure.authRepository', { description: 'Authentication repository', type: 'string|object', validate(value) { return is.String(value) ? container.invoke(Kernel).use(value) : value } })
+        config.node('web.routes.*.secure.authRepository', { description: 'Authentication repository', type: 'string|object', validate(value) { return is.String(value) ? container.invoke(Kernel).use(value) : value } })
 
     }
 

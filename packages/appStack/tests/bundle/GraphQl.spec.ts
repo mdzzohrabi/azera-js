@@ -246,7 +246,7 @@ input UserInput {\n\tusername: String\n}`
             it('should execute query with execute()', async () => {
 
                 @Type() class User {
-                    @Field() public friends: string[] = [];
+                    @Field({type: '[String]'}) friends: string[] = [];
                     @Field() public name!: string;
                     @Field() isFriend(
                         @Parent() user: User,

@@ -389,9 +389,9 @@ export class HtmlParser {
 /**
  * CSS-Selector parsing regular expression
  */
-const SELECTOR_NODE_REGEX = /\s*(?=\S)(?<op>[\s+~,>]{1})?\s*(?<!\.)(?<name>(\*|[:a-zA-Z_]*[a-zA-Z0-9-_]*))(\#(?<id>[a-zA-Z_]*[a-zA-Z0-9-_]*))?(?<class>(\.[a-zA-Z_]+[a-zA-Z0-9-_]*)*)(?<attr>(\[[A-Za-z_]+[a-zA-Z0-9-_]*(([|^~|*$]?[=])[\w\W]+)?\])*)/gm;
+const SELECTOR_NODE_REGEX = /\s*(?=\S)(?<op>[\s+~,>]{1})?\s*(?<!\.)(?<name>(\*|[:a-zA-Z_]*[a-zA-Z0-9-_]*))(?<class>(\.[a-zA-Z_]+[a-zA-Z0-9-_]*)*)(\#(?<id>[a-zA-Z_]*[a-zA-Z0-9-_]*))?(?<classAfterId>(\.[a-zA-Z_]+[a-zA-Z0-9-_]*)*)(?<attr>(\[\s*[A-Za-z_]+[a-zA-Z0-9-_]*\s*(([|^~|*$]?[=])\s*[\w\W]+)?\s*\])*)/gm;
 
-const SELECTOR_ATTR_REGEX = /\[(?<name>[[A-Za-z_]+[a-zA-Z0-9-_]*)((?<op>[|^~|*$]?[=])(?<value>[\w\W]+))?\]/gm;
+const SELECTOR_ATTR_REGEX = /\[\s*(?<name>[[A-Za-z_]+[a-zA-Z0-9-_]*)\s*((?<op>[|^~|*$]?[=])\s*(?<value>[\w\W]+))?\s*\]/gm;
 
 /**
  * Cached CSS-Selectors
@@ -402,7 +402,7 @@ let cachedSelectors: { [selector: string]: any[] } = {};
  * Convert CSS-Selector string to strcutured format
  * @param selector CSS Selector string
  */
-function parseSelector(selector: string): CSSSelector[] {
+export function parseSelector(selector: string): CSSSelector[] {
     if (cachedSelectors[selector]) return cachedSelectors[selector];
     let selectors = [];
     let result: RegExpExecArray | null
@@ -411,6 +411,9 @@ function parseSelector(selector: string): CSSSelector[] {
     let overflow = 0;
     while (result = SELECTOR_NODE_REGEX.exec(selector)) {
         if (overflow++ > 40) throw Error(`CSS Selector parse overflow for "${selector}"`);
+        if (result.groups) {
+            result.groups.class = `${result.groups.class}${result.groups.classAfterId}`;
+        }
         let node: CSSSelector = { ...result.groups };
         let attrs: { name: string, value?: string, op?: string }[] = [];
         if (result.groups?.attr) {
@@ -420,6 +423,7 @@ function parseSelector(selector: string): CSSSelector[] {
             while (attrResult = SELECTOR_ATTR_REGEX.exec(result.groups.attr)) {
                 if (overflow++ > 20) throw Error(`CSS selector attribute matcher overflow`);
                 let { name, value, op } = attrResult.groups ?? {};
+                value = value.trim();
                 attrs.push({
                     value: value ? (value[0] == "'" || value[0] == '"' ? value.substr(1, value.length - 2) : value) : undefined,
                     name, op

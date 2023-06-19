@@ -225,8 +225,6 @@ export class GraphQlBuilder {
             sdl += `\n}`;
 
             if (instance) {
-                console.log(type.name, instance);
-                
                 resolvers[type.name] = instance;
             }
 

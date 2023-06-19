@@ -51,7 +51,7 @@ describe('Cache', () => {
 
         let cache = new FileCacheProvider();
         cache.name = 'file';
-        cache.url = new URL('file://' + __dirname + '/../var/cache');
+        cache.url = new URL((__dirname.includes(':') ? '' : 'file://') +  __dirname + '/../var/cache');
 
         strictEqual( await cache.has('a') , false );
         strictEqual( await cache.get('a') , undefined );

@@ -1,8 +1,9 @@
 import { deepStrictEqual, ok, strictEqual } from "assert";
-import { HTMLElement, HtmlParser } from "../../src/browser/HtmlParser";
+import { HTMLElement, HtmlParser, parseSelector } from "../../src/browser/HtmlParser";
 import { VirtualBrowser } from "../../src/browser/VirtualBrowser";
 import { readFileSync } from 'fs';
 import { runInNewContext } from "vm";
+import { assert } from "chai";
 
 describe('Browser Bundle -> HTMLParser', () => {
 
@@ -34,6 +35,17 @@ describe('Browser Bundle -> HTMLParser', () => {
         strictEqual( parser.querySelectorAll('h2').length, 11 );
     });
 
+    it('parseSelector() should works properly', () => {
+        let selector = parseSelector('img.thumb#thumb1.circle[ lazy = "true" ]');
+        assert.lengthOf(selector, 1, 'only one selector should be parsed');
+        assert.equal(selector[0].name, 'img');
+        assert.equal(selector[0].id, 'thumb1');
+        assert.deepEqual(selector[0].class, ['thumb', 'circle']);
+        assert.deepEqual(selector[0].attr, [
+            {value: 'true', name: 'lazy', op: '=' }
+        ])
+    })
+
 });
 
 describe('Browser Bundle -> VirtualBrowser', () => {
@@ -62,7 +74,7 @@ describe('Browser Bundle -> VirtualBrowser', () => {
         let window = await VirtualBrowser.loadFile(__dirname + '/../fixture/html_fixture_1.html');
         
         strictEqual( window.document.title , 'Dave Raggett&#39;s Introduction to HTML' );
-        strictEqual( window.document.querySelector('img[name="adBanner"]').getAttribute('width'), '48' );
+        strictEqual( window.document.querySelector('img[ name = "adBanner" ]').getAttribute('width'), '48' );
         strictEqual( window.document.querySelectorAll('img').length, 8 );
         window.document.querySelector('img[name="adBanner"]').remove();
         strictEqual( window.document.querySelector('img[name="adBanner"]'), undefined );
