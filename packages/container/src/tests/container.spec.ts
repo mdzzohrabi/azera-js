@@ -1162,7 +1162,7 @@ describe('Container', () => {
                 class Book { constructor(public title: string) {} };
                 class BookController {
                     
-                    @ParamConverter(Book, value => new Book(value.value))
+                    @ParamConverter(Book, value => new Book(value.value + ' [PC]'))
                     @Inject()
                     findBook(book: Book) {
                         return book;
@@ -1182,7 +1182,7 @@ describe('Container', () => {
                 let result2 = container.invoke(controller, 'findBookNoConvert', 'Alice in the wonderland no convert');
 
                 expect(result).toBeInstanceOf(Book);
-                expect(result.title).toEqual('Alice in the wonderland');
+                expect(result.title).toEqual('Alice in the wonderland [PC]');
                 expect(result2).toBeInstanceOf(Book);
                 expect(result2.title).toEqual('Default title');
             })
@@ -1236,6 +1236,56 @@ describe('Container', () => {
 
             await expect(container.invokeAsync(ThrowabeService)).rejects.toThrow(/Custom Error/);
         });
+    });
+
+    describe('Scoped Container', () => {
+
+        it('should invoke different instance for different scopes', () => {
+            let container = new Container();
+            class Request {
+                id: number = 1;
+            }
+
+            let scope1 = container.scope('scope-1');
+            let scope2 = container.scope('scope-2');
+
+            let request1 = scope1.invoke(Request);
+            let request2 = scope2.invoke(Request);
+            let request1_2 = scope1.invoke(Request);
+            let request2_2 = scope2.invoke(Request);
+
+            request1.id = 1;
+            request2.id = 2;
+
+            expect(request1).not.toEqual(request2);
+            expect(request1).toEqual(request1_2);
+            expect(request2).toEqual(request2_2);
+        });
+
+
+        it('should follow parent container', () => {
+            let container = new Container();
+            class Request {
+                id: number = 1;
+            }
+
+            let baseRequest = container.invoke(Request);
+            baseRequest.id = 10;
+
+            let scope1 = container.scope('scope-1');
+            let scope2 = container.scope('scope-2');
+
+            let request1 = scope1.invoke(Request);
+            let request2 = scope2.invoke(Request);
+
+            request1.id = 1;
+            request2.id = 2;
+
+            expect(request1).toEqual(baseRequest);
+            expect(request2).toEqual(baseRequest);
+            expect(request1).toEqual(request2);
+        });
+
     });
 
 });

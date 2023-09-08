@@ -37,6 +37,12 @@ export class Container {
         }
     }
 
+    /** Container name (scope name) */
+    public containerName?: string;
+
+    /** Parent container (for scoped containers) */
+    private parentContainer?: Container;
+
     /** Invoked services in-memory cache */
     private instances = new Map<any, any>();
 
@@ -74,6 +80,13 @@ export class Container {
         this.setAlias(Container, this);
     }
 
+    public scope(name: string | undefined = undefined) {
+        let scope = new Container();
+        scope.containerName = name;
+        scope.parentContainer = this;
+        return scope;
+    }
+
     /**
      * Get container parameters
      */
@@ -103,7 +116,7 @@ export class Container {
             throw Error(`Factory must be Function or instanceOf IFactory`);
         }
 
-        if ('isPrivateFactory' in factory) isPrivate = factory['isPrivateFactory'];
+        if ('isPrivateFactory' in factory) isPrivate = factory['isPrivateFactory'] as boolean;
 
         return { service: result, isPrivate };
     }
@@ -154,7 +167,7 @@ export class Container {
      */
     private $checkFactoryCondition(factory: Factory, options?: IContainerInvokeOptions): boolean {
         if ('factoryCondition' in factory) {
-            let { methodName, target, paramIndex }: IFactoryCondition = factory['factoryCondition'];
+            let { methodName, target, paramIndex } = factory['factoryCondition'] as IFactoryCondition;
             if (target && !(options?.methodTarget instanceof target) && options?.methodTarget !== target) return false;
             if (methodName && options?.methodName != methodName) return false;
             if (typeof paramIndex !== 'undefined' && options?.argumentIndex != paramIndex) return false; 
@@ -163,14 +176,69 @@ export class Container {
     }
 
     /**
+     * Check if a type has any defined factories
+     * @param key Type
+     * @returns 
+     */
+    private hasFactories(key: any): boolean {
+        return this.factories.has(key) || !!this.parentContainer?.hasFactories(key);
+    }
+
+    /**
+     * Get defined factories for specified type
+     * @param key Type
+     * @returns 
+     */
+    private getFactories(key: any): Factory[] {
+        return [...(this.factories.get(key) || []), ...(this.parentContainer?.getFactories(key) || [])];
+    }
+
+    /**
+     * Check if a type has any defined pipes
+     * @param type Type
+     * @returns 
+     */
+    private hasPipes(type: any): boolean {
+        return this.pipes.has(type) || !!this.parentContainer?.hasPipes(type);
+    }
+
+    /**
+     * Get available pipes for specified type
+     * @param key Type
+     * @returns 
+     */
+    private getPipes(key: any): Function[] {
+        return [...(this.pipes.get(key) || []), ...(this.parentContainer?.getPipes(key) || [])];
+    }
+
+    /**
+     * Check if a service defined
+     * @param type Type
+     * @returns 
+     */
+    private hasService(type: any): boolean {
+        return !!this.services[type] || !!this.parentContainer?.hasService(type);
+    }
+
+    /**
+     * Get defined service
+     * @param key Type
+     * @returns 
+     */
+    private getService(key: any): ServiceDefinition<Function> {
+        return this.services[key] ?? this.parentContainer?.getService(key);
+    }
+    
+
+    /**
      * Get appropriate factory for given service definition
      * @param service Service definition
      * @returns 
      */
     private getAppropriateFactory(service: ServiceDefinition, options?: IContainerInvokeOptions) {
         let factory: Factory | undefined;
-        if (this.factories.has(service.service)) {
-            let factories = this.factories.get(service.service);
+        if (this.hasFactories(service.service)) {
+            let factories = this.getFactories(service.service);
             let factory = factories?.find(factory => this.$checkFactoryCondition(factory, options));
             if (factory) return factory;
         }
@@ -286,8 +354,8 @@ export class Container {
                         let { result: object } = createService(parameters, properties);
 
                         // Pipelines                    
-                        if (service.service && this.pipes.has(service.service)) {
-                            for (let pipe of (this.pipes.get(service.service) ?? [])) {
+                        if (service.service && this.hasPipes(service.service)) {
+                            for (let pipe of (this.getPipes(service.service) ?? [])) {
                                 await Promise.resolve(pipe(object, this));
                             }
                         }
@@ -306,8 +374,8 @@ export class Container {
             let { result: object, return: doReturn } = createService(parameters, properties);
             
             // Pipelines
-            if (service.service && this.pipes.has(service.service)) {
-                this.pipes.get(service.service)?.forEach(pipe => {
+            if (service.service && this.hasPipes(service.service)) {
+                this.getPipes(service.service)?.forEach(pipe => {
                     pipe(result, this);
                 });
             }
@@ -356,6 +424,13 @@ export class Container {
             if ( is.Array(service.tags) && service.tags.includes(tag) )
                 services.push( service );
         });
+
+        // Merge parent container
+        if (this.parentContainer) {
+            let parentServices = this.parentContainer.findByTag<T>(tag);
+            services = [...services, ...parentServices];
+        }
+        
         return services;
     }
 
@@ -476,6 +551,14 @@ export class Container {
         if (method) return this.invokeLater(value, method)(...params);
         return this._invoke(value);
     }
+
+    private hasInstance(key: any): boolean {
+        return this.instances.has(key) || !!this.parentContainer?.hasInstance(key);
+    }
+
+    private getInstance(key: any): any {
+        return this.instances.get(key) ?? this.parentContainer?.getInstance(key);
+    }
     
     /**
      * 
@@ -492,7 +575,12 @@ export class Container {
     private _invoke <T>(value: Invokable<T>, options?: IContainerInvokeOptions ): T
     {
         // Cached
-        if ( this.instances.has(value) ) return this.instances.get(value);
+        if ( this.hasInstance(value) ) return this.getInstance(value);
+
+        // Check if defined in parent
+        if (this.parentContainer?.hasFactories(value) || this.parentContainer?.hasService(value)) {
+            return this.parentContainer?._invoke(value, options);
+        }
 
         // Default options
         options = {
@@ -516,7 +604,7 @@ export class Container {
                 return this.findByTag( value.substr(2) ).map( service => this._invoke(service.name, options) ) as any;
             // Parameter
             else if ( value[0] === '$' )
-                return this.params[value.substr(1)];
+                return this.getParameter(value.substr(1));
             // Expression
             else if ( value[0] === '=' ) {
                 // @ts-ignore
@@ -524,11 +612,14 @@ export class Container {
                 return eval(value.substr(1));
             }
             // Defined service
-            else if (service = this.services[value])
+            else if (service = this.getService(value))
                 return this.resolveDefinition(service, options) as any;
             // Parameter
-            else if (this.params[value])
-                return this.params[value];
+            else {
+                let param = this.getParameter(value);
+                if (param)
+                    return param;
+            }
             
             throw new ServiceNotFoundError(String(value), options.stack);
         }
@@ -605,11 +696,19 @@ export class Container {
     }
 
     /**
+     * Check if a type is overrided
+     * @param type Type
+     */
+    hasType(type: Function): boolean {
+        return this.types.has(type) || !!this.parentContainer?.hasType(type);
+    }
+
+    /**
      * Get overrided service definition
      * @param type Type
      */
     getType(type: Function): ServiceDefinition | undefined {
-        return this.types.get(type);
+        return this.types.get(type) ?? this.parentContainer?.getType(type);
     }
 
     /**
@@ -632,13 +731,6 @@ export class Container {
      */
     set(type: Function, definition: Partial<ServiceDefinition>): this;
     set(...params: any[]) {
-        if (is.Function(params[0]))
-        {
-            this.definitionCache.delete(params[0]);
-            this.types.set(params[0], params[1]);
-            return this;
-        }
-
         // Collection of values
         if (is.HashMap<ContainerValue>(params[0])) {
             forEach(params[0], (value, name) => this.set(name, value));
@@ -647,14 +739,25 @@ export class Container {
 
         let [name, value] = params;
 
+        // 
+        if (is.Function(name))
+        {
+            this.definitionCache.delete(name);
+            this.types.set(name, value);
+            return this;
+        }
+
+        // Definition
         if (isServiceDefinition(value)) {
             this.addDefinition(Object.assign({ private: false, tags: [] }, value, { name }));
         }
+        // Named Service
         else if ( is.Function(value) || is.Array(value) ) {
             let def = Object.assign({}, this.getDefinition(value));
             def.name = name;
             this.addDefinition(def);
         }
+        // Parameter
         else this.setParameter(name, value);
 
         return this;
@@ -683,16 +786,16 @@ export class Container {
 
         if (typeof target == 'function') {
             def = getServiceDefinition(target) as IInternalDefinition;
-            if ( this.types.has(target) ) {
-                def = Object.assign({}, def, this.types.get(target));
+            if ( this.hasType(target) ) {
+                def = Object.assign({}, def, this.getType(target));
             }
             Container.checkInheritance(target);
             this.definitionCache.set(target, def);
         } else if ( typeof target == 'string' ) {
-            if ( !this.services[target] ) {
+            if ( !this.hasService(target) ) {
                 throw new ServiceNotFoundError(target);
             }
-            def = this.services[target];                
+            def = this.getService(target);                
             this.definitionCache.set(target, def);
         } else if ( isMethodInvoke(target) ) {
             let method = target.context[ target.method ];
@@ -779,7 +882,11 @@ export class Container {
             throw Error(`Parameter ${name} not found`);
         }
 
-        return this.params[name] || _default;
+        return this.params[name] || this.parentContainer?.$getParameter(name) || _default;
+    }
+
+    private $getParameter<T = any>(name: string): T extends object ? T & { [k: string]: any } : T {
+        return this.params[name] || this.parentContainer?.$getParameter(name);
     }
 
     /**
@@ -787,7 +894,7 @@ export class Container {
      * @param name Parameter name
      */
     hasParameter(name: string): boolean {
-        return Object.keys(this.params).includes(name);
+        return Object.keys(this.params).includes(name) || !!this.parentContainer?.hasParameter(name);
     }
 
     /**
@@ -795,7 +902,7 @@ export class Container {
      * @param name Service name
      */
     has(name: string): boolean {
-        return !!this.services[name];
+        return !!this.services[name] || !!this.parentContainer?.has(name);
     }
 
     /**
@@ -865,21 +972,31 @@ export class Container {
      * 
      * @deprecated use Container.services instead
      */
-    get definitions() {
+    get definitions(): Container['services'] {
+        if (this.parentContainer)
+            return {...this.parentContainer.definitions, ...this.services };
         return this.services;
     }
     
     /**
      * Return declared service names
      */
-    get names() {
+    get names(): string[] {
+        if (this.parentContainer)
+        {
+            return [...Object.keys(this.services), ...this.parentContainer.names];
+        }
         return Object.keys(this.services);
     }
 
     /**
      * Get services count
      */
-    get size() {
+    get size(): number {
+        if (this.parentContainer)
+        {
+            return Object.keys(this.services).length + this.parentContainer.size;
+        }
         return Object.keys(this.services).length;
     }
     

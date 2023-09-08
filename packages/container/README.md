@@ -254,3 +254,28 @@ async function run() {
 }
 
 ```
+
+
+## Scope
+```typescript
+class Request {
+  constructor(public requestId: number) {}
+}
+
+class EntityManager {
+}
+
+const container = new Container();
+
+container.add(EntityManager);
+
+const scope1 = container.scope(`request-1`);
+const scope2 = container.scope(`request-2`);
+
+scope1.setAlias(Request, new Request(100));
+scope2.setAlias(Request, new Request(200));
+
+assert( scope1.invoke(Request).requestId == 100 );    // true
+assert( scope2.invoke(Request).requestId == 200 );    // true
+assert( scope1.invoke(EntityManger) == scope2.invoke(EntityManager) );  // true
+```
