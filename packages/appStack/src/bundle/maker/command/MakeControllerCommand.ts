@@ -18,17 +18,23 @@ export class MakeControllerCommand extends AbstractMakeCommand {
     }
 
     async run(name: string, { path, dir, backup }: { path?: string, dir?: string, backup?: boolean }) {
+        let controllerPath = path && path != '/' ? "'" + path.replace('%name%', Str.dasherize(name)) + "'" : '';
+
         this.makeFile({
             type: 'Controller',
             name, backupConfiguration: backup, dirName: dir,
-            template: className => `import {Controller, Get, Request, Response, Inject} from '@azera/stack';
+            template: className => `
+import { Controller, Get, Request, Response, Inject } from '@azera/stack';
 
-@Controller(${path && path != '/' ? "'" + path.replace('%name%', Str.dasherize(name)) + "'" : ''})
-export class ${className} {
-    @Get('/') @Inject() indexAction(req: Request, res: Response) {
+@Controller(${controllerPath})
+export default class ${className} {
+
+    @Get('/') indexAction(req: Request, res: Response) {
         return 'Index action';
     }
-}`});
+
+}`.trim()
+        });
 
    }
 
