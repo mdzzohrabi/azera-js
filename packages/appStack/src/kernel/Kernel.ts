@@ -10,7 +10,6 @@ import { Logger } from '../logger/Logger';
 import { Profiler } from '../debug/Profiler';
 import { enableSourceMap, getPackageDir } from '../helper/Util';
 import { Cli } from '../bundle/cli';
-import { globSync } from 'glob';
 
 /**
  * Application kernel
