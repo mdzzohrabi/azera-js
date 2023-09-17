@@ -11,7 +11,7 @@ import { SecFetchModes } from "../Types";
  * 
  * @decorator
  */
-export const CrossOrigin = createDecorator(function (
+export const CORS = createDecorator(function (
     fetchMode: SecFetchModes = 'no-cors',
     allowOrigin: string = '*',
     allowHeaders: string = '*', allowMethods: string = '*', vary: string = 'Origin'
@@ -27,3 +27,6 @@ export const CrossOrigin = createDecorator(function (
         }
     ])(this.target, this.propName);
 }, 'http:cross_origin');
+
+// Backward Compatibility
+export const CrossOrigin = CORS;
