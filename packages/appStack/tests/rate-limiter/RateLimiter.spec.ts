@@ -8,11 +8,7 @@ describe('RateLimiter', () => {
         this.timeout(1000);
 
         let cache = new CacheManager([
-            (() => {
-                let provider = new MemoryCacheProvider()
-                provider.name = 'memory';
-                return provider;
-            })()
+            new MemoryCacheProvider('memory')
         ]);
 
         let limiter = new RateLimiter([

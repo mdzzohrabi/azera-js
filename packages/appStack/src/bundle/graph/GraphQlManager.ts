@@ -1,6 +1,5 @@
+import type { ApolloServer, ApolloServerOptions, BaseContext, GraphQLRequest } from "@apollo/server";
 import is, { HashMap } from "@azera/util/is";
-import type { ApolloServer, ApolloServerExpressConfig } from "apollo-server-express";
-import type { GraphQLRequest } from "apollo-server-types";
 
 /**
  * GraphQl Manager
@@ -10,7 +9,7 @@ export class GraphQlManager {
 
     public nodes: HashMap<() => ApolloServer | Promise<ApolloServer>> = {};
 
-    protected isServerConfig(value: any): value is ApolloServerExpressConfig {
+    protected isServerConfig(value: any): value is ApolloServerOptions<BaseContext> {
         return is.Object(value) && 'schema' in value;
     }
 
@@ -19,9 +18,9 @@ export class GraphQlManager {
      * @param nodeName Node name
      * @param node ApolloServer node
      */
-    public addNode(nodeName: string, node: ApolloServer | (() => ApolloServer | Promise<ApolloServer>) | ApolloServerExpressConfig) {
+    public addNode(nodeName: string, node: ApolloServer | (() => ApolloServer | Promise<ApolloServer>) | ApolloServerOptions<BaseContext>) {
         if (this.isServerConfig(node)) {
-            let config = { ...node } as ApolloServerExpressConfig;
+            let config = { ...node } as ApolloServerOptions<BaseContext>;
             node = () => this.createServer(config);
         }
         return this.nodes[nodeName] = is.Function(node) ? node : () => node as ApolloServer;
@@ -44,14 +43,14 @@ export class GraphQlManager {
     public async execute(nodeName: string, request: GraphQLRequest, options = { throwError: true }) {
         let node = await this.getNode(nodeName);
         let result = await node.executeOperation(request);
-        if (options.throwError && result.errors) {
-            throw new Error(result.errors.toString());
+        if (options.throwError && result.http.status != 200) {
+            throw new Error(result.body.toString());
         }
         return result;
     }
 
-    public async createServer(config: ApolloServerExpressConfig) {
-        let { ApolloServer } = await import('apollo-server-express');
+    public async createServer(config: ApolloServerOptions<BaseContext>) {
+        let { ApolloServer } = await import('@apollo/server');
         let server = new ApolloServer(config);
         return server;
     }

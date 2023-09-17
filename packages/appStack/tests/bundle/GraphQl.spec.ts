@@ -1,7 +1,7 @@
 import { Container } from '@azera/container';
-import { deepStrictEqual, equal, ok, strictEqual } from 'assert';
-import { ConfigResolver, ConfigSchema, GraphQlBundle, HttpBundle, is, Kernel } from '../../src';
-import { GraphQlManager, GraphQlBuilder, GraphQl } from '../../src/bundle/graph';
+import { deepStrictEqual, ok, strictEqual } from 'assert';
+import { ConfigResolver, ConfigSchema, GraphQlBundle, HttpBundle, Kernel, is } from '../../src';
+import { GraphQl, GraphQlBuilder, GraphQlManager } from '../../src/bundle/graph';
 import { hasMeta } from '../../src/decorator/Metadata';
 
 let { Type, Field, Input, Directive, Param, RequestConfig, Parent } = GraphQl;
@@ -271,12 +271,12 @@ input UserInput {\n\tusername: String\n}`
                 manager.addNode('public', { schema });
 
                 deepStrictEqual(
-                    { ...(await manager.execute('public', { query: `{ version }` })).data },
+                    { ...(await manager.execute('public', { query: `{ version }` })).body },
                     { version: '1.0.0' }
                 );
 
                 deepStrictEqual(
-                    JSON.parse(JSON.stringify({ ...(await manager.execute('public', { query: `{ user { name isFriend(username: "Alireza") } }` })).data })),
+                    JSON.parse(JSON.stringify({ ...(await manager.execute('public', { query: `{ user { name isFriend(username: "Alireza") } }` })).body })),
                     { user: { name: 'Masoud', isFriend: true } }
                 );
             });

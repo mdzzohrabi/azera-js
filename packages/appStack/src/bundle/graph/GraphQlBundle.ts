@@ -7,7 +7,7 @@ import { invariant } from '../../helper/Util';
 import { HttpBundle } from '../http';
 import { GraphQlBuilder } from './GraphQlBuilder';
 import { GraphQlManager } from './GraphQlManager';
-import type { ApolloServer } from 'apollo-server-express';
+import type { ApolloServer } from '@apollo/server';
 
 interface IGraphQlBundleConfig {
     nodes: {
@@ -64,13 +64,8 @@ export class GraphQlBundle extends Bundle {
                         ...(node.types?.map(type => is.String(type) ? kernel.use(type) : type) ?? [])
                     );
 
-                    // GraphQl Context
-                    let context = is.String(node.context) ? kernel.use(node.context) as Function : (node.context ?? {});
-
                     return await manager.createServer({
-                        schema,
-                        debug: node.debug,
-                        context
+                        schema
                     });
                 });
 
@@ -81,10 +76,19 @@ export class GraphQlBundle extends Bundle {
                 container.set(`graphql_node_${name}_middleware`, {
                     tags: [ HttpBundle.DI_TAG_MIDDLEWARE ],
                     factory: async function graphqlNodeMiddleware() {
-                        let nodeApp = await container.invokeAsync<ApolloServer>(`graphql_node_${name}`);
-                        await nodeApp.start();
-                        return nodeApp.getMiddleware({
-                            path: node.path
+                        const apolloServer = await container.invokeAsync<ApolloServer>(`graphql_node_${name}`);
+                        const kernel = await container.invokeAsync(Kernel);
+                        const { expressMiddleware } = await import('@apollo/server/express4');
+
+                        // Start apollo server
+                        await apolloServer.start();
+
+                        // GraphQl Context
+                        let context = is.String(node.context) ? kernel.use(node.context) as Function : (node.context ?? {});
+
+                        // Create middleware
+                        return expressMiddleware(apolloServer, {
+                            context: async (params) => typeof context == 'function' ? context(params) : context
                         });
                     }
                 });

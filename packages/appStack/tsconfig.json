@@ -11,7 +11,10 @@
         "importHelpers": true,
         "strictFunctionTypes": false,
         "inlineSourceMap": true,
-        "noImplicitAny": true
+        "noImplicitAny": true,
+        "paths": {
+            "@stack/*": ["./src/*"],
+        }
     },
     "include": ["src"],
     "exclude": ["node_modules"]

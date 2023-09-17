@@ -56,6 +56,12 @@ export class CoreBundle extends Bundle {
             .node('kernel.logger.transports.*.level', { description: 'Logger transport level (error,warn,info,verbose,debug,silly)', type: 'string' })
         ;
 
+        // Source Generator
+        config
+            .node('source_generator', { description: 'Source generator' })
+            .node('source_generator.enabled', { default: true })
+        ;
+
         // Configuration parameters
         config.node('parameters', {
             description: 'Container parameters',

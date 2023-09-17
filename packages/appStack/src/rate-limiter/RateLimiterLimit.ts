@@ -1,3 +1,5 @@
+import { AbstractRateLimitStrategy } from "./strategy/AbstractRateLimitStrategy";
+
 /**
  * RateLimiter Limit object
  * 
@@ -13,7 +15,7 @@ export class RateLimiterLimit {
         /** The number of seconds until the rate limit is reset. */
         public decaySeconds: number = 1,
         /** Rate limiter strategy name */
-        public strategy: string = 'fixed_window',
+        public strategy: string | AbstractRateLimitStrategy = 'fixed_window',
         /** Cache provider name */
         public cacheProviderName?: string
     ) {}
@@ -89,7 +91,12 @@ export class RateLimiterLimit {
     }
 
     /** Set rate limiter strategy */
-    public withStrategy(name: string) {
+    public withStrategy(name: string): this
+    public withStrategy(strategy: AbstractRateLimitStrategy): this
+    public withStrategy(name: string | AbstractRateLimitStrategy) {
+        if (typeof name != 'function' && typeof name != 'string') {
+            throw new TypeError(`Invalid strategy argument it must be strategy name or strategy class`);
+        }
         this.strategy = name;
         return this;
     }

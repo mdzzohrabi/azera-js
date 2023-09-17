@@ -124,7 +124,7 @@ export const GraphQl = {
                     operationName
                 });
 
-                return result.data;
+                return result.body;
             }
         }
     },

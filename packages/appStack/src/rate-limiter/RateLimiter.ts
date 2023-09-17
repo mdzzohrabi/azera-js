@@ -59,7 +59,7 @@ export class RateLimiter {
     }
 
     limiterStrategy(limit: RateLimiterLimit) {
-        let strategy = this.strategies[limit.strategy];
+        let strategy = typeof limit.strategy == 'string' ? this.strategies[limit.strategy] : Object.values(this.strategies).find(x => x instanceof (limit.strategy as any));
         if (!strategy) throw Error(`RateLimiter strategy ${limit.strategy} for limit ${limit.name} not found`);
         return strategy;
     }

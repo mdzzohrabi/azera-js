@@ -22,11 +22,13 @@ export abstract class CacheProvider {
     /** Cache provider schema */
     static readonly schema: string;
 
-    /** Cache provider name */
-    public name!: string;
-    
-    /** Cache provider Url */
-    public url?: URL;
+    public constructor(
+        /** Cache provider name */
+        public name: string = '',
+
+        /** Cache provider Url */
+        public url?: URL
+    ) {}
 
     abstract set<T>(key: string, value: T): Promise<T>
 
