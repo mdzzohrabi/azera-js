@@ -1,0 +1,14 @@
+{
+  "name": "@azera/reflect",
+  "module": "index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "reflect-metadata": "^0.2.2"
+  }
+}
