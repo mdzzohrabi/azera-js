@@ -13,3 +13,4 @@ db
 *.log
 packages/cms./
 .vs
+.DS_Store

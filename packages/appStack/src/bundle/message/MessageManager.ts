@@ -13,12 +13,14 @@ export class MessageManager {
      * Dispatch a message
      * @param message Message
      */
-    public dispatch<T extends Message>(message: T) {
-        this.transports.forEach(transport => {
+    public async dispatch<T extends Message>(message: T): Promise<boolean> {
+        let result = false;
+        for (let transport of this.transports) {
             if (transport.accept(message)) {
-                transport.send(message, {});
+                result ||= await transport.send(message, {});
             }
-        })
+        }
+        return result;
     }
 
     /**

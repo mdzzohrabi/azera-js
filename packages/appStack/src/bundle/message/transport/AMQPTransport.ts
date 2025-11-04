@@ -1,7 +1,7 @@
 import { MessageTransport } from './MessageTransport';
 import { Message } from '../Message';
 import { MessageTransportOptions } from './MessageTransportOptions';
-import type { Connection } from 'amqplib';
+import type { ChannelModel } from 'amqplib';
 
 /**
  * AMQP transport provider
@@ -9,7 +9,7 @@ import type { Connection } from 'amqplib';
  */
 export class AMQPTransport extends MessageTransport<Message> {
 
-    private _connection!: Connection;
+    private _connection!: ChannelModel;
 
     constructor(options: MessageTransportOptions) {
         super(options);

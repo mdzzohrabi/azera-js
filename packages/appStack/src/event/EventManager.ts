@@ -16,10 +16,13 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
 @Service({
     factory: async ($isDevelopment: string, serviceContainer: Container) => {
         // Use DebugEventManager is Development environment
-        let manager = $isDevelopment ? new DebugEventManager(
-            await serviceContainer.invokeAsync(Logger),
-            await serviceContainer.invokeAsync(Profiler)) : new EventManager();
-        
+        let manager = $isDevelopment ?
+            new DebugEventManager(
+                serviceContainer.invoke(Logger),
+                serviceContainer.invoke(Profiler)
+            )
+            : new EventManager();
+
         // Find tagged subscubers
         let subscribers = serviceContainer.getByTag<IEventSubscriber>(EVENT_SUBSCRIBER_TAG);
         subscribers.forEach(subscriber => manager.subscribe(subscriber));
@@ -29,7 +32,7 @@ export const EVENT_SUBSCRIBER_TAG = 'event.subscriber';
 
     // Auto-tagging services that implements IEventSubScriber or it's name ends with EventSubscriber
     autoTags: [function eventSubscriberTagger(service) {
-        if (service.name.endsWith('EventSubscriber') || (is.Object(service.service) && 'getSubscribedEvents' in service.service)) return [ EVENT_SUBSCRIBER_TAG ];
+        if (service.name.endsWith('EventSubscriber') || (is.Object(service.service) && 'getSubscribedEvents' in service.service)) return [EVENT_SUBSCRIBER_TAG];
         return [];
     }]
 })
@@ -42,7 +45,7 @@ export class EventManager extends EventEmitter {
     subscribe(subscriber: IEventSubscriber) {
 
         if (!subscriber || typeof subscriber['getSubscribedEvents'] != 'function') {
-            throw Error(`Event SubScriber must be instance of a IEventSubscriber, ${ debugName(subscriber) } given`);
+            throw Error(`Event SubScriber must be instance of a IEventSubscriber, ${debugName(subscriber)} given`);
         }
 
         let addListener = (eventName: string, listener: any) => {
@@ -55,7 +58,7 @@ export class EventManager extends EventEmitter {
             }
         }
 
-        forEach( subscriber.getSubscribedEvents() , (listeners, eventName) => {
+        forEach(subscriber.getSubscribedEvents(), (listeners, eventName) => {
             if (Array.isArray(listeners)) {
                 listeners.forEach((listener: any) => {
                     addListener(eventName, listener);
@@ -77,8 +80,8 @@ export class EventManager extends EventEmitter {
 class DebugEventManager extends EventManager {
 
     constructor(
-    @Inject() private logger: Logger,
-    @Inject() private profiler: Profiler) { super() }
+        @Inject() private logger: Logger,
+        @Inject() private profiler: Profiler) { super() }
 
     emit(event: string, eventData: any) {
         this.logger.debug(`EventManager emit '${event}'`);
@@ -100,7 +103,7 @@ export interface IEventSubscriber {
 
 export class Event {
     public defaultPrevented: boolean = false;
-    
+
     public preventDefault() {
         this.defaultPrevented = true;
     }

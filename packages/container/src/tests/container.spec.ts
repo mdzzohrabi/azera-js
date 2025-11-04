@@ -1,6 +1,6 @@
 import { getParameters } from '@azera/reflect';
 import { deepEqual, deepStrictEqual, equal, notEqual, ok, throws } from "assert";
-import * as expect from 'expect';
+import expect from 'expect';
 import { Container, ContainerInvokeOptions, getDependencies, isServiceDefinition, isFactory, isService } from "..";
 import { ContainerAware } from "../containerAware";
 import { Inject, ParamConverter, Service } from "../decorators";
@@ -682,9 +682,9 @@ describe('Container', () => {
 
         });
 
-        describe('Resolve without Inject and Service decorators', () => {
+        describe.skip('Resolve without Inject and Service decorators', () => {
 
-            it.skip('should resolve class constructor parameters', () => {
+            it('should resolve class constructor parameters', () => {
 
                 let container = new Container();
                 class Connection {
@@ -699,7 +699,7 @@ describe('Container', () => {
                 let app = container.invoke(App);
 
                 // Dependencies => ['connection']
-                equal(app.connection.name, 'default');
+                equal(app.connection?.name, 'default', 'Connection for App.connection not resolved');
 
             });
 
@@ -1222,7 +1222,7 @@ describe('Container', () => {
                 }
             }
             
-            expect(() => container.invoke(ThrowabeService)).toThrowError(/Custom Error/);
+            expect(() => container.invoke(ThrowabeService)).toThrow(/Custom Error/);
         });
 
         it('should throw errors during dependency resolution in async invoke', async () => {

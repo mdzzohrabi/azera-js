@@ -2,7 +2,7 @@
     "name": "@azera/container",
     "description": "Javascript dependecy injection container",
     "authors": "Masoud Zohrabi <mdzzohrabi@gmail.com>",
-    "version": "2.1.5",
+    "version": "2.1.6",
     "main": "build/index.js",
     "types": "build/index.d.ts",
     "directories": {
@@ -27,18 +27,19 @@
     "dependencies": {
         "@azera/reflect": "^1.0.9",
         "@azera/util": "^1.0.18",
-        "glob": "^7.1.6",
-        "reflect-metadata": "^0.1.13",
+        "glob": "^11.0.3",
+        "reflect-metadata": "^0.2.2",
         "tslib": "^2.5.3"
     },
     "devDependencies": {
-        "@types/glob": "^7.2.0",
-        "@types/mocha": "^8.2.3",
-        "expect": "^27.5.1",
-        "mocha": "^10.2.0",
-        "nyc": "^15.1.0",
-        "rimraf": "^5.0.1",
-        "ts-node": "^9.1.1",
+        "@types/glob": "^9.0.0",
+        "@types/mocha": "^10.0.10",
+        "expect": "^30.2.0",
+        "mocha": "^11.7.4",
+        "nyc": "^17.1.0",
+        "rimraf": "^6.0.1",
+        "ts-node": "^10.9.2",
+        "typedi": "^0.10.0",
         "typescript": "^5.1.3"
     }
 }

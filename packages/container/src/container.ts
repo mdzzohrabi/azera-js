@@ -594,7 +594,7 @@ export class Container {
 
         // Invoke options as service
         if (value == 'invokeOptions' || value == ContainerInvokeOptions) {
-            return options.async ? Promise.resolve(options) : options as any;
+            return options.async ? Promise.resolve(options) as any : options as any;
         }
 
         if (typeof value == 'string') {

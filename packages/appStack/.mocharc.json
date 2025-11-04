@@ -1,0 +1,8 @@
+{
+  "extension": ["ts"],
+  "require": "ts-node/register",
+  "spec": "tests/**/*.spec.ts",
+  "package": "package.json",
+  "color": true,
+  "exit": true
+}

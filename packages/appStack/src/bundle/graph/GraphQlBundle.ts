@@ -78,7 +78,7 @@ export class GraphQlBundle extends Bundle {
                     factory: async function graphqlNodeMiddleware() {
                         const apolloServer = await container.invokeAsync<ApolloServer>(`graphql_node_${name}`);
                         const kernel = await container.invokeAsync(Kernel);
-                        const { expressMiddleware } = await import('@apollo/server/express4');
+                        const { expressMiddleware } = await import('@as-integrations/express5');
 
                         // Start apollo server
                         await apolloServer.start();

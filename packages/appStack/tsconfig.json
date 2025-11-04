@@ -6,7 +6,7 @@
         "declaration": true,
         "outDir": "dist",
         "module": "commonjs",
-        "target": "es2017",
+        "target": "ESNext",
         "skipLibCheck": true,
         "importHelpers": true,
         "strictFunctionTypes": false,

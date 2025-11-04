@@ -17,7 +17,7 @@ export let MongooseSchema = {
     }, 'schema:ref', false),
     Schema: createDecorator(function (this: any, modelName?: string, collection?: string) {
         return {
-            modelName: modelName ?? this.target.name,
+            modelName: modelName ?? String(this.target.name).replace('Schema', ''),
             collection
         }
     }, 'schema', false),

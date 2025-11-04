@@ -95,7 +95,7 @@ export class WebClient {
     async requestJson<T = any>(url: string, options?: WebClientRequestOptions): Promise<T> {
         if (!options) options = {};
         if (!options.headers) options.headers = {};
-        options.headers['Content-Type'] = 'application/json';
+        (options.headers as any)['Content-Type'] = 'application/json';
         let buffer = await this.requestBuffer(url, options);
         
         return JSON.parse(buffer.toString('utf8'));
