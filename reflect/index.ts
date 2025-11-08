@@ -1,8 +1,17 @@
+import 'reflect-metadata';
 
-export type Kinds = 'class' | 'method' | 'property' | 'all';
+export type Kinds = 'class' | 'method' | 'property' | 'parameter' | 'all';
 
-const CLASS_META = Symbol('classAttributes');
-const MEMBERS_META = Symbol('membersAttributes');
+const METADATA_KEY = Symbol('metadata');
+
+type MetadataIndex = string;
+type MetadataMap = Map<MetadataIndex, Attributes>;
+
+// export interface Metadata {
+//     classAttributes: Attributes
+//     membersAttributes: Record<MemberName, Attributes>
+//     parametersAttributes: Record<MemberName, Record<number, Attributes>>
+// }
 
 type MemberName = symbol | string;
 type Attributes = Record<symbol, IAttributeInstance<any, any, any>>
@@ -16,6 +25,7 @@ export interface AttributeOptions<Kind extends Kinds> {
 export interface ContextTypes {
     class: ClassDecoratorContext
     method: ClassMethodDecoratorContext
+    parameter: DecoratorContext
     property:
     | ClassGetterDecoratorContext
     | ClassSetterDecoratorContext
@@ -28,14 +38,19 @@ export interface DecoratorTypes {
     class: ClassDecorator
     method: MethodDecorator
     property: PropertyDecorator
-    all: ClassDecorator & MethodDecorator & PropertyDecorator
+    parameter: ParameterDecorator
+    all: ClassDecorator & MethodDecorator & PropertyDecorator & ParameterDecorator
 }
 
 export type IAttributeInstance<Params extends any[], Kind extends Kinds, AttributeValue> = {
     attribute: IAttribute<Params, Kind, AttributeValue>
     name: MemberName
+    parameterIndex?: number
     kind: Kinds
     value: AttributeValue
+    inherited: boolean
+    target: Function | object
+    type?: any
 }
 
 export type IAttribute<Params extends any[], Kind extends Kinds, AttributeValue> = {
@@ -55,6 +70,19 @@ export type DecoratorKind<A, B, C> =
     : 'all'
     : 'all';
 
+function GetMetaKeyAndTarget(target: Function | object, memberName?: MemberName) {
+    const metaKey = METADATA_KEY;// memberName ? MEMBERS_META : CLASS_META;
+    const metaTarget = (target as any).prototype ?? target;
+    return { metaKey, metaTarget };
+}
+
+function GetMetadataIndex(target: Function | object, memberName?: MemberName, parameterIndex?: number): MetadataIndex {
+    if (!memberName && parameterIndex === undefined)
+        return 'class';
+
+    return `${String(memberName ?? 'constructor')}${parameterIndex !== undefined ? `$${parameterIndex}` : ``}`;
+}
+
 /**
  * Get metadata
  * 
@@ -62,10 +90,50 @@ export type DecoratorKind<A, B, C> =
  * @param memberName Member name
  * @returns 
  */
-function GetMetadata(target: Function | object, memberName?: MemberName) {
-    const metaKey = memberName ? MEMBERS_META : CLASS_META;
-    const metaTarget = (target as any).prototype ?? target;
-    return Object.getOwnPropertyDescriptor(metaTarget, metaKey)?.value;
+function GetMetadata<M extends MemberName>(target: Function | object, memberName?: M, parameterIndex?: number): Attributes | undefined {
+    const metadata = GetMetadataMap(target);
+
+    // No metadata
+    if (!metadata)
+        return undefined;
+
+    const index = GetMetadataIndex(target, memberName, parameterIndex);
+
+    return metadata.get(index);
+}
+
+function GetMetadataMap(target: Function | object): MetadataMap | undefined {
+    const { metaKey, metaTarget } = GetMetaKeyAndTarget(target);
+    const metadata: MetadataMap = Object.getOwnPropertyDescriptor(metaTarget, metaKey)?.value;
+
+    // No metadata
+    if (!metadata)
+        return undefined;
+
+    return metadata;
+}
+
+/**
+ * Inherit metadata from parent
+ * @param metadata Target metadata
+ * @param parentMetadata Parent metadata
+ */
+function InheritMetadataMap(metadata: MetadataMap, parentMetadata: MetadataMap) {
+    parentMetadata.forEach((attributes, index) => {
+        // Inherit attributes
+        let inheritedAttributes = Object.fromEntries(Object.getOwnPropertySymbols(attributes).map(key => [key, Object.assign({}, attributes[key], { inherited: true })]));
+
+        if (!metadata.has(index)) {
+            metadata.set(index, inheritedAttributes);
+        }
+        else {
+            const existing = metadata.get(index)!;
+            metadata.set(index, {
+                ...existing,
+                ...inheritedAttributes
+            });
+        }
+    });
 }
 
 /**
@@ -75,28 +143,40 @@ function GetMetadata(target: Function | object, memberName?: MemberName) {
  * @param memberName Member name
  * @returns 
  */
-function CreateMetadata(target: Function | object, memberName?: MemberName) {
-    const metaKey = memberName ? MEMBERS_META : CLASS_META;
-    const metaTarget = (target as any).prototype ?? target;
-    let metadata = {};
-    Object.defineProperty(metaTarget, metaKey, {
-        value: metadata = {},
-        configurable: false,
-        enumerable: false,
-        writable: false
-    });
+function CreateMetadata(target: Function | object, memberName?: MemberName, parameterIndex?: number): Attributes {
+    const { metaKey, metaTarget } = GetMetaKeyAndTarget(target, memberName);
 
+    let metadata = GetMetadataMap(target);
+
+    if (!metadata) {
+        metadata = new Map<MetadataIndex, Attributes>();
+        // Define metadata
+        Object.defineProperty(metaTarget, metaKey, {
+            value: metadata,
+            configurable: false,
+            enumerable: false,
+            writable: false,
+        });
+    }
+
+    // Get prototype
     const prototype = Object.getPrototypeOf(metaTarget);
 
     // Inheritance
     if (prototype !== Object.prototype) {
-        const parentMetadata = GetMetadata(prototype, memberName);
+        const parentMetadata = GetMetadataMap(prototype); // Raw metadata from parent
         if (parentMetadata) {
-            metadata = { ...parentMetadata, metadata };
+            InheritMetadataMap(metadata, parentMetadata);
         }
     }
 
-    return metadata;
+    const index = GetMetadataIndex(target, memberName, parameterIndex);
+
+    // Create metadata entry
+    if (!metadata.has(index))
+        metadata.set(index, {});
+
+    return metadata.get(index)!;
 }
 
 
@@ -107,21 +187,14 @@ function CreateMetadata(target: Function | object, memberName?: MemberName) {
  * @param memberName Member name
  * @returns 
  */
-function GetOrCreateMetadata(target: Function | object, memberName?: MemberName) {
-    let metadata = GetMetadata(target, memberName) ?? CreateMetadata(target, memberName);
-
-    // Member metadata
-    if (memberName) {
-        let membersMetadata = metadata as Record<MemberName, Attributes>;
-        if (!membersMetadata[memberName])
-            membersMetadata[memberName] = {};
-        return membersMetadata[memberName];
-    }
-
-    return metadata as Attributes;
+function GetOrCreateMetadata(target: Function | object, memberName?: MemberName, parameterIndex?: number): Attributes {
+    return GetMetadata(target, memberName, parameterIndex) ?? CreateMetadata(target, memberName, parameterIndex);
 }
 
-function createDecoratorContext<A extends Function | object, B extends MemberName, C>(target?: A, name?: B, descriptor?: C) {
+/**
+ * Get decorator kind
+ */
+function GetDecoratorKind<A extends Function | object, B extends MemberName, C>(target?: A, name?: B, descriptor?: C): DecoratorKind<A, B, C> {
 
     let kind: DecoratorKind<A, B, C> = undefined as any;
 
@@ -130,20 +203,50 @@ function createDecoratorContext<A extends Function | object, B extends MemberNam
     if (type1 !== 'object' && type1 !== 'function')
         throw TypeError(`Invalid decorator injection`);
 
-    if (type1 == 'function' || type2 == 'undefined')
+    // Class
+    if (type1 == 'function' && type2 == 'undefined' && type3 == 'undefined')
         kind = 'class' as DecoratorKind<A, B, C>;
+
+    // Method
     else if (type3 == 'object')
         kind = 'method' as DecoratorKind<A, B, C>;
+
+    // Parameter
+    else if (type3 == 'number')
+        kind = 'parameter' as DecoratorKind<A, B, C>;
+
+    // Property
     else
         kind = 'property' as DecoratorKind<A, B, C>;
 
-    const metadata = GetOrCreateMetadata(target!, name);
+    if (!kind)
+        throw TypeError(`Cannot detect decorator kind for ${target}${name ? '.' + String(name) : ''}`);
+
+    return kind;
+}
+
+/**
+ * Get decorator context
+ * @returns Decorator context
+ */
+function createDecoratorContext<A extends Function | object, B extends MemberName, C>(target?: A, name?: B, descriptor?: C) {
+
+    let kind: DecoratorKind<A, B, C> = GetDecoratorKind(target, name, descriptor);
+
+    const metadata = GetOrCreateMetadata(target!, name, typeof descriptor == 'number' ? descriptor as number : undefined);
 
     return {
         kind,
-        name,
+        name: name ?? (target as Function)?.name,
         metadata
     } as ContextTypes[typeof kind]
+}
+
+function attributeDataType(kind: Kinds, target: any, propName?: any, paramIndex?: number) {
+    if (kind == 'parameter') {
+        const types = Reflect.getMetadata('reflect:paramtypes', target, propName);
+        console.log({ types });
+    }    
 }
 
 /**
@@ -152,7 +255,7 @@ function createDecoratorContext<A extends Function | object, B extends MemberNam
  * @example
  * const Summary = createAttribute(({ summary: string }) => summary, { kind: 'method' });
  * class AuthController {
- *      \@Summary('Login') login () {}
+ *      @Summary('Login') login () {}
  * }
  * 
  * @param func Attribute inputs and output generator
@@ -160,7 +263,25 @@ function createDecoratorContext<A extends Function | object, B extends MemberNam
  * @returns 
  */
 export function createAttribute<
-    Func extends (...args: [...any, string]) => any,
+    AttributeValue = true,
+    Params extends any[] = any[],
+    Kind extends Kinds = 'all'
+>(
+    options?: AttributeOptions<Kind>
+): IAttribute<Params, Kind, AttributeValue>
+
+export function createAttribute<
+    Func extends (this: ContextTypes[Kind], ...args: any[]) => any,
+    AttributeValue extends ReturnType<Func>,
+    Params extends Parameters<Func>,
+    Kind extends Kinds = 'all'
+>(
+    func: Func,
+    options?: AttributeOptions<Kind>
+): IAttribute<Params, Kind, AttributeValue>
+
+export function createAttribute<
+    Func extends (this: ContextTypes[Kind], ...args: any[]) => any,
     AttributeValue extends ReturnType<Func>,
     Params extends Parameters<Func>,
     Kind extends Kinds = 'all'
@@ -168,6 +289,11 @@ export function createAttribute<
     func: Func,
     options?: AttributeOptions<Kind>
 ): IAttribute<Params, Kind, AttributeValue> {
+
+    if (typeof func !== 'function') {
+        options = func as AttributeOptions<Kind>;
+        func = function () { return true; } as Func;
+    }
 
     const {
         kind = 'all',
@@ -177,17 +303,32 @@ export function createAttribute<
 
     const attrKey = Symbol(key ?? func.name);
 
+    // Attribute decorator
     const attribute = (...args: Params) => {
-        const attributeValue = func(...args);
 
-        // actual decorator
+        // Actual decorator
         const decorator: DecoratorTypes[Kind] = (...params: any[]) => {
-            const { kind, metadata, name } = createDecoratorContext(...params);
-            metadata[attrKey] = {
+            // console.log(params);
+            // Decorator context
+            const context = createDecoratorContext(...params);
+
+            // Ensure attribute can be applied to this kind
+            if (kind !== 'all' && context.kind !== kind) {
+                throw TypeError(`Attribute '${String(key ?? func.name)}' cannot be applied to ${context.kind} kind`);
+            }
+
+            // Invoke attribute
+            const attributeValue = func.call(context as any, ...args);
+
+            context.metadata[attrKey] = {
                 value: attributeValue,
                 attribute,
-                kind,
-                name
+                kind: context.kind,
+                name: context.name,
+                parameterIndex: typeof params[2] == 'number' ? params[2] as number : undefined,
+                inherited: false,
+                target: params[0],
+                type: attributeDataType(context.kind as Kinds, params[0], params[1], params[2])
             } as IAttributeInstance<Params, Kind, AttributeValue>;
         }
 
@@ -200,17 +341,38 @@ export function createAttribute<
     return attribute;
 }
 
-export function getAttributes(target: Function | object, memberName?: MemberName): Record<symbol, IAttributeInstance<any, any, any>> {
-    return GetOrCreateMetadata(target, memberName);
+export function getAttributes(target: Function | object, memberName?: MemberName, parameterIndex?: number): Attributes {
+    return GetOrCreateMetadata(target, memberName, parameterIndex) ?? {};
 }
 
-export function getAttribute<Params extends any[], Kind extends Kinds, AttributeValue>(attribute: IAttribute<Params, Kind, AttributeValue>, target: Function | object, memberName?: MemberName): IAttributeInstance<Params, Kind, AttributeValue> | undefined {
-    let metadata = GetOrCreateMetadata(target, memberName);
+/**
+ * Get specific attribute for class or its member
+ * 
+ * @param attribute Attribute
+ * @param target Class
+ * @param memberName Member name
+ * @returns 
+ */
+export function getAttribute<Params extends any[], Kind extends Kinds, AttributeValue>(attribute: IAttribute<Params, Kind, AttributeValue>, target: Function | object, memberName?: MemberName, parameterIndex?: number): IAttributeInstance<Params, Kind, AttributeValue> | undefined {
+    let metadata = getAttributes(target, memberName, parameterIndex);
+    if (!metadata) return undefined;
     let result = metadata[attribute.attrKey];
     return result;
 }
 
-export function hasAttribute<Params extends any[], Kind extends Kinds, AttributeValue>(attribute: IAttribute<Params, Kind, AttributeValue>, target: Function | object, memberName?: MemberName): boolean {
-    const attributes = getAttributes(target, memberName);
+/**
+ * Check if a class or its member has specific attribute
+ * 
+ * @param attribute Attribute
+ * @param target Class
+ * @param memberName Member name
+ * @returns 
+ */
+export function hasAttribute<Params extends any[], Kind extends Kinds, AttributeValue>(attribute: IAttribute<Params, Kind, AttributeValue>, target: Function | object, memberName?: MemberName, parameterIndex?: number): boolean {
+    const attributes = getAttributes(target, memberName, parameterIndex);
     return attribute.attrKey in attributes;
+}
+
+export const __Test = {
+    GetMetadataMap
 }
