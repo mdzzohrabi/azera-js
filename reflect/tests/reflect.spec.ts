@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { __Test, createAttribute, getAttribute, getAttributes, hasAttribute } from '..';
+import { createAttribute, getAttribute, getAttributes, hasAttribute } from '..';
 
 describe('Reflect', () => {
 
@@ -18,7 +18,7 @@ describe('Reflect', () => {
             @Summary('Class')
             class HomeController {
 
-                @Summary('Property') version = '1.0.0';
+                @Summary('Property') version: string = '1.0.0';
 
                 @Summary('Method') homes() {
                     return true;
@@ -43,6 +43,7 @@ describe('Reflect', () => {
                 expect(getAttribute(Summary, HomeController, 'version')?.attribute).toEqual(Summary);
                 expect(getAttribute(Summary, HomeController, 'version')?.kind).toEqual('property');
                 expect(getAttribute(Summary, HomeController, 'version')?.name).toEqual('version');
+                expect(getAttribute(Summary, HomeController, 'version')?.type).toEqual(String);
                 expect(hasAttribute(Summary, HomeController, 'version')).toBeTrue();
             });
 
@@ -52,13 +53,15 @@ describe('Reflect', () => {
                 expect(getAttribute(Summary, HomeController, 'homes')?.attribute).toEqual(Summary);
                 expect(getAttribute(Summary, HomeController, 'homes')?.kind).toEqual('method');
                 expect(getAttribute(Summary, HomeController, 'homes')?.name).toEqual('homes');
+                expect(getAttribute(Summary, HomeController, 'homes')?.type).toEqual(Function);
                 expect(hasAttribute(Summary, HomeController, 'homes')).toBeTrue();
             });
 
             test('Method parameter attribute', () => {
                 // expect((getAttributes(HomeController, 'indexAction')), `HomeController.indexAction method must have Inject attribute on parameter`).toContainKeys([GET.attrKey, Inject.attrKey]);
                 expect(getAttribute(Inject, HomeController, 'indexAction', 0)?.kind).toEqual('parameter');
-                expect(getAttribute(Inject, HomeController, 'indexAction', 0)?.name).toEqual('indexAction');
+                expect(getAttribute(Inject, HomeController, 'indexAction', 0)?.name).toEqual('db');
+                expect(getAttribute(Inject, HomeController, 'indexAction', 0)?.type).toEqual(DbContext);
                 expect(getAttribute(Inject, HomeController, 'indexAction', 0)?.parameterIndex).toEqual(0);
                 expect(hasAttribute(Inject, HomeController, 'indexAction', 0)).toBeTrue();
             });
@@ -108,9 +111,9 @@ describe('Reflect', () => {
 
         });
 
-        test('Attribute context', () => {
+        test('Construction parameter injection', () => {
 
-            const Inject = createAttribute(function () { return this; }, { key: 'inject' });
+            const Inject = createAttribute(() => true, { key: 'inject' });
 
             class Logger { }
             class EventManager { }
@@ -133,7 +136,6 @@ describe('Reflect', () => {
                 }
 
             }
-            console.log(__Test.GetMetadataMap(Controller));
 
             expect(getAttribute(Inject, Controller)?.kind).toEqual('class');
             expect(getAttribute(Inject, Controller)?.name).toEqual('Controller');
@@ -141,11 +143,37 @@ describe('Reflect', () => {
             expect(getAttribute(Inject, Controller, 'logger')?.kind).toEqual('property');
             expect(getAttribute(Inject, Controller, 'logger')?.name).toEqual('logger');
 
-            expect(getAttribute(Inject, Controller, '', 0)?.kind).toEqual('parameter');
-            expect(getAttribute(Inject, Controller, '', 0)?.name).toEqual('eventManager');
+            expect(getAttribute(Inject, Controller, 'constructor', 0)?.kind).toEqual('parameter');
+            expect(getAttribute(Inject, Controller, 'constructor', 0)?.type).toEqual(EventManager);
+            expect(getAttribute(Inject, Controller, 'constructor', 0)?.name).toEqual('eventManager');
+
+            expect(getAttribute(Inject, Controller, 'methodInject', 0)?.kind).toEqual('parameter');
+            expect(getAttribute(Inject, Controller, 'methodInject', 0)?.type).toEqual(EventManager);
+            expect(getAttribute(Inject, Controller, 'methodInject', 0)?.name).toEqual('eventManager');
 
 
         });
+
+        describe('Context', () => {
+            test('context-aware attribute', () => {
+
+                const Query = createAttribute(function queryAttribute (queryName?: string) {
+                    return queryName ?? this.name;
+                });
+
+                class BookController {
+
+                    books(@Query() page = 1) {
+                    }
+
+                }
+
+                expect(getAttribute(Query, BookController, 'books', 0)?.value).toBe('page');
+                expect(getAttribute(Query, BookController, 'books', 0)?.parameterDefaultValue).toBe('1');
+
+
+            });
+        })
     });
 
 });
