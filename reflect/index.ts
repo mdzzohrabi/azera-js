@@ -1,8 +1,10 @@
 import 'reflect-metadata';
-import { attributeDataType, getParamInfo } from './helpers';
-import { GetOrCreateMetadata } from './metadata';
+import { attributeDataType, constrcutorParamTypes, getParamInfo } from './helpers';
+import { GetMetadataMap, GetOrCreateMetadata } from './metadata';
 import type { AttributeOptions, Attributes, ContextTypes, DecoratorTypes, IAttribute, IAttributeInstance, Kinds, MemberName } from './types';
 import { createDecoratorContext } from './context';
+export type { Constructor } from './helpers';
+export { isClass, isFunction } from './helpers';
 
 /**
  * Attribute
@@ -91,6 +93,7 @@ export function createAttribute<
                 inherited: false,
                 target: params[0],
                 type: attributeDataType(context.kind as Kinds, params[0], params[1], params[2]),
+                constructorTypes: constrcutorParamTypes(params[0]),
                 parameterDefaultValue: paramInfo?.defaultValue
             } as IAttributeInstance<Params, Kind, AttributeValue>;
         }
@@ -134,4 +137,15 @@ export function getAttribute<Params extends any[], Kind extends Kinds, Attribute
 export function hasAttribute<Params extends any[], Kind extends Kinds, AttributeValue>(attribute: IAttribute<Params, Kind, AttributeValue>, target: Function | object, memberName?: MemberName, parameterIndex?: number): boolean {
     const attributes = getAttributes(target, memberName, parameterIndex);
     return attribute.attrKey in attributes;
+}
+
+export function getAllAttributes(target: Function | object) {
+    const metadata = GetMetadataMap(target);
+    // console.log(metadata);
+
+    return [ ...metadata?.values() ?? [] ].flatMap(value => {
+        console.log(Object.values(value));
+        
+        return Object.values(value) as IAttributeInstance[];
+    });
 }

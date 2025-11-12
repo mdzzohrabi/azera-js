@@ -38,7 +38,7 @@ export interface DecoratorTypes {
     all: ClassDecorator & MethodDecorator & PropertyDecorator & ParameterDecorator
 }
 
-export type IAttributeInstance<Params extends any[], Kind extends Kinds, AttributeValue> = {
+export type IAttributeInstance<Params extends any[] = any, Kind extends Kinds = any, AttributeValue = any> = {
     attribute: IAttribute<Params, Kind, AttributeValue>
     name: MemberName
     parameterIndex?: number
@@ -48,6 +48,7 @@ export type IAttributeInstance<Params extends any[], Kind extends Kinds, Attribu
     target: Function | object
     parameterDefaultValue?: string
     type?: any
+    constructorTypes?: any[]
 }
 
 export type IAttribute<Params extends any[], Kind extends Kinds, AttributeValue> = {
