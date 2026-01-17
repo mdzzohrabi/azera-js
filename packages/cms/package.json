@@ -20,7 +20,7 @@
     "parcel-bundler": "^1.12.4",
     "tslib": "^1.9.3",
     "twig": "^1.13.3",
-    "typeorm": "^0.2.19",
+    "typeorm": "^0.2.25",
     "typescript": "^3.7.2"
   },
   "scripts": {
