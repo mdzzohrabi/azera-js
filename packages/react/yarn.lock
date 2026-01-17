@@ -14,6 +14,28 @@
   resolved "https://registry.yarnpkg.com/@apollographql/graphql-playground-html/-/graphql-playground-html-1.6.24.tgz#3ce939cb127fb8aaa3ffc1e90dff9b8af9f2e3dc"
   integrity sha512-8GqG48m1XqyXh4mIZrtB5xOhUwSsh1WsrrsaZQOEYYql3YN9DEu9OOSg0ILzXHZo/h2Q74777YE4YzlArQzQEQ==
 
+"@azera/reflect@^1.0.4":
+  version "1.0.9"
+  resolved "https://registry.yarnpkg.com/@azera/reflect/-/reflect-1.0.9.tgz#69b2cf64197d4ebbf22290d16caf1aa0aa58b3eb"
+  integrity sha512-7vtfAoakIR2F27TZI7ta7iZ4IOpNqsQ9C5kkwAxRnOVdSg4Q9wEPLHTg+VAg/6+M62p/JYe3kuLpl9q0iptmXA==
+  dependencies:
+    "@azera/util" "^1.0.17"
+    tslib "^2.0.1"
+
+"@azera/ts@^1.0.0":
+  version "1.0.3"
+  resolved "https://registry.yarnpkg.com/@azera/ts/-/ts-1.0.3.tgz#14d31262abf603b08da247b4eb60a05be475b604"
+  integrity sha512-6bZ1FFVp+B2CqwwRIZuVMP8zLyK6Dn9WcXUGKVHwMNJ1hY1aRRh1cJol9MlxM6U7aU18IpHagsGK1KteumS6vQ==
+
+"@azera/util@^1.0.12", "@azera/util@^1.0.17":
+  version "1.0.18"
+  resolved "https://registry.yarnpkg.com/@azera/util/-/util-1.0.18.tgz#64072f053d903a5b0f6b3c7b83a7c823ee0490be"
+  integrity sha512-mQ3syTlKV3CQ8T/LAuOBVmJYGRWxdjtPgGSU2vblwXYMlDzbGbVcXgfETnTuWhaCvBOHJ19pjQGg5xFXeQeTrQ==
+  dependencies:
+    "@azera/ts" "^1.0.0"
+    tslib "^1.9.3"
+    typescript "^3.6.3"
+
 "@protobufjs/aspromise@^1.1.1", "@protobufjs/aspromise@^1.1.2":
   version "1.1.2"
   resolved "https://registry.yarnpkg.com/@protobufjs/aspromise/-/aspromise-1.1.2.tgz#9b8b0cc663d669a7d8f6f5d0893a14d348f30fbf"
@@ -1856,6 +1878,11 @@ tslib@^1.9.3:
   resolved "https://registry.yarnpkg.com/tslib/-/tslib-1.9.3.tgz#d7e4dd79245d85428c4d7e4822a79917954ca286"
   integrity sha512-4krF8scpejhaOgqzBEcGM7yDIEfi0/8+8zDRZhNZZ2kjmHJ4hv3zCbQWxoJGz1iw5U0Jl0nma13xzHXcncMavQ==
 
+tslib@^2.0.1:
+  version "2.3.0"
+  resolved "https://registry.yarnpkg.com/tslib/-/tslib-2.3.0.tgz#803b8cdab3e12ba581a4ca41c8839bbb0dacb09e"
+  integrity sha512-N82ooyxVNm6h1riLCoyS9e3fuJ3AMG2zIZs2Gd1ATcSFjSA23Q0fzjjZeh0jbJvWVDZ0cJT8yaNNaaXHzueNjg==
+
 tslint@^5.9.1:
   version "5.9.1"
   resolved "https://registry.yarnpkg.com/tslint/-/tslint-5.9.1.tgz#1255f87a3ff57eb0b0e1f0e610a8b4748046c9ae"
@@ -1955,9 +1982,9 @@ wrappy@1:
   integrity sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=
 
 ws@^5.2.0:
-  version "5.2.2"
-  resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.2.tgz#dffef14866b8e8dc9133582514d1befaf96e980f"
-  integrity sha512-jaHFD6PFv6UgoIVda6qZllptQsMlDEJkTQcybzzXDYM1XO9Y8em691FGMPmM46WGyLU4z9KMgQN+qrux/nhlHA==
+  version "5.2.3"
+  resolved "https://registry.yarnpkg.com/ws/-/ws-5.2.3.tgz#05541053414921bc29c63bee14b8b0dd50b07b3d"
+  integrity sha512-jZArVERrMsKUatIdnLzqvcfydI85dvd/Fp1u/VOpfdDWQ4c9qWXe+VIeAbQ5FrDwciAkr+lzofXLz3Kuf26AOA==
   dependencies:
     async-limiter "~1.0.0"
 
