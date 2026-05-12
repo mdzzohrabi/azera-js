@@ -1,3 +1,4 @@
+import Bun from 'bun';
 import { describe, expect, test } from 'bun:test';
 import { createAttribute, getAttribute, getAttributes, hasAttribute } from '..';
 

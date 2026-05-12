@@ -74,26 +74,29 @@ export class ServiceProvider {
         return this.get(token);
     }
 
+    private getDescriptors(token: any) {
+        return this.services.get(token);
+    }
+
+    private getDescriptorsOrThrow(token: any) {
+        let descriptors = this.getDescriptors(token);
+        if (!descriptors || descriptors.length == 0)
+            throw new Error(`Service "${token.name ?? String(token)}" not registered`);
+        return descriptors;
+    }
+
     get<T>(token: Constructor<T>): T
-    get<T>(token: any): T
-    {
-        const descriptors = this.services.get(token);
+    get<T>(token: any): T {
+        const descriptors = this.getDescriptorsOrThrow(token);
 
-        if (!descriptors || descriptors.length === 0)
-            throw new Error(`Service not registered: ${token.toString()}`);
-
-        if (descriptors.length > 1) {
+        if (descriptors.length > 1)
             return descriptors.map(d => this.resolveDescriptor(d)) as any;
-        }
 
         return this.resolveDescriptor(descriptors[0]!);
     }
 
     getAll<T>(token: any): T[] {
-        let result = this.tryGet(token);
-        if (!Array.isArray(result))
-            result = [result];
-        return result as T[];
+        return this.getDescriptors(token)?.map(d => this.resolveDescriptor<T>(d)) ?? [];
     }
 
     private resolveDescriptor<T>(descriptor: ServiceDescriptor): T {
@@ -107,6 +110,15 @@ export class ServiceProvider {
                 // Try to get from current scope or parent scope
                 if (this.scopedInstances.has(descriptor))
                     return this.scopedInstances.get(descriptor);
+
+                if (this.parentScope) {
+                    const parentInstance = this.parentScope.scopedInstances.get(descriptor);
+                    if (parentInstance) {
+                        this.scopedInstances.set(descriptor, parentInstance);
+                        return parentInstance;
+                    }
+                }
+
                 const instance = this.createInstance(descriptor.implementation);
                 this.scopedInstances.set(descriptor, instance);
                 return instance;
@@ -117,14 +129,17 @@ export class ServiceProvider {
     }
 
     private createInstance<T>(impl: Constructor<T> | ServiceFactory<T>): T {
+
+        // Factory function
         if (typeof impl === "function" && !impl.prototype?.constructor) {
-            // Factory function
             return (impl as ServiceFactory<T>)(this);
         }
 
+        // Service Type
         const ctor = impl as Constructor<T>;
-        const paramTypes: any[] = Reflect.getMetadata("design:paramtypes", ctor) || [];
 
+        // Resolve contrcutor paramerters
+        const paramTypes: any[] = Reflect.getMetadata("design:paramtypes", ctor) || [];
         const dependencies = paramTypes.map((dep, index) => {
             if (dep === Array) {
                 const inject = getAttribute(Inject, ctor, "constructor", index);
@@ -139,17 +154,18 @@ export class ServiceProvider {
             return this.get(dep);
         });
 
+        // Create instance
         const instance = new ctor(...dependencies);
 
-        const attribtues = getAllAttributes(ctor);
-        console.log(attribtues);
+        // const attribtues = getAllAttributes(ctor);
 
-        // Property resolution
+        // Resolve properties
         Object.keys(instance as object).forEach(propName => {
             let inject = getAttribute(Inject, instance as object, propName);
 
             if (inject) {
-                (instance as any)[propName] = this.get(inject.value.service ?? inject.type);
+                let serviceKey = inject.value.service ?? inject.type;
+                (instance as any)[propName] = this.get(serviceKey);
             }
         });
 

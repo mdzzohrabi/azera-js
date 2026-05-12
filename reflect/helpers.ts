@@ -76,12 +76,10 @@ export function GetDecoratorKind<A extends Function | object, B extends MemberNa
 export function attributeDataType(kind: Kinds, target: any, propName?: any, paramIndex?: number) {
 	if (typeof paramIndex == 'number') {
 		const types = Reflect.getMetadata('design:paramtypes', target, propName);
-		// console.log({types, target, propName, paramIndex, fn: target[propName]});
 		return types[paramIndex];
 	}
 	else if (typeof propName == 'string' || typeof propName == 'symbol') {
 		const type = Reflect.getMetadata('design:type', target, propName);
-		// console.log({ type, propName });
 		return type;
 	}
 }

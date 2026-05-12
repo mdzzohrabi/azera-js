@@ -141,11 +141,8 @@ export function hasAttribute<Params extends any[], Kind extends Kinds, Attribute
 
 export function getAllAttributes(target: Function | object) {
     const metadata = GetMetadataMap(target);
-    // console.log(metadata);
 
     return [ ...metadata?.values() ?? [] ].flatMap(value => {
-        console.log(Object.values(value));
-        
         return Object.values(value) as IAttributeInstance[];
     });
 }
